@@ -54,7 +54,9 @@ function AppShell() {
     <div className="min-h-screen bg-surface">
       <Sidebar profile={profile} />
       <TopBar profile={profile} onExportGlobal={handleExportGlobal} />
-      <ThresholdAlert profile={profile} />
+      <div className="lg:ml-72 pt-16">
+        <ThresholdAlert profile={profile} />
+      </div>
       <main className="lg:ml-72 pt-24 px-6 lg:px-12 pb-32 lg:pb-16 min-h-screen">
         <div className="max-w-7xl mx-auto">
           <Outlet />

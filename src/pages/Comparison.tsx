@@ -376,7 +376,7 @@ export const Comparison: React.FC<ComparisonProps> = ({ profile }) => {
                 <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
                 <YAxis hide />
                 <Tooltip
-                  formatter={(value: number) => [formatCurrency(value), 'CA annuel']}
+                  formatter={(value) => [formatCurrency(Number(value)), 'CA annuel']}
                   contentStyle={{ borderRadius: 12, fontSize: 12 }}
                 />
                 <Bar dataKey="value" radius={[8, 8, 0, 0]}>
@@ -400,7 +400,7 @@ export const Comparison: React.FC<ComparisonProps> = ({ profile }) => {
                 <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
                 <YAxis hide />
                 <Tooltip
-                  formatter={(value: number) => [formatCurrency(value), 'Net après IR']}
+                  formatter={(value) => [formatCurrency(Number(value)), 'Net après IR']}
                   contentStyle={{ borderRadius: 12, fontSize: 12 }}
                 />
                 <Bar dataKey="value" radius={[8, 8, 0, 0]}>

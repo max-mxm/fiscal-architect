@@ -9,14 +9,13 @@ import {
   Settings,
   Bell,
   AlertTriangle,
-  X,
   Download,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { cn } from '~/utils';
 import type { UserProfile } from '~/types';
-import { SEUIL_MICRO, calcCAannuel } from '~/lib/fiscal';
+import { calcCAannuel } from '~/lib/fiscal';
 
 const navItems = [
   { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, path: '/' as const },
@@ -84,49 +83,36 @@ export const Sidebar: React.FC<SidebarProps> = ({ profile }) => {
 // --- TRANS-01 : Alerte seuil micro-entreprise ---
 
 export const ThresholdAlert: React.FC<{ profile: UserProfile }> = ({ profile }) => {
-  const [dismissed, setDismissed] = useState(false);
-
   const caAnnuel = useMemo(
     () => calcCAannuel(profile.tjm, profile.workingDays),
     [profile.tjm, profile.workingDays],
   );
 
-  const percent = useMemo(() => (caAnnuel / SEUIL_MICRO) * 100, [caAnnuel]);
+  const seuil = profile.seuilMicro;
+  const percent = useMemo(() => (caAnnuel / seuil) * 100, [caAnnuel, seuil]);
 
-  // N'affiche que si on dépasse 80% du seuil et statut micro
-  if (dismissed || profile.status !== 'micro' || percent < 80) return null;
+  if (profile.status !== 'micro' || percent < 80) return null;
 
-  const isOver = caAnnuel >= SEUIL_MICRO;
+  const isOver = caAnnuel >= seuil;
 
   return (
     <div className={cn(
-      "fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-lg w-full mx-4 px-6 py-4 rounded-2xl shadow-2xl flex items-start gap-4",
-      isOver ? "bg-red-50 border border-red-200" : "bg-amber-50 border border-amber-200",
+      "w-full px-4 py-2 flex items-center justify-center gap-2 text-xs font-medium",
+      isOver ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700",
     )}>
-      <AlertTriangle className={cn("w-5 h-5 shrink-0 mt-0.5", isOver ? "text-red-500" : "text-amber-500")} />
-      <div className="flex-1">
-        <p className={cn("text-sm font-bold", isOver ? "text-red-800" : "text-amber-800")}>
-          {isOver
-            ? `Seuil micro-entreprise dépassé (${caAnnuel.toLocaleString()}€ / ${SEUIL_MICRO.toLocaleString()}€)`
-            : `Attention : ${percent.toFixed(0)}% du seuil micro-entreprise atteint (${caAnnuel.toLocaleString()}€ / ${SEUIL_MICRO.toLocaleString()}€)`
-          }
-        </p>
-        <p className={cn("text-xs mt-1", isOver ? "text-red-600" : "text-amber-600")}>
-          {isOver
-            ? "Vous devez envisager un changement de statut (SASU ou EURL)."
-            : "Pensez à anticiper un éventuel changement de statut."
-          }
-        </p>
-        <Link
-          to="/calendar"
-          className={cn("text-xs font-bold mt-2 underline underline-offset-2 inline-block", isOver ? "text-red-700" : "text-amber-700")}
-        >
-          Voir le calendrier
-        </Link>
-      </div>
-      <button onClick={() => setDismissed(true)} className="text-slate-400 hover:text-slate-600">
-        <X className="w-4 h-4" />
-      </button>
+      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+      <span>
+        {isOver
+          ? `Seuil micro dépassé — ${caAnnuel.toLocaleString()}€ / ${seuil.toLocaleString()}€`
+          : `${percent.toFixed(0)}% du seuil micro atteint — ${caAnnuel.toLocaleString()}€ / ${seuil.toLocaleString()}€`
+        }
+      </span>
+      <Link
+        to="/calendar"
+        className="font-bold underline underline-offset-2 ml-1"
+      >
+        Voir le calendrier
+      </Link>
     </div>
   );
 };
@@ -146,7 +132,8 @@ export const TopBar: React.FC<TopBarProps> = ({ profile, onExportGlobal }) => {
     [profile.tjm, profile.workingDays],
   );
 
-  const percent = Math.min(100, (caAnnuel / SEUIL_MICRO) * 100);
+  const seuil = profile.seuilMicro;
+  const percent = Math.min(100, (caAnnuel / seuil) * 100);
   const hasWarning = profile.status === 'micro' && percent >= 80;
 
   return (
@@ -159,7 +146,7 @@ export const TopBar: React.FC<TopBarProps> = ({ profile, onExportGlobal }) => {
           <Wallet className="w-5 h-5" />
           <span className="text-sm font-medium">
             {caAnnuel.toLocaleString()}€
-            <span className="text-xs text-slate-400 ml-1">/ {SEUIL_MICRO.toLocaleString()}€</span>
+            <span className="text-xs text-slate-400 ml-1">/ {seuil.toLocaleString()}€</span>
           </span>
         </Link>
         <Link
@@ -212,7 +199,7 @@ export const TopBar: React.FC<TopBarProps> = ({ profile, onExportGlobal }) => {
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-on-surface-variant">
-                  Votre CA projeté ({caAnnuel.toLocaleString()}€) atteint {percent.toFixed(0)}% du seuil micro-entreprise.
+                  Votre CA projeté ({caAnnuel.toLocaleString()}€) atteint {percent.toFixed(0)}% du seuil micro ({seuil.toLocaleString()}€).
                 </p>
               </div>
             ) : (

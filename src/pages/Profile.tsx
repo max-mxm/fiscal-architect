@@ -2,18 +2,18 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Info,
-  ArrowRight,
   Sparkles,
 } from 'lucide-react';
 import { UserProfile } from '~/types';
 import { DEFAULT_PROFILE } from '~/constants';
+import { FiscalControls } from '~/components/FiscalControls';
 
 interface ProfileProps {
   profile: UserProfile;
-  setProfile: (profile: UserProfile) => void;
+  setProfile: React.Dispatch<React.SetStateAction<UserProfile>>;
 }
 
-const STORAGE_KEY = 'fiscal-architect-profile';
+const STORAGE_KEY = 'fiscal-profile';
 
 export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
   // PROF-03: Toast state
@@ -26,8 +26,8 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const updateProfile = useCallback((updated: UserProfile) => {
-    setProfile(updated);
+  const updateProfile = useCallback((updated: Partial<UserProfile>) => {
+    setProfile((prev) => ({ ...prev, ...updated }));
   }, [setProfile]);
 
   // PROF-03: Annuler — reset from localStorage or DEFAULT_PROFILE
@@ -42,16 +42,6 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
       setToast('Profil réinitialisé aux valeurs par défaut');
     }
   }, [setProfile]);
-
-  // PROF-03: Initialiser — save to localStorage + toast
-  const handleSave = useCallback(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-      setToast('Profil sauvegardé avec succès');
-    } catch {
-      setToast('Erreur lors de la sauvegarde');
-    }
-  }, [profile]);
 
   return (
     <motion.div
@@ -80,11 +70,11 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
         <span className="text-secondary font-bold tracking-widest text-xs uppercase mb-4 block">Mon profil</span>
         <h2 className="font-headline text-5xl font-extrabold text-slate-900 tracking-tight mb-4">Configuration du profil</h2>
         <p className="text-on-surface-variant max-w-2xl text-lg leading-relaxed">
-          Renseignez votre identité. Les paramètres fiscaux sont configurables directement depuis la page Calendrier.
+          Renseignez votre identité et configurez vos paramètres fiscaux. Les modifications sont appliquées en temps réel sur toutes les pages.
         </p>
       </header>
 
-      <form className="space-y-8" onSubmit={(e) => e.preventDefault()}>
+      <div className="space-y-8">
         <div className="bg-surface-lowest p-8 rounded-3xl shadow-sm">
           <h3 className="font-headline text-xl font-bold mb-6">Identité</h3>
           <div className="flex flex-col sm:flex-row gap-4">
@@ -94,7 +84,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                 id="profile-name"
                 type="text"
                 value={profile.name}
-                onChange={(e) => updateProfile({ ...profile, name: e.target.value })}
+                onChange={(e) => updateProfile({ name: e.target.value })}
                 placeholder="Votre nom"
                 className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all"
               />
@@ -105,12 +95,18 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
                 id="profile-role"
                 type="text"
                 value={profile.role}
-                onChange={(e) => updateProfile({ ...profile, role: e.target.value })}
+                onChange={(e) => updateProfile({ role: e.target.value })}
                 placeholder="Votre rôle"
                 className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-sm font-medium focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all"
               />
             </div>
           </div>
+        </div>
+
+        {/* Paramètres fiscaux */}
+        <div>
+          <h3 className="font-headline text-xl font-bold mb-4">Paramètres fiscaux</h3>
+          <FiscalControls profile={profile} setProfile={setProfile} />
         </div>
 
         {/* Footer Actions */}
@@ -125,18 +121,11 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
               onClick={handleCancel}
               className="px-8 py-3 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors"
             >
-              Annuler
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="px-8 py-3 bg-slate-900 text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2"
-            >
-              Sauvegarder <ArrowRight className="w-4 h-4" />
+              Réinitialiser
             </button>
           </div>
         </div>
-      </form>
+      </div>
 
       {/* Guide */}
       <footer className="mt-32 pt-16 border-t border-outline-variant/20 grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -157,7 +146,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
             <h5 className="font-bold text-sm mb-1">Suggestions intelligentes</h5>
             <p className="text-xs text-on-surface-variant">
               Avec un TJM de {profile.tjm}€, nous vous recommandons d'explorer la structure SASU une fois
-              que votre CA dépasse 72 600€ pour optimiser votre stratégie fiscale.
+              que votre CA dépasse {profile.seuilMicro.toLocaleString()}€ pour optimiser votre stratégie fiscale.
             </p>
           </div>
         </div>

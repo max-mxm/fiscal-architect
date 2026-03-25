@@ -2,7 +2,7 @@ import type { UserProfile, FiscalResult, MonthlyChartData } from '~/types';
 
 // --- Constantes fiscales ---
 
-export const SEUIL_MICRO = 77_700;
+export const SEUIL_MICRO = 88_700;
 export const ABATTEMENT_BNC = 0.34;
 export const TAUX_VL_BNC = 0.022; // Versement libératoire BNC (prestations de services)
 export const FLAT_TAX = 0.30;
@@ -153,14 +153,28 @@ export function calcNetEURL(ca: number, chargesFixes: number): FiscalResult {
 
 // --- Utilitaires ---
 
-export function calcSeuilDate(caCumule: number, caMensuelMoyen: number, seuil: number = SEUIL_MICRO): Date | null {
-  if (caMensuelMoyen <= 0) return null;
-  if (caCumule >= seuil) return new Date();
+/**
+ * Calcule la date de franchissement du seuil en cumulant les jours travaillés mois par mois.
+ * Retourne la date exacte du jour où le cumul dépasse le seuil, ou null si pas de dépassement.
+ */
+export function calcSeuilDate(
+  months: { month: number; year: number; workedDays: number[] }[],
+  tjm: number,
+  seuil: number = SEUIL_MICRO,
+): Date | null {
+  if (tjm <= 0) return null;
 
-  const moisRestants = (seuil - caCumule) / caMensuelMoyen;
-  const date = new Date();
-  date.setMonth(date.getMonth() + Math.ceil(moisRestants));
-  return date;
+  let cumul = 0;
+  for (const m of months) {
+    const sorted = [...m.workedDays].sort((a, b) => a - b);
+    for (const day of sorted) {
+      cumul += tjm;
+      if (cumul >= seuil) {
+        return new Date(m.year, m.month, day);
+      }
+    }
+  }
+  return null;
 }
 
 export function generateChartData(profile: UserProfile): MonthlyChartData[] {

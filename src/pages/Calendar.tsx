@@ -9,18 +9,16 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
-  Pencil,
-  SlidersHorizontal,
+  CalendarDays,
 } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 import { UserProfile, FiscalYear, CalendarMonth } from '~/types';
 import { cn } from '~/utils';
 import { calcSeuilDate } from '~/lib/fiscal';
 import { useLocalStorage } from '~/hooks/useLocalStorage';
-import { FiscalControls } from '~/components/FiscalControls';
 
 interface CalendarProps {
   profile: UserProfile;
-  setProfile: React.Dispatch<React.SetStateAction<UserProfile>>;
 }
 
 const MONTH_NAMES = [
@@ -59,6 +57,62 @@ function isWeekend(year: number, month: number, day: number): boolean {
   return d === 0 || d === 6;
 }
 
+/** Calcul de la date de Pâques (algorithme de Meeus) */
+function getEasterDate(year: number): Date {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month, day);
+}
+
+/** Retourne un Set de clés (mois*100+jour) et un Map de noms pour les jours fériés français */
+function getJoursFeries(year: number): { set: Set<number>; names: Map<number, string> } {
+  const easter = getEasterDate(year);
+  const addDays = (d: Date, n: number) => {
+    const r = new Date(d);
+    r.setDate(r.getDate() + n);
+    return r;
+  };
+
+  const lundiPaques = addDays(easter, 1);
+  const ascension = addDays(easter, 39);
+  const lundiPentecote = addDays(easter, 50);
+
+  const entries: [Date, string][] = [
+    [new Date(year, 0, 1), 'Jour de l\'An'],
+    [lundiPaques, 'Lundi de Pâques'],
+    [new Date(year, 4, 1), 'Fête du Travail'],
+    [new Date(year, 4, 8), 'Victoire 1945'],
+    [ascension, 'Ascension'],
+    [lundiPentecote, 'Lundi de Pentecôte'],
+    [new Date(year, 6, 14), 'Fête nationale'],
+    [new Date(year, 7, 15), 'Assomption'],
+    [new Date(year, 10, 1), 'Toussaint'],
+    [new Date(year, 10, 11), 'Armistice'],
+    [new Date(year, 11, 25), 'Noël'],
+  ];
+
+  const set = new Set<number>();
+  const names = new Map<number, string>();
+  for (const [d, name] of entries) {
+    const key = d.getMonth() * 100 + d.getDate();
+    set.add(key);
+    names.set(key, name);
+  }
+  return { set, names };
+}
+
 function formatEuro(n: number): string {
   return n.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + '€';
 }
@@ -75,26 +129,31 @@ function formatDateFR(date: Date): { day: number; monthName: string; year: numbe
   };
 }
 
-export const Calendar: React.FC<CalendarProps> = ({ profile, setProfile }) => {
+export const Calendar: React.FC<CalendarProps> = ({ profile }) => {
   const now = new Date();
   const year = now.getFullYear();
   const todayDate = now.getDate();
   const currentMonthIndex = now.getMonth();
 
   const [fiscalYear, setFiscalYear] = useLocalStorage<FiscalYear>(`fiscal-calendar-${year}`, createEmptyFiscalYear(year));
+  const [missionStart, setMissionStart] = useLocalStorage<string>(`fiscal-mission-start-${year}`, `${year}-01-01`);
   const [selectedMonth, setSelectedMonth] = useState<number>(currentMonthIndex);
   const [navDirection, setNavDirection] = useState<number>(1);
-  const [editingSeuil, setEditingSeuil] = useState(false);
-  const [seuilInput, setSeuilInput] = useState(String(profile.seuilMicro));
-  const [showConfig, setShowConfig] = useState(false);
+
+  const missionStartDate = useMemo(() => new Date(missionStart), [missionStart]);
+
+  const { set: joursFeriesSet, names: joursFeriesNames } = useMemo(() => getJoursFeries(year), [year]);
+  const isJourFerie = useCallback((month: number, day: number) => joursFeriesSet.has(month * 100 + day), [joursFeriesSet]);
+  const getJourFerieName = useCallback((month: number, day: number) => joursFeriesNames.get(month * 100 + day), [joursFeriesNames]);
 
   // --- Drag-to-select state ---
   const dragging = useRef(false);
   const dragMode = useRef<'add' | 'remove'>('add');
   const dragMonth = useRef<number>(-1);
 
-  const setDay = useCallback((monthIndex: number, day: number, add: boolean) => {
+  const setDay = useCallback((monthIndex: number, day: number, add: boolean, force = false) => {
     if (isWeekend(year, monthIndex, day)) return;
+    if (!force && isJourFerie(monthIndex, day)) return;
     setFiscalYear((prev) => {
       const newMonths = prev.months.map((m, i) => {
         if (i !== monthIndex) return m;
@@ -109,23 +168,32 @@ export const Calendar: React.FC<CalendarProps> = ({ profile, setProfile }) => {
       });
       return { ...prev, months: newMonths };
     });
-  }, [year]);
+  }, [year, isJourFerie]);
 
   const handleDayMouseDown = useCallback((monthIndex: number, day: number) => {
     if (isWeekend(year, monthIndex, day)) return;
+    if (isJourFerie(monthIndex, day)) return;
     dragging.current = true;
     dragMonth.current = monthIndex;
     const isWorked = fiscalYear.months[monthIndex].workedDays.includes(day);
     dragMode.current = isWorked ? 'remove' : 'add';
     setDay(monthIndex, day, !isWorked);
-  }, [year, fiscalYear, setDay]);
+  }, [year, fiscalYear, setDay, isJourFerie]);
 
   const handleDayMouseEnter = useCallback((monthIndex: number, day: number) => {
     if (!dragging.current) return;
     if (monthIndex !== dragMonth.current) return;
     if (isWeekend(year, monthIndex, day)) return;
+    if (isJourFerie(monthIndex, day)) return;
     setDay(monthIndex, day, dragMode.current === 'add');
-  }, [year, setDay]);
+  }, [year, setDay, isJourFerie]);
+
+  const handleDayDoubleClick = useCallback((monthIndex: number, day: number) => {
+    if (isWeekend(year, monthIndex, day)) return;
+    if (!isJourFerie(monthIndex, day)) return;
+    const isWorked = fiscalYear.months[monthIndex].workedDays.includes(day);
+    setDay(monthIndex, day, !isWorked, true);
+  }, [year, fiscalYear, setDay, isJourFerie]);
 
   const handleMouseUp = useCallback(() => {
     dragging.current = false;
@@ -152,7 +220,7 @@ export const Calendar: React.FC<CalendarProps> = ({ profile, setProfile }) => {
     setSelectedMonth((prev) => (prev === 11 ? 0 : prev + 1));
   };
 
-  // Fill weekdays for selected month only
+  // Fill weekdays for selected month only (excluding holidays)
   const fillMonthBusinessDays = () => {
     setFiscalYear((prev) => {
       const newMonths = prev.months.map((m, i) => {
@@ -160,7 +228,7 @@ export const Calendar: React.FC<CalendarProps> = ({ profile, setProfile }) => {
         const totalDays = getDaysInMonth(prev.year, m.month);
         const weekdays: number[] = [];
         for (let d = 1; d <= totalDays; d++) {
-          if (!isWeekend(prev.year, m.month, d)) weekdays.push(d);
+          if (!isWeekend(prev.year, m.month, d) && !isJourFerie(m.month, d)) weekdays.push(d);
         }
         return { ...m, workedDays: weekdays };
       });
@@ -168,14 +236,14 @@ export const Calendar: React.FC<CalendarProps> = ({ profile, setProfile }) => {
     });
   };
 
-  // Fill all months
+  // Fill all months (excluding holidays)
   const fillAllBusinessDays = () => {
     setFiscalYear((prev) => {
       const newMonths = prev.months.map((m) => {
         const totalDays = getDaysInMonth(prev.year, m.month);
         const weekdays: number[] = [];
         for (let d = 1; d <= totalDays; d++) {
-          if (!isWeekend(prev.year, m.month, d)) weekdays.push(d);
+          if (!isWeekend(prev.year, m.month, d) && !isJourFerie(m.month, d)) weekdays.push(d);
         }
         return { ...m, workedDays: weekdays };
       });
@@ -218,17 +286,6 @@ export const Calendar: React.FC<CalendarProps> = ({ profile, setProfile }) => {
     URL.revokeObjectURL(url);
   };
 
-  // Seuil editing
-  const handleSeuilSubmit = () => {
-    const val = parseInt(seuilInput, 10);
-    if (!isNaN(val) && val > 0) {
-      setProfile((prev) => ({ ...prev, seuilMicro: val }));
-    } else {
-      setSeuilInput(String(profile.seuilMicro));
-    }
-    setEditingSeuil(false);
-  };
-
   // Computed values
   const chargesFixesMensuelles = useMemo(
     () => profile.fixedCosts.reduce((sum, c) => sum + c.amount, 0),
@@ -242,6 +299,19 @@ export const Calendar: React.FC<CalendarProps> = ({ profile, setProfile }) => {
 
   const caCumule = useMemo(() => totalWorkedDays * profile.tjm, [totalWorkedDays, profile.tjm]);
 
+  // CA réalisé : jours travaillés des mois passés + jours <= aujourd'hui du mois en cours
+  const { caRealise, joursRealises } = useMemo(() => {
+    let jours = 0;
+    for (const m of fiscalYear.months) {
+      if (m.month < currentMonthIndex) {
+        jours += m.workedDays.length;
+      } else if (m.month === currentMonthIndex) {
+        jours += m.workedDays.filter((d) => d <= todayDate).length;
+      }
+    }
+    return { caRealise: jours * profile.tjm, joursRealises: jours };
+  }, [fiscalYear, currentMonthIndex, todayDate, profile.tjm]);
+
   const seuilMicro = profile.seuilMicro;
 
   const progressPercent = useMemo(
@@ -254,15 +324,28 @@ export const Calendar: React.FC<CalendarProps> = ({ profile, setProfile }) => {
     [caCumule, seuilMicro, profile.tjm],
   );
 
-  const caMensuelMoyen = useMemo(() => {
-    const monthsWithWork = fiscalYear.months.filter((m) => m.workedDays.length > 0).length;
-    return monthsWithWork > 0 ? caCumule / monthsWithWork : 0;
-  }, [fiscalYear, caCumule]);
-
   const seuilDate = useMemo(
-    () => calcSeuilDate(caCumule, caMensuelMoyen, seuilMicro),
-    [caCumule, caMensuelMoyen, seuilMicro],
+    () => calcSeuilDate(fiscalYear.months, profile.tjm, seuilMicro),
+    [fiscalYear.months, profile.tjm, seuilMicro],
   );
+
+  // Jours ouvrés à partir de la date de début de mission (hors weekends et fériés)
+  const missionStartMonth = missionStartDate.getMonth();
+  const missionStartDay = missionStartDate.getDate();
+
+  const totalBusinessDays = useMemo(() => {
+    let count = 0;
+    for (let m = 0; m < 12; m++) {
+      const days = getDaysInMonth(year, m);
+      for (let d = 1; d <= days; d++) {
+        if (m < missionStartMonth || (m === missionStartMonth && d < missionStartDay)) continue;
+        if (!isWeekend(year, m, d) && !isJourFerie(m, d)) count++;
+      }
+    }
+    return count;
+  }, [year, isJourFerie, missionStartMonth, missionStartDay]);
+
+  const joursNonTravailles = totalBusinessDays - totalWorkedDays;
 
   // Selected month metrics
   const selectedMonthWorkedDays = fiscalYear.months[selectedMonth]?.workedDays.length ?? 0;
@@ -295,24 +378,33 @@ export const Calendar: React.FC<CalendarProps> = ({ profile, setProfile }) => {
 
     for (let d = 1; d <= totalDays; d++) {
       const weekend = isWeekend(year, monthIndex, d);
+      const ferie = isJourFerie(monthIndex, d);
       const isWorked = workedDays.includes(d);
       const isToday = monthIndex === currentMonthIndex && d === todayDate;
+      const ferieName = getJourFerieName(monthIndex, d);
 
       cells.push(
         <div
           key={d}
           onMouseDown={(e) => { e.preventDefault(); handleDayMouseDown(monthIndex, d); }}
           onMouseEnter={() => handleDayMouseEnter(monthIndex, d)}
+          onDoubleClick={() => handleDayDoubleClick(monthIndex, d)}
+          title={ferie && !weekend ? (ferieName ?? 'Jour férié') + ' — double-clic pour sélectionner' : undefined}
           className={cn(
-            'h-14 w-full rounded-lg flex items-center justify-center text-sm font-bold transition-all select-none',
+            'h-14 w-full rounded-lg flex items-center justify-center text-sm font-bold transition-all select-none relative',
             weekend
               ? 'bg-surface-highest/30 text-slate-300 cursor-default'
-              : 'bg-surface-highest/10 text-slate-400 cursor-pointer hover:bg-surface-highest/30',
+              : ferie && !isWorked
+                ? 'bg-amber-50 text-amber-600 border border-amber-200 cursor-default'
+                : 'bg-surface-highest/10 text-slate-400 cursor-pointer hover:bg-surface-highest/30',
             isWorked && !weekend && 'bg-secondary text-white shadow-lg shadow-secondary/20',
             isToday && 'ring-2 ring-secondary ring-offset-1',
           )}
         >
           {d}
+          {ferie && !weekend && !isWorked && (
+            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-amber-400" />
+          )}
         </div>,
       );
     }
@@ -329,10 +421,29 @@ export const Calendar: React.FC<CalendarProps> = ({ profile, setProfile }) => {
       {/* Compact header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-on-surface-variant text-xs font-medium tracking-widest uppercase mb-1">Année fiscale {year}</h2>
-          <h1 className="font-headline font-extrabold text-3xl leading-none tracking-tighter text-slate-900">
-            {formatEuroDetailed(caCumule)} <span className="text-secondary text-lg font-bold ml-1">Projeté</span>
-          </h1>
+          <div className="flex items-center gap-3 mb-1">
+            <h2 className="text-on-surface-variant text-xs font-medium tracking-widest uppercase">Année fiscale {year}</h2>
+            <div className="flex items-center gap-1.5 bg-surface-lowest rounded-lg px-2.5 py-1 shadow-sm">
+              <CalendarDays className="w-3 h-3 text-on-surface-variant" />
+              <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Début mission</label>
+              <input
+                type="date"
+                value={missionStart}
+                onChange={(e) => setMissionStart(e.target.value)}
+                min={`${year}-01-01`}
+                max={`${year}-12-31`}
+                className="bg-transparent text-xs font-bold text-secondary border-none p-0 focus:ring-0 cursor-pointer"
+              />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-4 flex-wrap">
+            <h1 className="font-headline font-extrabold text-3xl leading-none tracking-tighter text-slate-900">
+              {formatEuro(caRealise)} <span className="text-slate-400 text-lg font-bold ml-1">Réalisé</span>
+            </h1>
+            <span className="font-headline font-bold text-xl leading-none tracking-tighter text-on-surface-variant/40">
+              {formatEuro(caCumule)} <span className="text-secondary text-sm font-bold ml-0.5">Projeté</span>
+            </span>
+          </div>
         </div>
         <div className="flex gap-2 flex-wrap">
           <div className="flex flex-col items-center">
@@ -366,20 +477,9 @@ export const Calendar: React.FC<CalendarProps> = ({ profile, setProfile }) => {
         </div>
       </div>
 
-      {/* Mobile config toggle */}
-      <div className="lg:hidden">
-        <button
-          onClick={() => setShowConfig(!showConfig)}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-surface-lowest text-on-surface-variant font-semibold text-xs shadow-sm transition-colors hover:text-slate-900"
-        >
-          <SlidersHorizontal className="w-3.5 h-3.5" />
-          Paramètres fiscaux {showConfig ? '▴' : '▾'}
-        </button>
-      </div>
-
       <div className="grid grid-cols-12 gap-4">
-        {/* Calendar: 5 cols on lg */}
-        <div className="col-span-12 lg:col-span-5 space-y-3">
+        {/* Calendar */}
+        <div className="col-span-12 lg:col-span-7 space-y-3">
           {/* Month pills selector */}
           <div className="overflow-x-auto scrollbar-hide snap-x snap-mandatory">
             <div className="flex gap-1.5 min-w-max">
@@ -497,24 +597,8 @@ export const Calendar: React.FC<CalendarProps> = ({ profile, setProfile }) => {
           </div>
         </div>
 
-        {/* Config: 3 cols on lg — hidden on mobile unless toggled */}
-        <div className={cn('col-span-12 lg:col-span-3', !showConfig && 'hidden lg:block')}>
-          <AnimatePresence>
-            {(showConfig || true) && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="lg:!h-auto"
-              >
-                <FiscalControls profile={profile} setProfile={setProfile} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Metrics: 4 cols on lg */}
-        <div className="col-span-12 lg:col-span-4 space-y-4">
+        {/* Metrics */}
+        <div className="col-span-12 lg:col-span-5 space-y-4">
           {/* Threshold Card — compact */}
           <div className="bg-slate-900 p-5 rounded-2xl text-white shadow-2xl relative overflow-hidden">
             <div className="relative z-10">
@@ -522,53 +606,61 @@ export const Calendar: React.FC<CalendarProps> = ({ profile, setProfile }) => {
                 <div className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center">
                   <TrendingUp className="w-4 h-4" />
                 </div>
-                <span className="bg-white/10 px-3 py-0.5 rounded-full text-[11px] font-bold tracking-widest uppercase">Prévision plafond</span>
+                <span className="bg-white/10 px-3 py-0.5 rounded-full text-[11px] font-bold tracking-widest uppercase">
+                  {seuilDate ? 'Prévision plafond' : 'Statut micro'}
+                </span>
               </div>
               <h3 className="font-headline text-lg font-bold mb-1">Seuil micro-entreprise</h3>
-              <p className="text-slate-400 text-xs mb-4 font-medium leading-relaxed">
-                {seuilDate
-                  ? 'Franchissement estimé du plafond :'
-                  : 'Ajoutez des jours pour estimer la date de franchissement.'}
-              </p>
-              {seuilDate && (() => {
-                const { day, monthName, year: y } = formatDateFR(seuilDate);
-                return (
-                  <div className="flex items-baseline space-x-2 mb-4">
-                    <span className="text-2xl font-black font-headline tracking-tight">{day} {monthName.toLowerCase()}</span>
-                    <span className="text-secondary font-bold text-xs">{y}</span>
-                  </div>
-                );
-              })()}
+
+              {seuilDate ? (
+                <>
+                  <p className="text-slate-400 text-xs mb-4 font-medium leading-relaxed">
+                    Franchissement estimé du plafond :
+                  </p>
+                  {(() => {
+                    const { day, monthName, year: y } = formatDateFR(seuilDate);
+                    return (
+                      <div className="flex items-baseline space-x-2 mb-4">
+                        <span className="text-2xl font-black font-headline tracking-tight">{day} {monthName.toLowerCase()}</span>
+                        <span className="text-secondary font-bold text-xs">{y}</span>
+                      </div>
+                    );
+                  })()}
+                </>
+              ) : totalWorkedDays > 0 ? (
+                <div className="mb-4">
+                  <p className="text-secondary text-xs font-bold mb-2">Vous restez sous le seuil cette année.</p>
+                  <p className="text-slate-400 text-xs font-medium leading-relaxed">
+                    Marge restante : {formatEuro(seuilMicro - caCumule)}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-slate-400 text-xs mb-4 font-medium leading-relaxed">
+                  Ajoutez des jours pour estimer votre projection annuelle.
+                </p>
+              )}
+
               <div className="space-y-2">
                 <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
                   <span>Progression</span>
-                  <span>{formatEuro(caCumule)} / {editingSeuil ? (
-                    <input
-                      type="number"
-                      value={seuilInput}
-                      onChange={(e) => setSeuilInput(e.target.value)}
-                      onBlur={handleSeuilSubmit}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSeuilSubmit()}
-                      autoFocus
-                      className="bg-white/10 text-white text-xs font-bold w-20 px-1 py-0.5 rounded border border-white/20 outline-none focus:border-secondary"
-                    />
-                  ) : (
-                    <button
-                      onClick={() => { setSeuilInput(String(seuilMicro)); setEditingSeuil(true); }}
-                      className="inline-flex items-center gap-1 hover:text-secondary transition-colors"
-                    >
-                      {formatEuro(seuilMicro)} <Pencil className="w-2.5 h-2.5" />
-                    </button>
-                  )}</span>
+                  <span>{formatEuro(caCumule)} / {formatEuro(seuilMicro)}</span>
                 </div>
                 <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                   <div className="h-full bg-secondary rounded-full transition-all" style={{ width: `${progressPercent}%` }}></div>
                 </div>
-                <p className="text-[11px] text-secondary/80 font-medium">
-                  {remainingDays > 0
-                    ? `~${remainingDays} jours facturables restants avant passage TVA.`
-                    : 'Seuil micro-entreprise atteint.'}
-                </p>
+                <div className="flex justify-between items-center">
+                  <p className="text-[11px] text-secondary/80 font-medium">
+                    {caCumule >= seuilMicro
+                      ? 'Seuil micro-entreprise atteint.'
+                      : seuilDate
+                        ? `~${remainingDays} jours facturables restants avant passage TVA.`
+                        : `${joursNonTravailles} jours ouvrés disponibles restants.`
+                    }
+                  </p>
+                  <Link to="/profile" className="text-[11px] text-slate-500 hover:text-secondary transition-colors underline underline-offset-2">
+                    Modifier
+                  </Link>
+                </div>
               </div>
             </div>
             <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-secondary/20 blur-[60px] rounded-full"></div>

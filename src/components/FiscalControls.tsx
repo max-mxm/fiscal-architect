@@ -259,6 +259,37 @@ export const FiscalControls: React.FC<FiscalControlsProps> = ({ profile, setProf
         </div>
       )}
 
+      {/* Seuil micro-entreprise */}
+      <div>
+        <div className="flex justify-between items-center mb-1">
+          <div className="flex items-center gap-1">
+            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-[0.12em]">Seuil micro</label>
+            {profile.seuilMicro !== DEFAULT_PROFILE.seuilMicro && (
+              <button
+                type="button"
+                title={`Réinitialiser (${DEFAULT_PROFILE.seuilMicro.toLocaleString()}€)`}
+                onClick={() => updateProfile({ seuilMicro: DEFAULT_PROFILE.seuilMicro })}
+                className="text-on-surface-variant hover:text-secondary transition-colors"
+              >
+                <RotateCcw className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+          <div className="flex items-baseline gap-1">
+            <input
+              type="number"
+              value={profile.seuilMicro}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val) && val > 0) updateProfile({ seuilMicro: val });
+              }}
+              className="font-headline font-black text-lg text-secondary bg-transparent border-b border-secondary/30 w-24 p-0 text-right focus:ring-0 focus:border-secondary appearance-none transition-colors"
+            />
+            <span className="text-secondary font-bold text-xs">€</span>
+          </div>
+        </div>
+      </div>
+
       <div className="border-t border-outline-variant/20" />
 
       {/* Charges fixes */}
@@ -289,6 +320,8 @@ export const FiscalControls: React.FC<FiscalControlsProps> = ({ profile, setProf
                   placeholder="Nom"
                   value={newCost.name}
                   onChange={(e) => setNewCost({ ...newCost, name: e.target.value })}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCost()}
+                  autoFocus
                   className="w-full bg-white border-none rounded-lg py-1.5 px-3 text-xs focus:ring-2 focus:ring-secondary/20"
                 />
                 <input
@@ -296,6 +329,7 @@ export const FiscalControls: React.FC<FiscalControlsProps> = ({ profile, setProf
                   placeholder="Montant (€)"
                   value={newCost.amount}
                   onChange={(e) => setNewCost({ ...newCost, amount: e.target.value })}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCost()}
                   className="w-full bg-white border-none rounded-lg py-1.5 px-3 text-xs focus:ring-2 focus:ring-secondary/20"
                 />
                 <div className="flex gap-1.5 justify-end">
@@ -329,12 +363,14 @@ export const FiscalControls: React.FC<FiscalControlsProps> = ({ profile, setProf
                     type="text"
                     value={editCost.name}
                     onChange={(e) => setEditCost({ ...editCost, name: e.target.value })}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
                     className="bg-white border-none rounded-md py-1 px-2 text-xs font-bold flex-1 focus:ring-2 focus:ring-secondary/20"
                   />
                   <input
                     type="number"
                     value={editCost.amount}
                     onChange={(e) => setEditCost({ ...editCost, amount: e.target.value })}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
                     className="bg-white border-none rounded-md py-1 px-2 text-xs font-bold w-16 focus:ring-2 focus:ring-secondary/20"
                   />
                   <button type="button" onClick={handleSaveEdit} className="text-secondary"><Check className="w-3.5 h-3.5" /></button>

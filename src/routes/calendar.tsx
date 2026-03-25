@@ -7,6 +7,6 @@ export const Route = createFileRoute('/calendar')({
 })
 
 function CalendarRoute() {
-  const { profile, setProfile } = useProfile()
-  return <Calendar profile={profile} setProfile={setProfile} />
+  const { profile } = useProfile()
+  return <Calendar profile={profile} />
 }
