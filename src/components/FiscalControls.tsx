@@ -8,7 +8,7 @@ import {
   calcChargesURSSAF,
   calcTotalChargesFixes,
   calcCAannuel,
-  TAUX_VL_BNC,
+  calcNetMicro,
 } from '~/lib/fiscal';
 import { cn } from '~/utils';
 
@@ -80,17 +80,18 @@ export const FiscalControls: React.FC<FiscalControlsProps> = ({ profile, setProf
 
   const totalChargesFixes = profile.fixedCosts.reduce((sum, c) => sum + c.amount, 0);
 
-  // Métriques d'impact en temps réel
+  // Métriques d'impact en temps réel (avec IR)
   const impact = useMemo(() => {
     const caMensuel = calcCAMensuel(profile.tjm, profile.workingDays);
     const chargesURSSAF = calcChargesURSSAF(caMensuel, profile.urssafRate);
     const chargesFixes = calcTotalChargesFixes(profile.fixedCosts);
-    const vlMensuel = profile.versementLiberatoire ? caMensuel * TAUX_VL_BNC : 0;
-    const netMensuel = caMensuel - chargesURSSAF - chargesFixes - vlMensuel;
     const caAnnuel = calcCAannuel(profile.tjm, profile.workingDays);
-    const netAnnuel = netMensuel * 12;
+    const result = calcNetMicro(caAnnuel, profile.urssafRate, chargesFixes * 12, profile.versementLiberatoire);
+    const irMensuel = result.ir / 12;
+    const netMensuel = result.netApresIR / 12;
+    const netAnnuel = result.netApresIR;
     const tauxRetention = caMensuel > 0 ? (netMensuel / caMensuel) * 100 : 0;
-    return { caMensuel, chargesURSSAF, vlMensuel, netMensuel, caAnnuel, netAnnuel, tauxRetention };
+    return { caMensuel, chargesURSSAF, irMensuel, netMensuel, caAnnuel, netAnnuel, tauxRetention, versementLiberatoire: profile.versementLiberatoire };
   }, [profile.tjm, profile.workingDays, profile.urssafRate, profile.fixedCosts, profile.versementLiberatoire]);
 
   return (
@@ -433,15 +434,13 @@ export const FiscalControls: React.FC<FiscalControlsProps> = ({ profile, setProf
             <span className="text-xs text-on-surface-variant">URSSAF ({profile.urssafRate}%)</span>
             <span className="text-xs font-bold font-mono text-red-500">−{Math.round(impact.chargesURSSAF).toLocaleString()}€</span>
           </div>
-          {impact.vlMensuel > 0 && (
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-on-surface-variant">VL (2,2%)</span>
-              <span className="text-xs font-bold font-mono text-red-500">−{Math.round(impact.vlMensuel).toLocaleString()}€</span>
-            </div>
-          )}
           <div className="flex justify-between items-center">
             <span className="text-xs text-on-surface-variant">Charges fixes</span>
             <span className="text-xs font-bold font-mono text-red-500">−{totalChargesFixes.toLocaleString()}€</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-on-surface-variant">{impact.versementLiberatoire ? 'IR (VL 2,2%)' : 'IR (barème)'}</span>
+            <span className="text-xs font-bold font-mono text-red-500">−{Math.round(impact.irMensuel).toLocaleString()}€</span>
           </div>
           <div className="pt-1.5 border-t border-outline-variant/20 flex justify-between items-center">
             <span className="text-xs font-bold text-on-surface-variant">Taux de rétention</span>

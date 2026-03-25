@@ -14,7 +14,7 @@ import {
 import { Link } from '@tanstack/react-router';
 import { UserProfile, FiscalYear, CalendarMonth } from '~/types';
 import { cn } from '~/utils';
-import { calcSeuilDate } from '~/lib/fiscal';
+import { calcSeuilDate, calcNetMicro } from '~/lib/fiscal';
 import { useLocalStorage } from '~/hooks/useLocalStorage';
 
 interface CalendarProps {
@@ -347,17 +347,24 @@ export const Calendar: React.FC<CalendarProps> = ({ profile }) => {
 
   const joursNonTravailles = totalBusinessDays - totalWorkedDays;
 
+  // Calcul annuel avec IR via le moteur fiscal
+  const resultAnnuel = useMemo(
+    () => calcNetMicro(caCumule, profile.urssafRate, chargesFixesMensuelles * 12, profile.versementLiberatoire),
+    [caCumule, profile.urssafRate, chargesFixesMensuelles, profile.versementLiberatoire],
+  );
+  const tauxNetEffectif = caCumule > 0 ? resultAnnuel.netApresIR / caCumule : 0;
+
   // Selected month metrics
   const selectedMonthWorkedDays = fiscalYear.months[selectedMonth]?.workedDays.length ?? 0;
   const caMensuel = selectedMonthWorkedDays * profile.tjm;
-  const netMensuel = caMensuel * (1 - profile.urssafRate / 100) - chargesFixesMensuelles;
+  const netMensuel = caMensuel * tauxNetEffectif;
 
   // Weekly metrics
   const caHebdo = profile.tjm * 5;
-  const netHebdo = caHebdo * (1 - profile.urssafRate / 100) - chargesFixesMensuelles / 4.33;
+  const netHebdo = caHebdo * tauxNetEffectif;
 
   // Annual metrics
-  const netCumule = caCumule * (1 - profile.urssafRate / 100) - chargesFixesMensuelles * 12;
+  const netCumule = resultAnnuel.netApresIR;
 
   // Max worked days across all months (for mini bar chart scaling)
   const maxWorkedDays = useMemo(

@@ -2,7 +2,7 @@ import type { UserProfile, FiscalResult, MonthlyChartData } from '~/types';
 
 // --- Constantes fiscales ---
 
-export const SEUIL_MICRO = 88_700;
+export const SEUIL_MICRO = 83_600;
 export const ABATTEMENT_BNC = 0.34;
 export const TAUX_VL_BNC = 0.022; // Versement libératoire BNC (prestations de services)
 export const FLAT_TAX = 0.30;
@@ -12,11 +12,11 @@ export const CHARGES_SALARIALES_SASU = 0.22;
 export const COTISATIONS_TNS = 0.45;
 
 export const TRANCHES_IR = [
-  { min: 0, max: 11_294, taux: 0 },
-  { min: 11_295, max: 28_797, taux: 0.11 },
-  { min: 28_798, max: 82_341, taux: 0.30 },
-  { min: 82_342, max: 177_106, taux: 0.41 },
-  { min: 177_107, max: Infinity, taux: 0.45 },
+  { min: 0, max: 11_600, taux: 0 },
+  { min: 11_601, max: 29_579, taux: 0.11 },
+  { min: 29_580, max: 84_577, taux: 0.30 },
+  { min: 84_578, max: 181_917, taux: 0.41 },
+  { min: 181_918, max: Infinity, taux: 0.45 },
 ];
 
 const MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
@@ -179,12 +179,12 @@ export function calcSeuilDate(
 
 export function generateChartData(profile: UserProfile): MonthlyChartData[] {
   const chargesFixesMensuelles = calcTotalChargesFixes(profile.fixedCosts);
+  const caAnnuel = calcCAannuel(profile.tjm, profile.workingDays);
+  const result = calcNetMicro(caAnnuel, profile.urssafRate, chargesFixesMensuelles * 12, profile.versementLiberatoire);
+  const netMensuel = result.netApresIR / 12;
 
   return MONTHS.map((month) => {
     const brut = calcCAMensuel(profile.tjm, profile.workingDays);
-    const urssaf = calcChargesURSSAF(brut, profile.urssafRate);
-    const net = brut - urssaf - chargesFixesMensuelles;
-
-    return { month, brut: Math.round(brut), net: Math.round(net) };
+    return { month, brut: Math.round(brut), net: Math.round(netMensuel) };
   });
 }

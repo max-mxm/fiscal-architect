@@ -13,9 +13,9 @@ import { motion } from 'motion/react';
 import { UserProfile } from '~/types';
 import {
   calcCAMensuel,
-  calcChargesURSSAF,
   calcTotalChargesFixes,
   calcCAannuel,
+  calcNetMicro,
   generateChartData,
 } from '~/lib/fiscal';
 import { useCallback } from 'react';
@@ -25,12 +25,12 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ profile }) => {
-  // Calculs via moteur fiscal
+  // Calculs via moteur fiscal (avec IR)
   const monthlyGross = calcCAMensuel(profile.tjm, profile.workingDays);
-  const urssaf = calcChargesURSSAF(monthlyGross, profile.urssafRate);
   const totalChargesFixes = calcTotalChargesFixes(profile.fixedCosts);
-  const netProfit = monthlyGross - urssaf - totalChargesFixes;
   const annualForecast = calcCAannuel(profile.tjm, profile.workingDays);
+  const resultAnnuel = calcNetMicro(annualForecast, profile.urssafRate, totalChargesFixes * 12, profile.versementLiberatoire);
+  const netProfit = resultAnnuel.netApresIR / 12;
 
   // Graphique dynamique
   const chartData = generateChartData(profile);
@@ -81,9 +81,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile }) => {
               </p>
             </div>
             <div className="border-l-2 border-outline-variant pl-8">
-              <p className="text-xs font-medium text-on-surface-variant mb-1">Provision fiscale (URSSAF)</p>
-              <p className="text-3xl font-mono font-bold text-slate-900">{urssaf.toLocaleString()}€</p>
-              <p className="text-xs text-on-surface-variant mt-2">Taux de rétention : {(100 - profile.urssafRate).toFixed(1)}%</p>
+              <p className="text-xs font-medium text-on-surface-variant mb-1">Provisions (URSSAF + IR)</p>
+              <p className="text-3xl font-mono font-bold text-slate-900">{Math.round((resultAnnuel.chargesURSSAF + resultAnnuel.ir) / 12).toLocaleString()}€</p>
+              <p className="text-xs text-on-surface-variant mt-2">Taux de rétention : {annualForecast > 0 ? ((resultAnnuel.netApresIR / annualForecast) * 100).toFixed(1) : '0.0'}%</p>
             </div>
           </div>
         </div>

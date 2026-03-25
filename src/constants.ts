@@ -6,14 +6,14 @@ export const DEFAULT_PROFILE: UserProfile = {
   status: 'micro',
   tjm: 650,
   workingDays: 19,
-  urssafRate: 22.0,
+  urssafRate: 25.6,
   incomeTaxBracket: '30% - Revenu médian (27k€ - 78k€)',
   fixedCosts: [
     { id: '1', name: 'Outils & SaaS', description: 'Adobe, Slack, Notion', amount: 85, icon: 'laptop', color: 'bg-blue-100 text-blue-600' },
     { id: '2', name: 'Espace coworking', description: 'Location bureau mensuel', amount: 350, icon: 'users', color: 'bg-emerald-100 text-emerald-600' },
     { id: '3', name: 'Assurance pro', description: 'RC Pro + Mutuelle', amount: 120, icon: 'shield', color: 'bg-slate-100 text-slate-600' },
   ],
-  seuilMicro: 88_700,
+  seuilMicro: 83_600,
   versementLiberatoire: false,
 };
 
