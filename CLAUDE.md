@@ -91,3 +91,34 @@ npm run clean    # Supprime dist/
 - Paramétrage complet du profil freelance
 - Alertes de seuils (dépassement micro-entreprise)
 - Comparaison statuts juridiques avec simulation chiffrée
+
+## Documentation projet
+
+Le dossier `docs/` contient la documentation vivante du projet :
+
+| Fichier | Description | Quand lire | Quand modifier |
+|---------|-------------|------------|----------------|
+| `docs/README.md` | Index de la documentation | En début de session | Quand on ajoute un fichier doc |
+| `docs/objectifs.md` | Milestones M0-M5 et vision | Pour comprendre le scope | Quand un milestone évolue |
+| `docs/taches.md` | Liste des tâches avec statuts | Avant de commencer à coder | Après chaque tâche (statut) |
+| `docs/journal.md` | Log de dev | Pour le contexte historique | Quand on rencontre un problème ou prend une décision |
+| `docs/architecture.md` | Décisions d'architecture (ADR) | Avant un choix structurant | Quand on prend une décision d'architecture |
+| `docs/progression.md` | Tableau de progression | Pour voir l'avancement global | Après chaque tâche terminée |
+| `agent.md` | Instructions pour l'agent LLM | En début de session | Quand le workflow change |
+
+### Protocole de session de développement
+
+1. **Lire** `docs/taches.md` — identifier la prochaine tâche à traiter
+2. **Marquer** la tâche `[~]` en cours dans `docs/taches.md`
+3. **Coder** — implémenter la tâche
+4. **Marquer** la tâche `[x]` fait dans `docs/taches.md` + mettre à jour `docs/progression.md`
+5. **Logger** les problèmes/décisions dans `docs/journal.md` si nécessaire
+
+### Convention de commits
+
+Format : `TASK-ID: description`
+
+Exemples :
+- `FOUND-01: add useLocalStorage hook`
+- `DASH-03: compute vacation reserve from profile`
+- `COMP-02: wire fiscal engine to comparison page`

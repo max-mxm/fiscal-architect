@@ -12,7 +12,7 @@
   --color-surface-highest: #e0e3e5;
   --color-secondary: #006c49;
   --color-secondary-container: #6cf8bb;
-  --color-on-surface-variant: #45464d;
+  --color-on-surface-variant: #3d3e44;
   --color-outline-variant: #c6c6cd;
 }
 
@@ -20,6 +20,14 @@
   body {
     @apply bg-surface text-slate-900 font-sans antialiased;
   }
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 .glass-panel {
@@ -30,20 +38,24 @@
 input[type='range'] {
   -webkit-appearance: none;
   width: 100%;
-  height: 4px;
+  height: 6px;
   background: #eceef0;
-  border-radius: 2px;
+  border-radius: 3px;
   outline: none;
 }
 
 input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   background: #006c49;
   cursor: pointer;
   border-radius: 50%;
   border: 2px solid white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+input[type='range']:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgba(0,108,73,0.2), 0 2px 6px rgba(0,0,0,0.15);
 }

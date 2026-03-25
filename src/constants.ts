@@ -1,4 +1,4 @@
-import { UserProfile } from './types';
+import { UserProfile } from '~/types';
 
 export const DEFAULT_PROFILE: UserProfile = {
   name: 'Alex Durand',
@@ -13,6 +13,8 @@ export const DEFAULT_PROFILE: UserProfile = {
     { id: '2', name: 'Espace coworking', description: 'Location bureau mensuel', amount: 350, icon: 'users', color: 'bg-emerald-100 text-emerald-600' },
     { id: '3', name: 'Assurance pro', description: 'RC Pro + Mutuelle', amount: 120, icon: 'shield', color: 'bg-slate-100 text-slate-600' },
   ],
+  seuilMicro: 77_700,
+  versementLiberatoire: false,
 };
 
 export const MONTHS = [
