@@ -1,0 +1,15 @@
+{
+  "name": "Fiscal Architect — Simulation fiscale",
+  "short_name": "Fiscal Architect",
+  "description": "Suivi et simulation fiscale pour micro-entrepreneurs",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f9fb",
+  "theme_color": "#006c49",
+  "orientation": "any",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
