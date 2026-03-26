@@ -107,6 +107,7 @@ export const Comparison: React.FC<ComparisonProps> = ({ profile }) => {
   const renderScenarioInputs = (
     scenario: Scenario,
     setScenario: React.Dispatch<React.SetStateAction<Scenario>>,
+    result: FiscalResult,
     accent: boolean,
     badge: string,
     icon: React.ReactNode,
@@ -169,14 +170,49 @@ export const Comparison: React.FC<ComparisonProps> = ({ profile }) => {
             <option value="eurl">EURL</option>
           </select>
         </div>
-        <div>
-          <label className="text-xs font-bold text-on-surface-variant uppercase tracking-widest block mb-1">CA annuel brut</label>
-          <p className={cn('text-xl font-headline font-bold', accent && 'text-secondary')}>
-            {formatCurrency(calcCAannuel(scenario.tjm, scenario.workingDays))}
-          </p>
-          <p className="text-xs text-on-surface-variant mt-1">
-            Net après IR : <span className={cn('font-bold', accent && 'text-secondary')}>{formatCurrency(accent ? resultB.netApresIR : resultA.netApresIR)}</span>
-          </p>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-widest block mb-2">Annuel</label>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase">CA brut</span>
+                <p className="text-sm font-mono font-bold text-slate-900">{formatCurrency(result.caAnnuel)}</p>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Net avant IR</span>
+                <p className={cn('text-sm font-mono font-bold', accent ? 'text-secondary' : 'text-slate-900')}>
+                  {formatCurrency(result.caAnnuel - result.chargesURSSAF - result.chargesFixes)}
+                </p>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Net après IR</span>
+                <p className={cn('text-sm font-mono font-bold', accent ? 'text-secondary' : 'text-slate-900')}>
+                  {formatCurrency(result.netApresIR)}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-widest block mb-2">Mensuel</label>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase">CA brut</span>
+                <p className="text-sm font-mono font-bold text-slate-900">{formatCurrency(Math.round(result.caAnnuel / 12))}</p>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Net avant IR</span>
+                <p className={cn('text-sm font-mono font-bold', accent ? 'text-secondary' : 'text-slate-900')}>
+                  {formatCurrency(Math.round((result.caAnnuel - result.chargesURSSAF - result.chargesFixes) / 12))}
+                </p>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Net après IR</span>
+                <p className={cn('text-sm font-mono font-bold', accent ? 'text-secondary' : 'text-slate-900')}>
+                  {formatCurrency(Math.round(result.netApresIR / 12))}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -206,6 +242,7 @@ export const Comparison: React.FC<ComparisonProps> = ({ profile }) => {
           {renderScenarioInputs(
             scenarioA,
             setScenarioA,
+            resultA,
             false,
             'Scénario A',
             <History className="text-slate-300 w-6 h-6" />,
@@ -215,6 +252,7 @@ export const Comparison: React.FC<ComparisonProps> = ({ profile }) => {
           {renderScenarioInputs(
             scenarioB,
             setScenarioB,
+            resultB,
             true,
             'Scénario B',
             <TrendingUp className="text-secondary w-6 h-6" />,
@@ -281,14 +319,45 @@ export const Comparison: React.FC<ComparisonProps> = ({ profile }) => {
                       <option value="eurl">EURL</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="text-xs font-bold text-on-surface-variant uppercase tracking-widest block mb-1">CA annuel brut</label>
-                    <p className="text-xl font-headline font-bold text-indigo-600">
-                      {formatCurrency(calcCAannuel(scenarioC.tjm, scenarioC.workingDays))}
-                    </p>
-                    <p className="text-xs text-on-surface-variant mt-1">
-                      Net après IR : <span className="font-bold text-indigo-600">{formatCurrency(resultC.netApresIR)}</span>
-                    </p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-widest block mb-2">Annuel</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">CA brut</span>
+                          <p className="text-sm font-mono font-bold text-slate-900">{formatCurrency(resultC.caAnnuel)}</p>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">Net avant IR</span>
+                          <p className="text-sm font-mono font-bold text-indigo-600">
+                            {formatCurrency(resultC.caAnnuel - resultC.chargesURSSAF - resultC.chargesFixes)}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">Net après IR</span>
+                          <p className="text-sm font-mono font-bold text-indigo-600">{formatCurrency(resultC.netApresIR)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-widest block mb-2">Mensuel</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">CA brut</span>
+                          <p className="text-sm font-mono font-bold text-slate-900">{formatCurrency(Math.round(resultC.caAnnuel / 12))}</p>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">Net avant IR</span>
+                          <p className="text-sm font-mono font-bold text-indigo-600">
+                            {formatCurrency(Math.round((resultC.caAnnuel - resultC.chargesURSSAF - resultC.chargesFixes) / 12))}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">Net après IR</span>
+                          <p className="text-sm font-mono font-bold text-indigo-600">{formatCurrency(Math.round(resultC.netApresIR / 12))}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

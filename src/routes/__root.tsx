@@ -6,7 +6,7 @@ import {
   Scripts,
 } from '@tanstack/react-router'
 import appCss from '~/styles/app.css?url'
-import { Sidebar, TopBar, MobileNav, ThresholdAlert } from '~/components/Navigation'
+import { Sidebar, TopBar, MobileNav } from '~/components/Navigation'
 import { ProfileProvider, useProfile } from '~/context/ProfileContext'
 
 export const Route = createRootRoute({
@@ -71,10 +71,7 @@ function AppShell() {
     <div className="min-h-screen bg-surface">
       <Sidebar profile={profile} />
       <TopBar profile={profile} onExportGlobal={handleExportGlobal} />
-      <div className="lg:ml-72 pt-16">
-        <ThresholdAlert profile={profile} />
-      </div>
-      <main className="lg:ml-72 pt-24 px-6 lg:px-12 pb-32 lg:pb-16 min-h-screen">
+      <main className="lg:ml-72 pt-20 lg:pt-24 px-6 lg:px-12 pb-20 lg:pb-16 min-h-screen">
         <div className="max-w-7xl mx-auto">
           <Outlet />
         </div>
