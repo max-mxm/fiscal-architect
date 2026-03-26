@@ -42,6 +42,15 @@ export interface FiscalResult {
   netApresIR: number;
 }
 
+export interface MonthlyBreakdown {
+  ca: number;
+  urssaf: number;
+  ir: number;
+  chargesFixes: number;
+  net: number;
+  tauxNet: number;
+}
+
 export interface MonthlyChartData {
   month: string;
   brut: number;

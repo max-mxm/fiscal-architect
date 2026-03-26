@@ -5,8 +5,6 @@ import {
   Sparkles,
   Trash2,
   Share2,
-  Plus,
-  BarChart3,
   ChevronLeft,
   ChevronRight,
   CalendarDays,
@@ -14,7 +12,7 @@ import {
 import { Link } from '@tanstack/react-router';
 import { UserProfile, FiscalYear, CalendarMonth } from '~/types';
 import { cn } from '~/utils';
-import { calcSeuilDate, calcNetMicro } from '~/lib/fiscal';
+import { calcSeuilDate, calcTotalChargesFixes, calcCaRealise, calcIR, ABATTEMENT_BNC } from '~/lib/fiscal';
 import { useLocalStorage } from '~/hooks/useLocalStorage';
 
 interface CalendarProps {
@@ -115,10 +113,6 @@ function getJoursFeries(year: number): { set: Set<number>; names: Map<number, st
 
 function formatEuro(n: number): string {
   return n.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + '€';
-}
-
-function formatEuroDetailed(n: number): string {
-  return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '€';
 }
 
 function formatDateFR(date: Date): { day: number; monthName: string; year: number } {
@@ -286,9 +280,9 @@ export const Calendar: React.FC<CalendarProps> = ({ profile }) => {
     URL.revokeObjectURL(url);
   };
 
-  // Computed values
+  // Computed values — via moteur fiscal centralisé
   const chargesFixesMensuelles = useMemo(
-    () => profile.fixedCosts.reduce((sum, c) => sum + c.amount, 0),
+    () => calcTotalChargesFixes(profile.fixedCosts),
     [profile.fixedCosts],
   );
 
@@ -299,18 +293,10 @@ export const Calendar: React.FC<CalendarProps> = ({ profile }) => {
 
   const caCumule = useMemo(() => totalWorkedDays * profile.tjm, [totalWorkedDays, profile.tjm]);
 
-  // CA réalisé : jours travaillés des mois passés + jours <= aujourd'hui du mois en cours
-  const { caRealise, joursRealises } = useMemo(() => {
-    let jours = 0;
-    for (const m of fiscalYear.months) {
-      if (m.month < currentMonthIndex) {
-        jours += m.workedDays.length;
-      } else if (m.month === currentMonthIndex) {
-        jours += m.workedDays.filter((d) => d <= todayDate).length;
-      }
-    }
-    return { caRealise: jours * profile.tjm, joursRealises: jours };
-  }, [fiscalYear, currentMonthIndex, todayDate, profile.tjm]);
+  const { caRealise, joursRealises } = useMemo(
+    () => calcCaRealise(fiscalYear.months, profile.tjm, currentMonthIndex, todayDate),
+    [fiscalYear, currentMonthIndex, todayDate, profile.tjm],
+  );
 
   const seuilMicro = profile.seuilMicro;
 
@@ -329,7 +315,6 @@ export const Calendar: React.FC<CalendarProps> = ({ profile }) => {
     [fiscalYear.months, profile.tjm, seuilMicro],
   );
 
-  // Jours ouvrés à partir de la date de début de mission (hors weekends et fériés)
   const missionStartMonth = missionStartDate.getMonth();
   const missionStartDay = missionStartDate.getDate();
 
@@ -347,24 +332,21 @@ export const Calendar: React.FC<CalendarProps> = ({ profile }) => {
 
   const joursNonTravailles = totalBusinessDays - totalWorkedDays;
 
-  // Calcul annuel avec IR via le moteur fiscal
-  const resultAnnuel = useMemo(
-    () => calcNetMicro(caCumule, profile.urssafRate, chargesFixesMensuelles * 12, profile.versementLiberatoire),
-    [caCumule, profile.urssafRate, chargesFixesMensuelles, profile.versementLiberatoire],
-  );
-  const tauxNetEffectif = caCumule > 0 ? resultAnnuel.netApresIR / caCumule : 0;
+  // Annuel cumulé — CA - cotisations - charges fixes (sans IR)
+  const urssafCumule = useMemo(() => caCumule * (profile.urssafRate / 100), [caCumule, profile.urssafRate]);
+  const chargesFixesAnnuelles = chargesFixesMensuelles * 12;
+  const netCumule = caCumule - urssafCumule - chargesFixesAnnuelles;
+  const revenuImposableCumule = caCumule * (1 - ABATTEMENT_BNC);
+  const irCumule = calcIR(revenuImposableCumule);
+  const netApresIRCumule = netCumule - irCumule;
 
-  // Selected month metrics
+  // Ventilation mensuelle — CA - cotisations - charges fixes (sans IR)
   const selectedMonthWorkedDays = fiscalYear.months[selectedMonth]?.workedDays.length ?? 0;
   const caMensuel = selectedMonthWorkedDays * profile.tjm;
-  const netMensuel = caMensuel * tauxNetEffectif;
-
-  // Weekly metrics
-  const caHebdo = profile.tjm * 5;
-  const netHebdo = caHebdo * tauxNetEffectif;
-
-  // Annual metrics
-  const netCumule = resultAnnuel.netApresIR;
+  const urssafMensuel = caMensuel * (profile.urssafRate / 100);
+  const netMensuel = caMensuel - urssafMensuel - chargesFixesMensuelles;
+  const irMensuel = caMensuel > 0 ? calcIR(caMensuel * 12 * (1 - ABATTEMENT_BNC)) / 12 : 0;
+  const netMensuelApresIR = netMensuel - irMensuel;
 
   // Max worked days across all months (for mini bar chart scaling)
   const maxWorkedDays = useMemo(
@@ -426,7 +408,7 @@ export const Calendar: React.FC<CalendarProps> = ({ profile }) => {
       className="space-y-4"
     >
       {/* Compact header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <h2 className="text-on-surface-variant text-xs font-medium tracking-widest uppercase">Année fiscale {year}</h2>
@@ -452,41 +434,79 @@ export const Calendar: React.FC<CalendarProps> = ({ profile }) => {
             </span>
           </div>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        {/* Compact action buttons */}
+        <div className="flex gap-2 items-center">
           <div className="flex flex-col items-center">
             <button
               onClick={fillMonthBusinessDays}
-              className="px-4 py-2 rounded-xl bg-surface-lowest text-on-surface-variant hover:text-slate-900 transition-colors font-semibold text-xs flex items-center gap-1.5 shadow-sm"
+              title={`Remplir ${MONTH_SHORT[selectedMonth]}`}
+              className="p-2.5 rounded-xl bg-surface-lowest text-on-surface-variant hover:text-slate-900 transition-colors shadow-sm"
             >
-              <Sparkles className="w-3.5 h-3.5" /> Remplir {MONTH_SHORT[selectedMonth]}
+              <Sparkles className="w-4 h-4" />
             </button>
-            <button onClick={fillAllBusinessDays} className="text-xs text-on-surface-variant underline mt-0.5 hover:text-slate-900 transition-colors">
-              Toute l'année
+            <button onClick={fillAllBusinessDays} className="text-[9px] text-on-surface-variant/60 mt-0.5 hover:text-slate-900 transition-colors">
+              Année
             </button>
           </div>
           <div className="flex flex-col items-center">
             <button
               onClick={clearMonth}
-              className="px-4 py-2 rounded-xl bg-surface-lowest text-on-surface-variant hover:text-red-500 transition-colors font-semibold text-xs flex items-center gap-1.5 shadow-sm"
+              title={`Effacer ${MONTH_SHORT[selectedMonth]}`}
+              className="p-2.5 rounded-xl bg-surface-lowest text-on-surface-variant hover:text-red-500 transition-colors shadow-sm"
             >
-              <Trash2 className="w-3.5 h-3.5" /> Effacer {MONTH_SHORT[selectedMonth]}
+              <Trash2 className="w-4 h-4" />
             </button>
-            <button onClick={clearAll} className="text-xs text-on-surface-variant underline mt-0.5 hover:text-red-500 transition-colors">
-              Toute l'année
+            <button onClick={clearAll} className="text-[9px] text-on-surface-variant/60 mt-0.5 hover:text-red-500 transition-colors">
+              Année
             </button>
           </div>
           <button
             onClick={exportCSV}
-            className="px-5 py-2 rounded-xl bg-slate-900 text-white hover:opacity-90 transition-opacity font-bold text-xs flex items-center gap-1.5 shadow-lg self-start"
+            title="Exporter CSV"
+            className="p-2.5 rounded-xl bg-slate-900 text-white hover:opacity-90 transition-opacity shadow-sm"
           >
-            <Share2 className="w-3.5 h-3.5" /> Exporter
+            <Share2 className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-12 gap-4">
-        {/* Calendar */}
+        {/* Left column — Calendar */}
         <div className="col-span-12 lg:col-span-7 space-y-3">
+          {/* HERO METRICS STRIP — CA & Net du mois en un coup d'oeil */}
+          <div className="bg-surface-lowest p-4 lg:p-5 rounded-2xl shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-headline text-lg font-bold text-slate-900">
+                {MONTH_NAMES[selectedMonth]}
+              </h3>
+              <span className={cn(
+                'text-xs font-bold px-2.5 py-0.5 rounded-full',
+                selectedMonthWorkedDays > 0
+                  ? 'bg-secondary/10 text-secondary'
+                  : 'bg-slate-100 text-slate-400',
+              )}>
+                {selectedMonthWorkedDays} jours
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">CA brut</span>
+                <div className="text-2xl lg:text-3xl font-mono font-black text-slate-900">
+                  {formatEuro(caMensuel)}
+                </div>
+              </div>
+              <div>
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Net estimé</span>
+                <div className={cn(
+                  'text-2xl lg:text-3xl font-mono font-black',
+                  netMensuel >= 0 ? 'text-secondary' : 'text-red-500',
+                )}>
+                  {formatEuro(Math.round(netMensuel))}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Month pills selector */}
           <div className="overflow-x-auto scrollbar-hide snap-x snap-mandatory">
             <div className="flex gap-1.5 min-w-max">
@@ -604,9 +624,34 @@ export const Calendar: React.FC<CalendarProps> = ({ profile }) => {
           </div>
         </div>
 
-        {/* Metrics */}
-        <div className="col-span-12 lg:col-span-5 space-y-4">
-          {/* Threshold Card — compact */}
+        {/* Right column — Metrics */}
+        <div className="col-span-12 lg:col-span-5 space-y-3">
+          {/* FISCAL BREAKDOWN — Détail du mois sélectionné */}
+          <div className="bg-surface-lowest p-4 rounded-2xl shadow-sm">
+            <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-[0.15em] mb-3">
+              Détail {MONTH_NAMES[selectedMonth]}
+            </h4>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">CA brut</span>
+                <div className="text-base font-mono font-bold text-slate-900">{formatEuro(caMensuel)}</div>
+              </div>
+              <div>
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Net avant IR</span>
+                <div className={cn('text-base font-mono font-bold', netMensuel >= 0 ? 'text-secondary' : 'text-red-500')}>
+                  {formatEuro(Math.round(netMensuel))}
+                </div>
+              </div>
+              <div>
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Net après IR</span>
+                <div className={cn('text-base font-mono font-bold', netMensuelApresIR >= 0 ? 'text-secondary' : 'text-red-500')}>
+                  {formatEuro(Math.round(netMensuelApresIR))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Threshold Card — Seuil micro-entreprise */}
           <div className="bg-slate-900 p-5 rounded-2xl text-white shadow-2xl relative overflow-hidden">
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-4">
@@ -673,85 +718,31 @@ export const Calendar: React.FC<CalendarProps> = ({ profile }) => {
             <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-secondary/20 blur-[60px] rounded-full"></div>
           </div>
 
-          {/* Financial metrics — 3 sections */}
-          <div className="space-y-3">
-            {/* Mois sélectionné */}
-            <div className="bg-surface-lowest p-4 rounded-2xl shadow-sm">
-              <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-[0.15em] mb-2 flex items-center gap-1.5">
-                <BarChart3 className="w-3 h-3" /> {MONTH_NAMES[selectedMonth]}
-              </h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">CA</span>
-                  <div className="text-lg font-headline font-black text-slate-900">{formatEuro(caMensuel)}</div>
-                </div>
-                <div>
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Net</span>
-                  <div className={cn('text-lg font-headline font-black', netMensuel >= 0 ? 'text-secondary' : 'text-red-500')}>
-                    {formatEuro(Math.round(netMensuel))}
-                  </div>
+          {/* Annuel cumulé */}
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-outline-variant/10">
+            <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-[0.15em] mb-2 flex items-center gap-1.5">
+              <TrendingUp className="w-3 h-3 text-secondary" /> Annuel cumulé
+            </h4>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">CA brut</span>
+                <div className="text-base font-headline font-black text-slate-900">{formatEuro(caCumule)}</div>
+              </div>
+              <div>
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Net avant IR</span>
+                <div className={cn('text-base font-headline font-black', netCumule >= 0 ? 'text-secondary' : 'text-red-500')}>
+                  {formatEuro(Math.round(netCumule))}
                 </div>
               </div>
-              <div className="mt-1.5 flex items-center space-x-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-secondary"></span>
-                <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">{selectedMonthWorkedDays} jours planifiés</span>
-              </div>
-            </div>
-
-            {/* Hebdo */}
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-outline-variant/10">
-              <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-[0.15em] mb-2 flex items-center gap-1.5">
-                <Sparkles className="w-3 h-3 text-secondary" /> Hebdomadaire
-              </h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">CA</span>
-                  <div className="text-lg font-headline font-black text-slate-900">{formatEuro(caHebdo)}</div>
-                </div>
-                <div>
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Net</span>
-                  <div className={cn('text-lg font-headline font-black', netHebdo >= 0 ? 'text-secondary' : 'text-red-500')}>
-                    {formatEuro(Math.round(netHebdo))}
-                  </div>
-                </div>
-              </div>
-              <div className="mt-1.5 flex items-center space-x-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-secondary"></span>
-                <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">5 jours × {formatEuro(profile.tjm)}</span>
-              </div>
-            </div>
-
-            {/* Annuel */}
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-outline-variant/10">
-              <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-[0.15em] mb-2 flex items-center gap-1.5">
-                <TrendingUp className="w-3 h-3 text-secondary" /> Annuel cumulé
-              </h4>
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">CA</span>
-                  <div className="text-base font-headline font-black text-slate-900">{formatEuro(caCumule)}</div>
-                </div>
-                <div>
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Net</span>
-                  <div className={cn('text-base font-headline font-black', netCumule >= 0 ? 'text-secondary' : 'text-red-500')}>
-                    {formatEuro(Math.round(netCumule))}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Jours</span>
-                  <div className="text-base font-headline font-black text-slate-900">{totalWorkedDays}</div>
+              <div>
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Net après IR</span>
+                <div className={cn('text-base font-headline font-black', netApresIRCumule >= 0 ? 'text-secondary' : 'text-red-500')}>
+                  {formatEuro(Math.round(netApresIRCumule))}
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="fixed bottom-24 lg:bottom-10 right-10 flex flex-col items-end space-y-4">
-        <button className="group flex items-center space-x-3 bg-secondary p-4 px-6 rounded-full shadow-2xl text-white hover:scale-105 active:scale-95 transition-all">
-          <Plus className="w-5 h-5" />
-          <span className="font-headline font-bold text-sm">Ajouter un projet</span>
-        </button>
       </div>
     </motion.div>
   );

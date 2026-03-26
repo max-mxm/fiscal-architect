@@ -1,4 +1,4 @@
-import type { UserProfile, FiscalResult, MonthlyChartData } from '~/types';
+import type { UserProfile, FiscalResult, MonthlyBreakdown, MonthlyChartData, CalendarMonth } from '~/types';
 
 // --- Constantes fiscales ---
 
@@ -151,6 +151,48 @@ export function calcNetEURL(ca: number, chargesFixes: number): FiscalResult {
   };
 }
 
+// --- Ventilation mensuelle ---
+
+export function calcMonthlyBreakdown(
+  caMensuel: number,
+  tauxURSSAF: number,
+  chargesFixesMensuelles: number,
+  versementLiberatoire: boolean = false,
+): MonthlyBreakdown {
+  const urssaf = calcChargesURSSAF(caMensuel, tauxURSSAF);
+
+  // Projection annualisée (×12) pour estimer l'IR au barème progressif
+  const caAnnuelProjection = caMensuel * 12;
+  const annualResult = calcNetMicro(caAnnuelProjection, tauxURSSAF, chargesFixesMensuelles * 12, versementLiberatoire);
+  const ir = annualResult.ir / 12;
+
+  const net = caMensuel - urssaf - chargesFixesMensuelles - ir;
+  const tauxNet = caMensuel > 0 ? net / caMensuel : 0;
+  return { ca: caMensuel, urssaf, ir, chargesFixes: chargesFixesMensuelles, net, tauxNet };
+}
+
+export function calcReserveVacances(netMensuel: number, joursParMois: number): number {
+  if (joursParMois <= 0) return 0;
+  return Math.round((netMensuel / joursParMois) * 25 / 12);
+}
+
+export function calcCaRealise(
+  months: CalendarMonth[],
+  tjm: number,
+  currentMonthIndex: number,
+  todayDate: number,
+): { caRealise: number; joursRealises: number } {
+  let jours = 0;
+  for (const m of months) {
+    if (m.month < currentMonthIndex) {
+      jours += m.workedDays.length;
+    } else if (m.month === currentMonthIndex) {
+      jours += m.workedDays.filter((d) => d <= todayDate).length;
+    }
+  }
+  return { caRealise: jours * tjm, joursRealises: jours };
+}
+
 // --- Utilitaires ---
 
 /**
@@ -179,12 +221,10 @@ export function calcSeuilDate(
 
 export function generateChartData(profile: UserProfile): MonthlyChartData[] {
   const chargesFixesMensuelles = calcTotalChargesFixes(profile.fixedCosts);
-  const caAnnuel = calcCAannuel(profile.tjm, profile.workingDays);
-  const result = calcNetMicro(caAnnuel, profile.urssafRate, chargesFixesMensuelles * 12, profile.versementLiberatoire);
-  const netMensuel = result.netApresIR / 12;
+  const brut = calcCAMensuel(profile.tjm, profile.workingDays);
+  const breakdown = calcMonthlyBreakdown(brut, profile.urssafRate, chargesFixesMensuelles, profile.versementLiberatoire);
 
-  return MONTHS.map((month) => {
-    const brut = calcCAMensuel(profile.tjm, profile.workingDays);
-    return { month, brut: Math.round(brut), net: Math.round(netMensuel) };
-  });
+  return MONTHS.map((month) => ({
+    month, brut: Math.round(brut), net: Math.round(breakdown.net),
+  }));
 }

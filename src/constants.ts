@@ -6,7 +6,7 @@ export const DEFAULT_PROFILE: UserProfile = {
   status: 'micro',
   tjm: 650,
   workingDays: 19,
-  urssafRate: 25.6,
+  urssafRate: 25.8,
   incomeTaxBracket: '30% - Revenu médian (27k€ - 78k€)',
   fixedCosts: [
     { id: '1', name: 'Outils & SaaS', description: 'Adobe, Slack, Notion', amount: 85, icon: 'laptop', color: 'bg-blue-100 text-blue-600' },

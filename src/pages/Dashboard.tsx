@@ -16,6 +16,8 @@ import {
   calcTotalChargesFixes,
   calcCAannuel,
   calcNetMicro,
+  calcMonthlyBreakdown,
+  calcReserveVacances,
   generateChartData,
 } from '~/lib/fiscal';
 import { useCallback } from 'react';
@@ -25,21 +27,17 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ profile }) => {
-  // Calculs via moteur fiscal (avec IR)
+  // Calculs via moteur fiscal centralisé
   const monthlyGross = calcCAMensuel(profile.tjm, profile.workingDays);
   const totalChargesFixes = calcTotalChargesFixes(profile.fixedCosts);
   const annualForecast = calcCAannuel(profile.tjm, profile.workingDays);
   const resultAnnuel = calcNetMicro(annualForecast, profile.urssafRate, totalChargesFixes * 12, profile.versementLiberatoire);
-  const netProfit = resultAnnuel.netApresIR / 12;
+  const monthBreakdown = calcMonthlyBreakdown(monthlyGross, profile.urssafRate, totalChargesFixes, profile.versementLiberatoire);
+  const netProfit = monthBreakdown.net;
 
-  // Graphique dynamique
   const chartData = generateChartData(profile);
 
-  // Réserve vacances calculée (5 semaines de congés = net journalier × 25 jours / 12 mois)
-  const netJournalier = profile.workingDays > 0
-    ? netProfit / profile.workingDays
-    : 0;
-  const reserveVacances = Math.round(netJournalier * 25 / 12);
+  const reserveVacances = calcReserveVacances(netProfit, profile.workingDays);
 
   // Export CSV
   const handleExportCSV = useCallback(() => {

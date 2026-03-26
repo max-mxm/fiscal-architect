@@ -5,10 +5,9 @@ import { UserProfile } from '~/types';
 import { DEFAULT_PROFILE } from '~/constants';
 import {
   calcCAMensuel,
-  calcChargesURSSAF,
   calcTotalChargesFixes,
   calcCAannuel,
-  calcNetMicro,
+  calcMonthlyBreakdown,
 } from '~/lib/fiscal';
 import { cn } from '~/utils';
 
@@ -80,18 +79,22 @@ export const FiscalControls: React.FC<FiscalControlsProps> = ({ profile, setProf
 
   const totalChargesFixes = profile.fixedCosts.reduce((sum, c) => sum + c.amount, 0);
 
-  // Métriques d'impact en temps réel (avec IR)
+  // Métriques d'impact en temps réel (via moteur fiscal centralisé)
   const impact = useMemo(() => {
     const caMensuel = calcCAMensuel(profile.tjm, profile.workingDays);
-    const chargesURSSAF = calcChargesURSSAF(caMensuel, profile.urssafRate);
     const chargesFixes = calcTotalChargesFixes(profile.fixedCosts);
     const caAnnuel = calcCAannuel(profile.tjm, profile.workingDays);
-    const result = calcNetMicro(caAnnuel, profile.urssafRate, chargesFixes * 12, profile.versementLiberatoire);
-    const irMensuel = result.ir / 12;
-    const netMensuel = result.netApresIR / 12;
-    const netAnnuel = result.netApresIR;
-    const tauxRetention = caMensuel > 0 ? (netMensuel / caMensuel) * 100 : 0;
-    return { caMensuel, chargesURSSAF, irMensuel, netMensuel, caAnnuel, netAnnuel, tauxRetention, versementLiberatoire: profile.versementLiberatoire };
+    const breakdown = calcMonthlyBreakdown(caMensuel, profile.urssafRate, chargesFixes, profile.versementLiberatoire);
+    return {
+      caMensuel,
+      chargesURSSAF: breakdown.urssaf,
+      irMensuel: breakdown.ir,
+      netMensuel: breakdown.net,
+      caAnnuel,
+      netAnnuel: breakdown.net * 12,
+      tauxRetention: breakdown.tauxNet * 100,
+      versementLiberatoire: profile.versementLiberatoire,
+    };
   }, [profile.tjm, profile.workingDays, profile.urssafRate, profile.fixedCosts, profile.versementLiberatoire]);
 
   return (
