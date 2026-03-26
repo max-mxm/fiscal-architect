@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarDays,
+  RotateCcw,
 } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { UserProfile, FiscalYear, CalendarMonth } from '~/types';
@@ -261,6 +262,15 @@ export const Calendar: React.FC<CalendarProps> = ({ profile }) => {
     setFiscalYear(createEmptyFiscalYear(year));
   };
 
+  // Reset total — vide tout + cache localStorage
+  const resetEverything = () => {
+    const keys = Object.keys(localStorage).filter((k) => k.startsWith('fiscal-'));
+    for (const k of keys) localStorage.removeItem(k);
+    setFiscalYear(createEmptyFiscalYear(year));
+    setMissionStart(`${year}-01-01`);
+    setSelectedMonth(currentMonthIndex);
+  };
+
   // Export CSV
   const exportCSV = () => {
     const header = 'Mois,Jours travaillés,CA (€)\n';
@@ -466,6 +476,13 @@ export const Calendar: React.FC<CalendarProps> = ({ profile }) => {
             className="p-2.5 rounded-xl bg-slate-900 text-white hover:opacity-90 transition-opacity shadow-sm"
           >
             <Share2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={resetEverything}
+            title="Tout réinitialiser"
+            className="p-2.5 rounded-xl bg-red-500 text-white hover:opacity-90 transition-opacity shadow-sm"
+          >
+            <RotateCcw className="w-4 h-4" />
           </button>
         </div>
       </div>
