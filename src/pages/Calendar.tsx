@@ -13,7 +13,7 @@ import {
 import { Link } from '@tanstack/react-router';
 import { UserProfile, FiscalYear, CalendarMonth } from '~/types';
 import { cn } from '~/utils';
-import { calcSeuilDate, calcTotalChargesFixes, calcCaRealise, calcIR, ABATTEMENT_BNC } from '~/lib/fiscal';
+import { calcSeuilDate, calcTotalChargesFixes, calcCaRealise, calcNetMicro, calcMonthlyBreakdown } from '~/lib/fiscal';
 import { useLocalStorage } from '~/hooks/useLocalStorage';
 
 interface CalendarProps {
@@ -342,21 +342,19 @@ export const Calendar: React.FC<CalendarProps> = ({ profile }) => {
 
   const joursNonTravailles = totalBusinessDays - totalWorkedDays;
 
-  // Annuel cumulé — CA - cotisations - charges fixes (sans IR)
+  // Annuel cumulé — CA - cotisations - charges fixes
   const urssafCumule = useMemo(() => caCumule * (profile.urssafRate / 100), [caCumule, profile.urssafRate]);
   const chargesFixesAnnuelles = chargesFixesMensuelles * 12;
   const netCumule = caCumule - urssafCumule - chargesFixesAnnuelles;
-  const revenuImposableCumule = caCumule * (1 - ABATTEMENT_BNC);
-  const irCumule = calcIR(revenuImposableCumule);
-  const netApresIRCumule = netCumule - irCumule;
+  const resultCumule = calcNetMicro(caCumule, profile.urssafRate, chargesFixesAnnuelles, profile.versementLiberatoire);
+  const netApresIRCumule = resultCumule.netApresIR;
 
-  // Ventilation mensuelle — CA - cotisations - charges fixes (sans IR)
+  // Ventilation mensuelle — moteur fiscal centralisé (VL pris en compte)
   const selectedMonthWorkedDays = fiscalYear.months[selectedMonth]?.workedDays.length ?? 0;
   const caMensuel = selectedMonthWorkedDays * profile.tjm;
-  const urssafMensuel = caMensuel * (profile.urssafRate / 100);
-  const netMensuel = caMensuel - urssafMensuel - chargesFixesMensuelles;
-  const irMensuel = caMensuel > 0 ? calcIR(caMensuel * 12 * (1 - ABATTEMENT_BNC)) / 12 : 0;
-  const netMensuelApresIR = netMensuel - irMensuel;
+  const monthBreakdown = calcMonthlyBreakdown(caMensuel, profile.urssafRate, chargesFixesMensuelles, profile.versementLiberatoire);
+  const netMensuel = caMensuel - monthBreakdown.urssaf - chargesFixesMensuelles;
+  const netMensuelApresIR = monthBreakdown.net;
 
   // Max worked days across all months (for mini bar chart scaling)
   const maxWorkedDays = useMemo(
