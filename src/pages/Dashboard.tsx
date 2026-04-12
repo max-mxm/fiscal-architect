@@ -20,6 +20,7 @@ import {
   calcReserveVacances,
   generateChartData,
 } from '~/lib/fiscal';
+import { formatEuro } from '~/lib/format';
 import { useCallback } from 'react';
 
 interface DashboardProps {
@@ -66,21 +67,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile }) => {
           <div className="col-span-12 lg:col-span-5">
             <p className="text-sm font-semibold tracking-widest text-on-surface-variant uppercase mb-2">CA mensuel projeté</p>
             <h2 className="font-headline text-slate-900 text-[4rem] lg:text-[5rem] font-extrabold leading-none tracking-tighter">
-              {monthlyGross.toLocaleString()}<span className="text-secondary">€</span>
+              {formatEuro(monthlyGross)}<span className="text-secondary">€</span>
             </h2>
           </div>
           <div className="col-span-12 lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-8">
             <div className="border-l-2 border-secondary pl-8">
               <p className="text-xs font-medium text-on-surface-variant mb-1">Bénéfice net estimé</p>
-              <p className="text-3xl font-mono font-bold text-slate-900">{Math.round(netProfit).toLocaleString()}€</p>
+              <p className="text-3xl font-mono font-bold text-slate-900">{formatEuro(netProfit)}€</p>
               <p className="text-xs text-on-surface-variant mt-2 flex items-center gap-1">
                 <TrendingUp className="w-4 h-4" />
-                Charges fixes : {totalChargesFixes.toLocaleString()}€/mois
+                Charges fixes : {formatEuro(totalChargesFixes)}€/mois
               </p>
             </div>
             <div className="border-l-2 border-outline-variant pl-8">
               <p className="text-xs font-medium text-on-surface-variant mb-1">Provisions (URSSAF + IR)</p>
-              <p className="text-3xl font-mono font-bold text-slate-900">{Math.round((resultAnnuel.chargesURSSAF + resultAnnuel.ir) / 12).toLocaleString()}€</p>
+              <p className="text-3xl font-mono font-bold text-slate-900">{formatEuro((resultAnnuel.chargesURSSAF + resultAnnuel.ir) / 12)}€</p>
               <p className="text-xs text-on-surface-variant mt-2">Taux de rétention : {annualForecast > 0 ? ((resultAnnuel.netApresIR / annualForecast) * 100).toFixed(1) : '0.0'}%</p>
             </div>
           </div>
@@ -109,7 +110,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile }) => {
             <div className="bg-surface-lowest p-6 rounded-2xl flex justify-between items-center shadow-sm">
               <div>
                 <p className="text-sm text-on-surface-variant mb-1">Estimation hebdomadaire</p>
-                <p className="text-xl font-mono font-bold">{Math.round(monthlyGross / 4).toLocaleString()}€</p>
+                <p className="text-xl font-mono font-bold">{formatEuro(monthlyGross / 4)}€</p>
               </div>
               <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
                 <Wallet className="w-5 h-5" />
@@ -118,7 +119,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile }) => {
             <div className="bg-surface-lowest p-6 rounded-2xl flex justify-between items-center shadow-sm">
               <div>
                 <p className="text-sm text-on-surface-variant mb-1">Prévision annuelle</p>
-                <p className="text-xl font-mono font-bold">{annualForecast.toLocaleString()}€</p>
+                <p className="text-xl font-mono font-bold">{formatEuro(annualForecast)}€</p>
               </div>
               <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
                 <History className="w-5 h-5" />
@@ -172,7 +173,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile }) => {
                   />
                   <Tooltip
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                    formatter={(value) => `${Number(value).toLocaleString()}€`}
+                    formatter={(value) => `${Number(value).toLocaleString('fr-FR')}€`}
                   />
                   <Area
                     type="monotone"
@@ -227,7 +228,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile }) => {
                 style={{ width: `${Math.min(100, monthlyGross > 0 ? (reserveVacances / monthlyGross) * 100 : 0)}%` }}
               ></div>
             </div>
-            <p className="text-xl font-mono font-bold text-slate-900">{reserveVacances.toLocaleString()}€ <span className="text-xs font-sans font-normal text-on-surface-variant">/ mois</span></p>
+            <p className="text-xl font-mono font-bold text-slate-900">{formatEuro(reserveVacances)}€ <span className="text-xs font-sans font-normal text-on-surface-variant">/ mois</span></p>
             <p className="text-xs text-on-surface-variant leading-relaxed">Provision pour 5 semaines de congés non rémunérés.</p>
           </div>
         </div>

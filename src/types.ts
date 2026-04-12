@@ -5,7 +5,6 @@ export interface UserProfile {
   tjm: number;
   workingDays: number;
   urssafRate: number;
-  incomeTaxBracket: string;
   fixedCosts: { id: string; name: string; description: string; amount: number; icon: string; color: string }[];
   seuilMicro: number;
   versementLiberatoire: boolean;

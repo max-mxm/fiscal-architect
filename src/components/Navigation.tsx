@@ -16,6 +16,7 @@ import { Link, useRouterState } from '@tanstack/react-router';
 import { cn } from '~/utils';
 import type { UserProfile } from '~/types';
 import { calcCAannuel } from '~/lib/fiscal';
+import { formatEuro } from '~/lib/format';
 
 const navItems = [
   { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, path: '/' as const },
@@ -103,8 +104,8 @@ export const ThresholdAlert: React.FC<{ profile: UserProfile }> = ({ profile }) 
       <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
       <span>
         {isOver
-          ? `Seuil micro dépassé — ${caAnnuel.toLocaleString()}€ / ${seuil.toLocaleString()}€`
-          : `${percent.toFixed(0)}% du seuil micro atteint — ${caAnnuel.toLocaleString()}€ / ${seuil.toLocaleString()}€`
+          ? `Seuil micro dépassé — ${formatEuro(caAnnuel)}€ / ${formatEuro(seuil)}€`
+          : `${percent.toFixed(0)}% du seuil micro atteint — ${formatEuro(caAnnuel)}€ / ${formatEuro(seuil)}€`
         }
       </span>
       <Link
@@ -145,8 +146,8 @@ export const TopBar: React.FC<TopBarProps> = ({ profile, onExportGlobal }) => {
         >
           <Wallet className="w-5 h-5" />
           <span className="text-sm font-medium">
-            {caAnnuel.toLocaleString()}€
-            <span className="text-xs text-slate-400 ml-1">/ {seuil.toLocaleString()}€</span>
+            {formatEuro(caAnnuel)}€
+            <span className="text-xs text-slate-400 ml-1">/ {formatEuro(seuil)}€</span>
           </span>
         </Link>
         <Link
@@ -199,7 +200,7 @@ export const TopBar: React.FC<TopBarProps> = ({ profile, onExportGlobal }) => {
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-on-surface-variant">
-                  Votre CA projeté ({caAnnuel.toLocaleString()}€) atteint {percent.toFixed(0)}% du seuil micro ({seuil.toLocaleString()}€).
+                  Votre CA projeté ({formatEuro(caAnnuel)}€) atteint {percent.toFixed(0)}% du seuil micro ({formatEuro(seuil)}€).
                 </p>
               </div>
             ) : (

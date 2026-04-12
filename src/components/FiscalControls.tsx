@@ -8,7 +8,10 @@ import {
   calcTotalChargesFixes,
   calcCAannuel,
   calcMonthlyBreakdown,
+  TAUX_VL_BNC,
+  TRANCHES_IR,
 } from '~/lib/fiscal';
+import { formatEuro } from '~/lib/format';
 import { cn } from '~/utils';
 
 interface FiscalControlsProps {
@@ -188,36 +191,24 @@ export const FiscalControls: React.FC<FiscalControlsProps> = ({ profile, setProf
 
       <div className="border-t border-outline-variant/20" />
 
-      {/* Tranche IR */}
+      {/* Tranche IR — calculée automatiquement */}
       <div>
-        <div className="flex items-center gap-1 mb-1.5">
-          <label className="text-xs font-bold text-on-surface-variant uppercase tracking-[0.12em]">Tranche IR</label>
-          {profile.incomeTaxBracket !== DEFAULT_PROFILE.incomeTaxBracket && (
-            <button
-              type="button"
-              title={`Réinitialiser (${DEFAULT_PROFILE.incomeTaxBracket})`}
-              onClick={() => updateProfile({ incomeTaxBracket: DEFAULT_PROFILE.incomeTaxBracket })}
-              className="text-on-surface-variant hover:text-secondary transition-colors"
-            >
-              <RotateCcw className="w-3 h-3" />
-            </button>
+        <label className="text-xs font-bold text-on-surface-variant uppercase tracking-[0.12em]">Tranche IR</label>
+        <div className="mt-1 bg-surface-highest/20 rounded-lg py-2 px-3">
+          {profile.versementLiberatoire ? (
+            <p className="text-xs font-medium text-on-surface-variant">
+              VL activé — taux forfaitaire {(TAUX_VL_BNC * 100).toFixed(1)}%
+            </p>
+          ) : (
+            <p className="text-xs font-medium text-on-surface-variant">
+              Tranche marginale : <span className="font-bold text-secondary">{(() => {
+                const revenu = impact.caAnnuel * 0.66;
+                const tranche = [...TRANCHES_IR].reverse().find(t => revenu > t.min);
+                return tranche ? `${(tranche.taux * 100).toFixed(0)}%` : '0%';
+              })()}</span>
+            </p>
           )}
         </div>
-        <select
-          value={profile.incomeTaxBracket}
-          onChange={(e) => updateProfile({ incomeTaxBracket: e.target.value })}
-          disabled={profile.versementLiberatoire}
-          className={cn(
-            'w-full bg-surface-highest/20 border-none rounded-lg py-2 px-3 text-xs font-medium focus:ring-2 focus:ring-secondary/20',
-            profile.versementLiberatoire && 'opacity-50 cursor-not-allowed'
-          )}
-        >
-          <option>0% - Non imposable</option>
-          <option>11% - Revenu modéré</option>
-          <option>30% - Revenu médian (27k€ - 78k€)</option>
-          <option>41% - Revenu élevé</option>
-          <option>45% - Tranche supérieure</option>
-        </select>
       </div>
 
       {/* Versement libératoire — micro only */}
@@ -256,7 +247,7 @@ export const FiscalControls: React.FC<FiscalControlsProps> = ({ profile, setProf
           {profile.versementLiberatoire && (
             <div className="mt-2 bg-secondary/5 border border-secondary/20 rounded-lg p-2">
               <p className="text-xs text-secondary font-medium">
-                Total : {profile.urssafRate}% + 2,2% = {(profile.urssafRate + 2.2).toFixed(1)}%
+                Total : {profile.urssafRate}% + {(TAUX_VL_BNC * 100).toFixed(1)}% = {(profile.urssafRate + TAUX_VL_BNC * 100).toFixed(1)}%
               </p>
             </div>
           )}
@@ -271,7 +262,7 @@ export const FiscalControls: React.FC<FiscalControlsProps> = ({ profile, setProf
             {profile.seuilMicro !== DEFAULT_PROFILE.seuilMicro && (
               <button
                 type="button"
-                title={`Réinitialiser (${DEFAULT_PROFILE.seuilMicro.toLocaleString()}€)`}
+                title={`Réinitialiser (${DEFAULT_PROFILE.seuilMicro.toLocaleString('fr-FR')}€)`}
                 onClick={() => updateProfile({ seuilMicro: DEFAULT_PROFILE.seuilMicro })}
                 className="text-on-surface-variant hover:text-secondary transition-colors"
               >
@@ -417,13 +408,13 @@ export const FiscalControls: React.FC<FiscalControlsProps> = ({ profile, setProf
           <div className="bg-secondary/5 rounded-xl p-3">
             <p className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Net mensuel</p>
             <p className="font-headline font-black text-lg text-secondary leading-tight">
-              {Math.round(impact.netMensuel).toLocaleString()}€
+              {formatEuro(impact.netMensuel)}€
             </p>
           </div>
           <div className="bg-secondary/5 rounded-xl p-3">
             <p className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Net annuel</p>
             <p className="font-headline font-black text-lg text-secondary leading-tight">
-              {Math.round(impact.netAnnuel).toLocaleString()}€
+              {formatEuro(impact.netAnnuel)}€
             </p>
           </div>
         </div>
@@ -431,19 +422,19 @@ export const FiscalControls: React.FC<FiscalControlsProps> = ({ profile, setProf
         <div className="space-y-1.5">
           <div className="flex justify-between items-center">
             <span className="text-xs text-on-surface-variant">CA mensuel</span>
-            <span className="text-xs font-bold font-mono text-slate-700">{impact.caMensuel.toLocaleString()}€</span>
+            <span className="text-xs font-bold font-mono text-slate-700">{formatEuro(impact.caMensuel)}€</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-xs text-on-surface-variant">URSSAF ({profile.urssafRate}%)</span>
-            <span className="text-xs font-bold font-mono text-red-500">−{Math.round(impact.chargesURSSAF).toLocaleString()}€</span>
+            <span className="text-xs font-bold font-mono text-red-500">−{formatEuro(impact.chargesURSSAF)}€</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-xs text-on-surface-variant">Charges fixes</span>
-            <span className="text-xs font-bold font-mono text-red-500">−{totalChargesFixes.toLocaleString()}€</span>
+            <span className="text-xs font-bold font-mono text-red-500">−{formatEuro(totalChargesFixes)}€</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-xs text-on-surface-variant">{impact.versementLiberatoire ? 'IR (VL 2,2%)' : 'IR (barème)'}</span>
-            <span className="text-xs font-bold font-mono text-red-500">−{Math.round(impact.irMensuel).toLocaleString()}€</span>
+            <span className="text-xs font-bold font-mono text-red-500">−{formatEuro(impact.irMensuel)}€</span>
           </div>
           <div className="pt-1.5 border-t border-outline-variant/20 flex justify-between items-center">
             <span className="text-xs font-bold text-on-surface-variant">Taux de rétention</span>
@@ -458,7 +449,7 @@ export const FiscalControls: React.FC<FiscalControlsProps> = ({ profile, setProf
 
         <div className="flex justify-between items-center pt-1">
           <span className="text-xs text-on-surface-variant">CA annuel</span>
-          <span className="text-xs font-bold font-mono text-slate-900">{impact.caAnnuel.toLocaleString()}€</span>
+          <span className="text-xs font-bold font-mono text-slate-900">{formatEuro(impact.caAnnuel)}€</span>
         </div>
       </div>
     </div>

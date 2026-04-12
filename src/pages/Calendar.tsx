@@ -342,18 +342,17 @@ export const Calendar: React.FC<CalendarProps> = ({ profile }) => {
 
   const joursNonTravailles = totalBusinessDays - totalWorkedDays;
 
-  // Annuel cumulé — CA - cotisations - charges fixes
-  const urssafCumule = useMemo(() => caCumule * (profile.urssafRate / 100), [caCumule, profile.urssafRate]);
+  // Annuel cumulé — via moteur fiscal centralisé
   const chargesFixesAnnuelles = chargesFixesMensuelles * 12;
-  const netCumule = caCumule - urssafCumule - chargesFixesAnnuelles;
   const resultCumule = calcNetMicro(caCumule, profile.urssafRate, chargesFixesAnnuelles, profile.versementLiberatoire);
+  const netCumule = resultCumule.netApresIR + resultCumule.ir; // Net avant IR
   const netApresIRCumule = resultCumule.netApresIR;
 
   // Ventilation mensuelle — moteur fiscal centralisé (VL pris en compte)
   const selectedMonthWorkedDays = fiscalYear.months[selectedMonth]?.workedDays.length ?? 0;
   const caMensuel = selectedMonthWorkedDays * profile.tjm;
   const monthBreakdown = calcMonthlyBreakdown(caMensuel, profile.urssafRate, chargesFixesMensuelles, profile.versementLiberatoire);
-  const netMensuel = caMensuel - monthBreakdown.urssaf - chargesFixesMensuelles;
+  const netMensuel = monthBreakdown.net + monthBreakdown.ir; // Net avant IR
   const netMensuelApresIR = monthBreakdown.net;
 
   // Max worked days across all months (for mini bar chart scaling)

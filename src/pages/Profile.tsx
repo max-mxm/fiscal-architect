@@ -13,8 +13,6 @@ interface ProfileProps {
   setProfile: React.Dispatch<React.SetStateAction<UserProfile>>;
 }
 
-const STORAGE_KEY = 'fiscal-profile';
-
 export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
   // PROF-03: Toast state
   const [toast, setToast] = useState<string | null>(null);
@@ -30,17 +28,10 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
     setProfile((prev) => ({ ...prev, ...updated }));
   }, [setProfile]);
 
-  // PROF-03: Annuler — reset from localStorage or DEFAULT_PROFILE
+  // PROF-03: Annuler — reset au profil par défaut
   const handleCancel = useCallback(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      const restored = saved ? JSON.parse(saved) : DEFAULT_PROFILE;
-      setProfile(restored);
-      setToast('Profil réinitialisé');
-    } catch {
-      setProfile(DEFAULT_PROFILE);
-      setToast('Profil réinitialisé aux valeurs par défaut');
-    }
+    setProfile(DEFAULT_PROFILE);
+    setToast('Profil réinitialisé aux valeurs par défaut');
   }, [setProfile]);
 
   return (
@@ -146,7 +137,7 @@ export const Profile: React.FC<ProfileProps> = ({ profile, setProfile }) => {
             <h5 className="font-bold text-sm mb-1">Suggestions intelligentes</h5>
             <p className="text-xs text-on-surface-variant">
               Avec un TJM de {profile.tjm}€, nous vous recommandons d'explorer la structure SASU une fois
-              que votre CA dépasse {profile.seuilMicro.toLocaleString()}€ pour optimiser votre stratégie fiscale.
+              que votre CA dépasse {profile.seuilMicro.toLocaleString('fr-FR')}€ pour optimiser votre stratégie fiscale.
             </p>
           </div>
         </div>
