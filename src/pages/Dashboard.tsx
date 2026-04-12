@@ -72,7 +72,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ profile }) => {
           <div className="col-span-12 lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-8">
             <div className="border-l-2 border-secondary pl-8">
               <p className="text-xs font-medium text-on-surface-variant mb-1">Bénéfice net estimé</p>
-              <p className="text-3xl font-mono font-bold text-slate-900">{netProfit.toLocaleString()}€</p>
+              <p className="text-3xl font-mono font-bold text-slate-900">{Math.round(netProfit).toLocaleString()}€</p>
               <p className="text-xs text-on-surface-variant mt-2 flex items-center gap-1">
                 <TrendingUp className="w-4 h-4" />
                 Charges fixes : {totalChargesFixes.toLocaleString()}€/mois
