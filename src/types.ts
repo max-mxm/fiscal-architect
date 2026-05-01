@@ -24,15 +24,6 @@ export interface FiscalYear {
   months: CalendarMonth[];
 }
 
-export interface Scenario {
-  label: string;
-  status: UserProfile['status'];
-  tjm: number;
-  workingDays: number;
-  urssafRate: number;
-  fixedCosts: number;
-}
-
 export interface FiscalResult {
   caAnnuel: number;
   chargesURSSAF: number;

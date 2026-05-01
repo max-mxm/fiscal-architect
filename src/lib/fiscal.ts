@@ -5,11 +5,6 @@ import type { UserProfile, FiscalResult, MonthlyBreakdown, MonthlyChartData, Cal
 export const SEUIL_MICRO = 83_600;
 export const ABATTEMENT_BNC = 0.34;
 export const TAUX_VL_BNC = 0.022; // Versement libératoire BNC (prestations de services)
-export const FLAT_TAX = 0.30;
-export const TAUX_IS = { reduit: 0.15, plafond: 42_500, normal: 0.25 };
-export const CHARGES_PATRONALES_SASU = 0.45;
-export const CHARGES_SALARIALES_SASU = 0.22;
-export const COTISATIONS_TNS = 0.45;
 
 export const TRANCHES_IR = [
   { min: 0, max: 11_600, taux: 0 },
@@ -83,70 +78,6 @@ export function calcNetMicro(ca: number, tauxURSSAF: number, chargesFixes: numbe
     chargesFixes,
     revenuImposable,
     ir,
-    netApresIR,
-  };
-}
-
-export function calcNetSASU(ca: number, chargesFixes: number): FiscalResult {
-  // Stratégie : 70% salaire, 30% dividendes
-  const partSalaire = ca * 0.70;
-  const partDividendes = ca * 0.30;
-
-  // Salaire : charges patronales puis salariales
-  const coutPatronal = partSalaire / (1 + CHARGES_PATRONALES_SASU);
-  const salaireNet = coutPatronal * (1 - CHARGES_SALARIALES_SASU);
-  const chargesSocialesSASU = partSalaire - salaireNet;
-
-  // IS sur le résultat (dividendes)
-  const resultatAvantIS = partDividendes - chargesFixes;
-  const is = resultatAvantIS <= TAUX_IS.plafond
-    ? resultatAvantIS * TAUX_IS.reduit
-    : TAUX_IS.plafond * TAUX_IS.reduit + (resultatAvantIS - TAUX_IS.plafond) * TAUX_IS.normal;
-  const dividendesApresIS = Math.max(0, resultatAvantIS - is);
-
-  // Flat tax sur dividendes
-  const dividendesNet = dividendesApresIS * (1 - FLAT_TAX);
-
-  // IR sur le salaire net
-  const ir = calcIR(salaireNet);
-  const netApresIR = salaireNet - ir + dividendesNet;
-
-  return {
-    caAnnuel: ca,
-    chargesURSSAF: chargesSocialesSASU,
-    chargesFixes,
-    revenuImposable: salaireNet,
-    ir: ir + Math.round(dividendesApresIS * FLAT_TAX),
-    netApresIR,
-  };
-}
-
-export function calcNetEURL(ca: number, chargesFixes: number): FiscalResult {
-  // TNS : cotisations sur rémunération
-  const remuneration = ca * 0.70;
-  const cotisationsTNS = remuneration * COTISATIONS_TNS;
-  const remunerationNette = remuneration - cotisationsTNS;
-
-  // IS sur le résultat
-  const resultatAvantIS = ca * 0.30 - chargesFixes;
-  const is = resultatAvantIS <= TAUX_IS.plafond
-    ? resultatAvantIS * TAUX_IS.reduit
-    : TAUX_IS.plafond * TAUX_IS.reduit + (resultatAvantIS - TAUX_IS.plafond) * TAUX_IS.normal;
-  const dividendesApresIS = Math.max(0, resultatAvantIS - is);
-
-  // Dividendes > 10% capital → cotisations TNS (on simplifie : tout en cotisations)
-  const cotisationsDividendes = dividendesApresIS * COTISATIONS_TNS;
-  const dividendesNet = dividendesApresIS - cotisationsDividendes;
-
-  const ir = calcIR(remunerationNette);
-  const netApresIR = remunerationNette - ir + dividendesNet;
-
-  return {
-    caAnnuel: ca,
-    chargesURSSAF: cotisationsTNS + cotisationsDividendes,
-    chargesFixes,
-    revenuImposable: remunerationNette,
-    ir: ir + Math.round(is),
     netApresIR,
   };
 }

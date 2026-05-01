@@ -1,12 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Dashboard } from '~/pages/Dashboard'
+import { Calendar } from '~/pages/Calendar'
 import { useProfile } from '~/context/ProfileContext'
 
 export const Route = createFileRoute('/')({
-  component: DashboardRoute,
+  component: CalendarHomeRoute,
 })
 
-function DashboardRoute() {
+function CalendarHomeRoute() {
   const { profile } = useProfile()
-  return <Dashboard profile={profile} />
+  return <Calendar profile={profile} />
 }

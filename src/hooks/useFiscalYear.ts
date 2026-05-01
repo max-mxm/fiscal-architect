@@ -4,12 +4,17 @@ import { useLocalStorage } from '~/hooks/useLocalStorage';
 import {
   MONTH_NAMES,
   createEmptyFiscalYear,
-  getDaysInMonth,
   getJoursFeries,
-  isWeekend,
   formatDaysFR,
 } from '~/lib/calendar';
 import { calcEquivDays } from '~/lib/fiscal';
+import {
+  cycleDayInMonths,
+  dragSetDayInMonths,
+  fillMonthInMonths,
+  fillAllInMonths,
+  clearMonthInMonths,
+} from '~/lib/calendarMutations';
 
 export function useFiscalYear(year: number) {
   const [fiscalYear, setFiscalYear] = useLocalStorage<FiscalYear>(
@@ -31,98 +36,39 @@ export function useFiscalYear(year: number) {
     [joursFeriesNames],
   );
 
-  /** Cycle 3 états : vide → plein → demi → vide. `force` outrepasse le verrou férié. */
   const cycleDay = useCallback((monthIndex: number, day: number, force = false) => {
-    if (isWeekend(year, monthIndex, day)) return;
-    if (!force && isJourFerie(monthIndex, day)) return;
-    setFiscalYear((prev) => {
-      const newMonths = prev.months.map((m, i) => {
-        if (i !== monthIndex) return m;
-        const half = m.halfDays ?? [];
-        const inFull = m.workedDays.includes(day);
-        const inHalf = half.includes(day);
-        if (!inFull && !inHalf) {
-          return { ...m, workedDays: [...m.workedDays, day].sort((a, b) => a - b), halfDays: half };
-        }
-        if (inFull) {
-          return {
-            ...m,
-            workedDays: m.workedDays.filter((d) => d !== day),
-            halfDays: [...half, day].sort((a, b) => a - b),
-          };
-        }
-        return { ...m, halfDays: half.filter((d) => d !== day) };
-      });
-      return { ...prev, months: newMonths };
-    });
+    setFiscalYear((prev) => ({
+      ...prev,
+      months: cycleDayInMonths(prev.months, year, monthIndex, day, force, isJourFerie),
+    }));
   }, [year, isJourFerie, setFiscalYear]);
 
-  /** Drag binaire : ajoute en plein (add=true) ou efface (add=false). */
   const dragSetDay = useCallback((monthIndex: number, day: number, add: boolean) => {
-    if (isWeekend(year, monthIndex, day)) return;
-    if (isJourFerie(monthIndex, day)) return;
-    setFiscalYear((prev) => {
-      const newMonths = prev.months.map((m, i) => {
-        if (i !== monthIndex) return m;
-        const half = m.halfDays ?? [];
-        const inFull = m.workedDays.includes(day);
-        const inHalf = half.includes(day);
-        if (add) {
-          if (inFull) return m;
-          return {
-            ...m,
-            workedDays: [...m.workedDays, day].sort((a, b) => a - b),
-            halfDays: inHalf ? half.filter((d) => d !== day) : half,
-          };
-        }
-        if (!inFull && !inHalf) return m;
-        return {
-          ...m,
-          workedDays: inFull ? m.workedDays.filter((d) => d !== day) : m.workedDays,
-          halfDays: inHalf ? half.filter((d) => d !== day) : half,
-        };
-      });
-      return { ...prev, months: newMonths };
-    });
+    setFiscalYear((prev) => ({
+      ...prev,
+      months: dragSetDayInMonths(prev.months, year, monthIndex, day, add, isJourFerie),
+    }));
   }, [year, isJourFerie, setFiscalYear]);
 
   const fillMonth = useCallback((monthIndex: number) => {
-    setFiscalYear((prev) => {
-      const newMonths = prev.months.map((m, i) => {
-        if (i !== monthIndex) return m;
-        const totalDays = getDaysInMonth(prev.year, m.month);
-        const weekdays: number[] = [];
-        for (let d = 1; d <= totalDays; d++) {
-          if (!isWeekend(prev.year, m.month, d) && !isJourFerie(m.month, d)) weekdays.push(d);
-        }
-        return { ...m, workedDays: weekdays, halfDays: [] };
-      });
-      return { ...prev, months: newMonths };
-    });
+    setFiscalYear((prev) => ({
+      ...prev,
+      months: fillMonthInMonths(prev.months, prev.year, monthIndex, isJourFerie),
+    }));
   }, [isJourFerie, setFiscalYear]);
 
   const fillAll = useCallback(() => {
-    setFiscalYear((prev) => {
-      const newMonths = prev.months.map((m) => {
-        const totalDays = getDaysInMonth(prev.year, m.month);
-        const weekdays: number[] = [];
-        for (let d = 1; d <= totalDays; d++) {
-          if (!isWeekend(prev.year, m.month, d) && !isJourFerie(m.month, d)) weekdays.push(d);
-        }
-        return { ...m, workedDays: weekdays, halfDays: [] };
-      });
-      return { ...prev, months: newMonths };
-    });
+    setFiscalYear((prev) => ({
+      ...prev,
+      months: fillAllInMonths(prev.months, prev.year, isJourFerie),
+    }));
   }, [isJourFerie, setFiscalYear]);
 
   const clearMonth = useCallback((monthIndex: number) => {
-    setFiscalYear((prev) => {
-      const newMonths = prev.months.map((m, i) => {
-        if (i !== monthIndex) return m;
-        return { ...m, workedDays: [], halfDays: [] };
-      });
-      return { ...prev, months: newMonths };
-    });
+    setFiscalYear((prev) => ({
+      ...prev,
+      months: clearMonthInMonths(prev.months, monthIndex),
+    }));
   }, [setFiscalYear]);
 
   const clearAll = useCallback(() => {

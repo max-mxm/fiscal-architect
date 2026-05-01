@@ -1,7 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import {
-  LayoutDashboard,
-  Scale,
   CalendarDays,
   UserCircle,
   Wallet,
@@ -19,9 +17,7 @@ import { calcCAannuel } from '~/lib/fiscal';
 import { formatEuro } from '~/lib/format';
 
 const navItems = [
-  { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, path: '/' as const },
-  { id: 'comparison', label: 'Comparaison', icon: Scale, path: '/comparison' as const },
-  { id: 'calendar', label: 'Calendrier', icon: CalendarDays, path: '/calendar' as const },
+  { id: 'calendar', label: 'Calendrier', icon: CalendarDays, path: '/' as const },
   { id: 'profile', label: 'Profil', icon: UserCircle, path: '/profile' as const },
 ];
 
@@ -109,7 +105,7 @@ export const ThresholdAlert: React.FC<{ profile: UserProfile }> = ({ profile }) 
         }
       </span>
       <Link
-        to="/calendar"
+        to="/"
         className="font-bold underline underline-offset-2 ml-1"
       >
         Voir le calendrier
@@ -151,7 +147,7 @@ export const TopBar: React.FC<TopBarProps> = ({ profile, onExportGlobal }) => {
           </span>
         </Link>
         <Link
-          to="/calendar"
+          to="/"
           className="flex items-center space-x-2 text-slate-600 hover:text-secondary cursor-pointer transition-colors"
         >
           <Calendar className="w-5 h-5" />
@@ -220,9 +216,7 @@ export const MobileNav: React.FC = () => {
   const currentPath = routerState.location.pathname;
 
   const mobileItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/' as const },
-    { id: 'comparison', label: 'Comparer', icon: Scale, path: '/comparison' as const },
-    { id: 'calendar', label: 'Calendrier', icon: CalendarDays, path: '/calendar' as const },
+    { id: 'calendar', label: 'Calendrier', icon: CalendarDays, path: '/' as const },
     { id: 'profile', label: 'Profil', icon: UserCircle, path: '/profile' as const },
   ];
 
