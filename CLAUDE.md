@@ -72,8 +72,10 @@ npm run clean    # Supprime dist/
 
 | Concept | Valeur |
 |---------|--------|
-| Taux URSSAF (prestations de services BNC) | 22% |
-| Seuil micro-entreprise (services) | 77 700 € CA annuel |
+| Taux URSSAF cotisations BNC libéral non réglementé (2026) | ≈ 26,1 % (+1 pt au 01/01/2026) |
+| Seuil micro-entreprise (services BIC/BNC, 2026-2028) | 83 600 € CA annuel |
+| Versement libératoire BNC (option) | 2,2 % du CA |
+| ACRE (depuis 01/07/2026) | exonération 25 % (vs 50 % avant) |
 | Statuts comparés | Micro-entreprise, SASU, EURL |
 | TJM | Taux Journalier Moyen |
 | Tranches IR | Barème progressif français |
@@ -81,7 +83,7 @@ npm run clean    # Supprime dist/
 ### Formules clés
 
 - **CA mensuel** = TJM × jours travaillés
-- **Charges URSSAF** = CA × taux URSSAF (22% par défaut)
+- **Charges URSSAF** = CA × taux URSSAF (≈ 26,1 % par défaut en 2026)
 - **Net avant IR** = CA − charges URSSAF − charges fixes
 
 ## Vision produit
