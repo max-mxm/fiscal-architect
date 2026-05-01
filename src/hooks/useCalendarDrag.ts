@@ -1,0 +1,82 @@
+import { useCallback, useEffect, useRef } from 'react';
+
+export type DayState = 'empty' | 'full' | 'half';
+
+interface UseCalendarDragOptions {
+  isWeekendCell: (monthIndex: number, day: number) => boolean;
+  isJourFerie: (monthIndex: number, day: number) => boolean;
+  getDayState: (monthIndex: number, day: number) => DayState;
+  cycleDay: (monthIndex: number, day: number, force?: boolean) => void;
+  dragSetDay: (monthIndex: number, day: number, add: boolean) => void;
+}
+
+/**
+ * Logique drag/clic 3 états pour la grille du calendrier.
+ *
+ * Au mousedown sur une cellule, on prépare un drag potentiel ; on bascule en mode drag
+ * dès que le pointeur entre dans une autre cellule. Si mouseup arrive sans drag,
+ * on déclenche un cycle 3 états (vide → plein → demi → vide).
+ *
+ * Le double-clic est dédié aux jours fériés (les seuls verrouillés cliquables).
+ */
+export function useCalendarDrag({
+  isWeekendCell,
+  isJourFerie,
+  getDayState,
+  cycleDay,
+  dragSetDay,
+}: UseCalendarDragOptions) {
+  const pressMonth = useRef<number>(-1);
+  const pressDay = useRef<number>(-1);
+  const dragging = useRef(false);
+  const dragMode = useRef<'add' | 'remove'>('add');
+
+  const onDayMouseDown = useCallback((monthIndex: number, day: number) => {
+    if (isWeekendCell(monthIndex, day)) return;
+    if (isJourFerie(monthIndex, day)) return;
+    pressMonth.current = monthIndex;
+    pressDay.current = day;
+    dragging.current = false;
+    // Mode drag déterminé par l'état initial : vide → add, sinon → remove
+    dragMode.current = getDayState(monthIndex, day) === 'empty' ? 'add' : 'remove';
+  }, [isWeekendCell, isJourFerie, getDayState]);
+
+  const onDayMouseEnter = useCallback((monthIndex: number, day: number) => {
+    if (pressMonth.current === -1) return;
+    if (monthIndex !== pressMonth.current) return;
+    if (isWeekendCell(monthIndex, day)) return;
+    if (isJourFerie(monthIndex, day)) return;
+    // Premier mouseEnter sur une cellule différente : on entre en mode drag
+    // et on applique aussi sur la cellule de départ (rien n'a été appliqué au mousedown).
+    if (!dragging.current && day !== pressDay.current) {
+      dragging.current = true;
+      dragSetDay(pressMonth.current, pressDay.current, dragMode.current === 'add');
+    }
+    if (dragging.current) {
+      dragSetDay(monthIndex, day, dragMode.current === 'add');
+    }
+  }, [isWeekendCell, isJourFerie, dragSetDay]);
+
+  const onDayDoubleClick = useCallback((monthIndex: number, day: number) => {
+    if (isWeekendCell(monthIndex, day)) return;
+    if (!isJourFerie(monthIndex, day)) return;
+    cycleDay(monthIndex, day, true);
+  }, [isWeekendCell, isJourFerie, cycleDay]);
+
+  const handleMouseUp = useCallback(() => {
+    // Pas de drag → mouseup = clic simple → cycle 3 états
+    if (pressMonth.current !== -1 && !dragging.current) {
+      cycleDay(pressMonth.current, pressDay.current);
+    }
+    pressMonth.current = -1;
+    pressDay.current = -1;
+    dragging.current = false;
+  }, [cycleDay]);
+
+  useEffect(() => {
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => window.removeEventListener('mouseup', handleMouseUp);
+  }, [handleMouseUp]);
+
+  return { onDayMouseDown, onDayMouseEnter, onDayDoubleClick };
+}

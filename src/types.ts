@@ -15,7 +15,8 @@ export interface UserProfile {
 export interface CalendarMonth {
   month: number; // 0-11
   year: number;
-  workedDays: number[]; // indices des jours travaillés (1-31)
+  workedDays: number[]; // jours pleins (1-31)
+  halfDays?: number[]; // demi-journées (1-31), optionnel pour rétro-compat localStorage
 }
 
 export interface FiscalYear {

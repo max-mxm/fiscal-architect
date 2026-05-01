@@ -176,6 +176,11 @@ export function calcReserveVacances(netMensuel: number, joursParMois: number): n
   return Math.round((netMensuel / joursParMois) * 25 / 12);
 }
 
+/** Nombre de jours équivalents (plein + demi × 0.5) pour un mois. */
+export function calcEquivDays(m: { workedDays: number[]; halfDays?: number[] }): number {
+  return m.workedDays.length + (m.halfDays?.length ?? 0) * 0.5;
+}
+
 export function calcCaRealise(
   months: CalendarMonth[],
   tjm: number,
@@ -184,10 +189,12 @@ export function calcCaRealise(
 ): { caRealise: number; joursRealises: number } {
   let jours = 0;
   for (const m of months) {
+    const halfDays = m.halfDays ?? [];
     if (m.month < currentMonthIndex) {
-      jours += m.workedDays.length;
+      jours += m.workedDays.length + halfDays.length * 0.5;
     } else if (m.month === currentMonthIndex) {
       jours += m.workedDays.filter((d) => d <= todayDate).length;
+      jours += halfDays.filter((d) => d <= todayDate).length * 0.5;
     }
   }
   return { caRealise: jours * tjm, joursRealises: jours };
@@ -200,7 +207,7 @@ export function calcCaRealise(
  * Retourne la date exacte du jour où le cumul dépasse le seuil, ou null si pas de dépassement.
  */
 export function calcSeuilDate(
-  months: { month: number; year: number; workedDays: number[] }[],
+  months: { month: number; year: number; workedDays: number[]; halfDays?: number[] }[],
   tjm: number,
   seuil: number = SEUIL_MICRO,
 ): Date | null {
@@ -208,9 +215,11 @@ export function calcSeuilDate(
 
   let cumul = 0;
   for (const m of months) {
-    const sorted = [...m.workedDays].sort((a, b) => a - b);
-    for (const day of sorted) {
-      cumul += tjm;
+    const halfSet = new Set(m.halfDays ?? []);
+    const allDays = [...new Set([...m.workedDays, ...(m.halfDays ?? [])])].sort((a, b) => a - b);
+    for (const day of allDays) {
+      const fraction = halfSet.has(day) ? 0.5 : 1;
+      cumul += tjm * fraction;
       if (cumul >= seuil) {
         return new Date(m.year, m.month, day);
       }
