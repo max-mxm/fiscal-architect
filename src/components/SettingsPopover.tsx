@@ -62,16 +62,14 @@ export const SettingsPopover: React.FC<SettingsPopoverProps> = ({
   return (
     <AnimatePresence>
       {open && (
-        <>
-          {/* Backdrop tactile mobile pour fermer au tap */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.12 }}
-            className="fixed inset-0 z-[70] md:bg-transparent bg-slate-900/30 backdrop-blur-[2px] md:backdrop-blur-0"
-            onClick={onClose}
-          />
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.12 }}
+          className="fixed inset-0 z-[70] md:bg-transparent bg-slate-900/30 backdrop-blur-[2px] md:backdrop-blur-0"
+          onClick={onClose}
+        >
           <motion.div
             ref={dialogRef}
             role="dialog"
@@ -139,7 +137,7 @@ export const SettingsPopover: React.FC<SettingsPopoverProps> = ({
               Les données sont stockées localement dans votre navigateur (localStorage). Aucune information n'est envoyée à un serveur.
             </p>
           </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );

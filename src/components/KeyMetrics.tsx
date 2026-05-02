@@ -1,15 +1,21 @@
 import React from 'react';
-import { AlertTriangle, CalendarClock, Pencil, Wallet } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Pencil } from 'lucide-react';
 import { cn } from '~/utils';
 import { formatEuro } from '~/lib/format';
-import { formatDateFR } from '~/lib/calendar';
+import { formatDateFR, formatDaysFR } from '~/lib/calendar';
 
 interface KeyMetricsProps {
   caCumule: number;
   caRealise: number;
   seuilMicro: number;
+  /** Nom du mois sélectionné (ex. "Mai"). */
+  monthName: string;
+  /** CA brut du mois sélectionné (basé sur les jours cochés × TJM). */
+  caMensuel: number;
+  /** Net après URSSAF + charges + IR du mois sélectionné. */
   netMensuel: number;
-  versementLiberatoire: boolean;
+  /** Nombre équivalent de jours travaillés du mois sélectionné (demi inclus). */
+  joursTravailes: number;
   missionStart: string;
   /** Date de franchissement projetée du seuil micro, ou null si pas dépassé. */
   seuilDate: Date | null;
@@ -20,8 +26,10 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
   caCumule,
   caRealise,
   seuilMicro,
+  monthName,
+  caMensuel,
   netMensuel,
-  versementLiberatoire,
+  joursTravailes,
   missionStart,
   seuilDate,
   onEditMissionStart,
@@ -30,6 +38,7 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
   const projectedPct = Math.min(100, (caCumule / seuilMicro) * 100);
   const overflow = caCumule >= seuilMicro;
   const margeRestante = Math.max(0, seuilMicro - caCumule);
+  const tauxNet = caMensuel > 0 ? Math.round((netMensuel / caMensuel) * 100) : 0;
 
   // La date renvoyée par calcSeuilDate peut être passée (dépassement déjà acté)
   // ou future (projection à venir). On distingue les deux cas.
@@ -64,10 +73,10 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
   })();
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5">
       {/* Hero sombre — CA cumulé / seuil */}
       <section
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 shadow-2xl md:col-span-2"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 shadow-2xl lg:col-span-7"
         aria-labelledby="kpi-ca-label"
       >
         <div className="relative z-10">
@@ -150,25 +159,54 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
         />
       </section>
 
-      {/* Card claire — Net mensuel */}
+      {/* Card claire — récap du mois sélectionné (alignée avec SlidersBlock en dessous) */}
       <section
-        className="bg-surface-lowest rounded-3xl p-5 shadow-sm flex flex-col justify-between"
+        className="bg-surface-lowest rounded-3xl p-5 shadow-sm flex flex-col justify-between gap-3 lg:col-span-5"
         aria-labelledby="kpi-net-label"
       >
-        <div>
+        <div className="space-y-3">
           <span
             id="kpi-net-label"
-            className="text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant"
+            className="text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant block"
           >
-            Net mensuel projeté
+            {monthName}
           </span>
-          <p className="mt-1.5 font-headline font-black text-2xl sm:text-3xl font-mono tabular-nums text-secondary leading-none">
-            {formatEuro(netMensuel)}<span className="text-secondary/70 ml-0.5">€</span>
-          </p>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-xs text-on-surface-variant">CA brut</span>
+            <span className="font-mono tabular-nums text-lg font-bold text-slate-900">
+              {formatEuro(caMensuel)} €
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 pt-2 border-t border-outline-variant/15">
+            <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+              Net après IR
+            </span>
+            <span className="inline-flex items-baseline gap-1.5">
+              <span className="font-headline font-black text-2xl sm:text-3xl font-mono tabular-nums text-secondary leading-none">
+                {formatEuro(netMensuel)} €
+              </span>
+              {joursTravailes > 0 && (
+                <span
+                  className={cn(
+                    'text-xs font-bold font-mono tabular-nums',
+                    tauxNet >= 60
+                      ? 'text-secondary'
+                      : tauxNet >= 40
+                        ? 'text-amber-700'
+                        : 'text-red-600',
+                  )}
+                  title="Taux de rétention (net / brut)"
+                >
+                  · {tauxNet}%
+                </span>
+              )}
+            </span>
+          </div>
         </div>
-        <p className="text-[11px] text-on-surface-variant mt-3 inline-flex items-center gap-1.5">
-          <Wallet className="w-3 h-3 text-secondary" />
-          Micro · {versementLiberatoire ? 'VL 2,2 % activé' : 'IR au barème'}
+        <p className="text-[11px] text-on-surface-variant">
+          {joursTravailes > 0
+            ? `${formatDaysFR(joursTravailes)} jour${joursTravailes > 1 ? 's' : ''} travaillé${joursTravailes > 1 ? 's' : ''}`
+            : 'Aucun jour sélectionné'}
         </p>
       </section>
     </div>

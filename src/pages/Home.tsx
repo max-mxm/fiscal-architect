@@ -138,13 +138,6 @@ export const Home: React.FC = () => {
     [caMensuel, profile.urssafRate, chargesFixesMensuelles, profile.versementLiberatoire],
   );
 
-  // Net mensuel projeté (basé sur tjm × workingDays nominal)
-  const netMensuelProjete = useMemo(() => {
-    const caNominal = profile.tjm * profile.workingDays;
-    const b = calcMonthlyBreakdown(caNominal, profile.urssafRate, chargesFixesMensuelles, profile.versementLiberatoire);
-    return Math.round(b.net);
-  }, [profile.tjm, profile.workingDays, profile.urssafRate, chargesFixesMensuelles, profile.versementLiberatoire]);
-
   // --- Navigation calendrier ---
   const goToMonth = (month: number) => {
     setNavDirection(month > selectedMonth ? 1 : -1);
@@ -277,8 +270,10 @@ export const Home: React.FC = () => {
           caCumule={caCumule}
           caRealise={caRealise}
           seuilMicro={profile.seuilMicro}
-          netMensuel={netMensuelProjete}
-          versementLiberatoire={profile.versementLiberatoire}
+          monthName={MONTH_NAMES[selectedMonth]}
+          caMensuel={caMensuel}
+          netMensuel={Math.round(monthBreakdown.net)}
+          joursTravailes={selectedMonthDays}
           missionStart={fy.missionStart}
           seuilDate={seuilDate}
           onEditMissionStart={openSheet}
