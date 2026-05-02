@@ -32,6 +32,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const cancelBtnRef = useRef<HTMLButtonElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  // Ref-pattern : éviter de re-trigger l'effect (et donc voler le focus) chaque
+  // fois que `onCancel` change (callback recréé à chaque render parent).
+  const onCancelRef = useRef(onCancel);
+  onCancelRef.current = onCancel;
 
   // Focus trap + ESC + restore focus
   useEffect(() => {
@@ -43,7 +47,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onCancel();
+        onCancelRef.current();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -67,9 +71,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       window.removeEventListener('keydown', handleKey);
       previousFocusRef.current?.focus?.();
     };
-  }, [open, onCancel]);
+  }, [open]);
 
-  const handleBackdrop = useCallback(() => onCancel(), [onCancel]);
+  const handleBackdrop = useCallback(() => onCancelRef.current(), []);
 
   return (
     <AnimatePresence>

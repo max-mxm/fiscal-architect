@@ -23,6 +23,10 @@ export const SettingsPopover: React.FC<SettingsPopoverProps> = ({
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  // Ref-pattern : on garde `onClose` à jour sans le mettre dans les deps de l'effect,
+  // sinon chaque render parent (recréé `closeSettings`) re-trigger l'effect qui vole le focus.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
@@ -32,7 +36,7 @@ export const SettingsPopover: React.FC<SettingsPopoverProps> = ({
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -55,7 +59,7 @@ export const SettingsPopover: React.FC<SettingsPopoverProps> = ({
       window.removeEventListener('keydown', handleKey);
       previousFocusRef.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   const update = (patch: Partial<UserProfile>) => setProfile((p) => ({ ...p, ...patch }));
 

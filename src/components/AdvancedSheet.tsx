@@ -32,6 +32,10 @@ export const AdvancedSheet: React.FC<AdvancedSheetProps> = ({
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  // Ref-pattern : éviter de re-trigger l'effect chaque fois que `onClose` change
+  // (les inputs internes perdraient le focus à chaque frappe).
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
@@ -41,7 +45,7 @@ export const AdvancedSheet: React.FC<AdvancedSheetProps> = ({
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -65,13 +69,13 @@ export const AdvancedSheet: React.FC<AdvancedSheetProps> = ({
       window.removeEventListener('keydown', handleKey);
       previousFocusRef.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   const updateProfile = (patch: Partial<UserProfile>) =>
     setProfile((prev) => ({ ...prev, ...patch }));
 
   const handleDragEnd = (_e: unknown, info: PanInfo) => {
-    if (info.offset.y > 80) onClose();
+    if (info.offset.y > 80) onCloseRef.current();
   };
 
   return (
