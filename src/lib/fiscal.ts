@@ -112,6 +112,34 @@ export function calcEquivDays(m: { workedDays: number[]; halfDays?: number[] }):
   return m.workedDays.length + (m.halfDays?.length ?? 0) * 0.5;
 }
 
+/**
+ * Net cumulé estimé : applique URSSAF + IR (barème ou VL) au CA cumulé,
+ * puis déduit `monthsWithActivity × chargesFixesMensuelles`.
+ *
+ * Le compte « mois avec activité » sert à pondérer les charges fixes
+ * (un freelance qui n'a coché que 3 mois ne paye pas 12 mois de charges).
+ */
+export function calcNetCumule(
+  caCumule: number,
+  tauxURSSAF: number,
+  chargesFixesMensuelles: number,
+  monthsWithActivity: number,
+  versementLiberatoire: boolean = false,
+): number {
+  if (caCumule <= 0) return 0;
+  const chargesFixesTotal = chargesFixesMensuelles * Math.max(0, monthsWithActivity);
+  const result = calcNetMicro(caCumule, tauxURSSAF, chargesFixesTotal, versementLiberatoire);
+  return Math.round(result.netApresIR);
+}
+
+/** Nombre de mois ayant au moins un jour plein ou demi saisi. */
+export function countMonthsWithActivity(months: CalendarMonth[]): number {
+  return months.reduce(
+    (acc, m) => acc + (m.workedDays.length > 0 || (m.halfDays?.length ?? 0) > 0 ? 1 : 0),
+    0,
+  );
+}
+
 export function calcCaRealise(
   months: CalendarMonth[],
   tjm: number,

@@ -35,11 +35,12 @@ const ActionGroup: React.FC<ActionGroupProps> = ({
   const toneClass =
     tone === 'fill'
       ? 'bg-secondary/8 text-secondary border-secondary/15'
-      : 'bg-amber-50 text-amber-700 border-amber-200/60';
+      : 'bg-red-50 text-red-700 border-red-200/60';
   const btnTone =
     tone === 'fill'
       ? 'hover:bg-white/80 active:bg-white text-secondary'
-      : 'hover:bg-white/80 active:bg-white text-amber-700';
+      : 'hover:bg-white/80 active:bg-white text-red-700';
+  const focusRing = tone === 'fill' ? 'focus:ring-secondary/30' : 'focus:ring-red-500/30';
 
   return (
     <div className={cn('rounded-2xl border p-3 flex flex-col gap-2.5', toneClass)}>
@@ -52,8 +53,9 @@ const ActionGroup: React.FC<ActionGroupProps> = ({
           type="button"
           onClick={onMonth}
           className={cn(
-            'min-h-[44px] md:min-h-[40px] rounded-xl bg-white/60 text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-secondary/30',
+            'min-h-[44px] md:min-h-[40px] rounded-xl bg-white/60 text-sm font-bold transition-colors focus:outline-none focus:ring-2',
             btnTone,
+            focusRing,
           )}
         >
           {monthLabel}
@@ -62,8 +64,9 @@ const ActionGroup: React.FC<ActionGroupProps> = ({
           type="button"
           onClick={onYear}
           className={cn(
-            'min-h-[44px] md:min-h-[40px] rounded-xl bg-white/60 text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-secondary/30',
+            'min-h-[44px] md:min-h-[40px] rounded-xl bg-white/60 text-sm font-bold transition-colors focus:outline-none focus:ring-2',
             btnTone,
+            focusRing,
           )}
         >
           {yearLabel}

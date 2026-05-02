@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, CalendarClock, Pencil } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Pencil, Wallet } from 'lucide-react';
 import { cn } from '~/utils';
 import { formatEuro } from '~/lib/format';
 import { formatDateFR, formatDaysFR } from '~/lib/calendar';
@@ -7,6 +7,8 @@ import { formatDateFR, formatDaysFR } from '~/lib/calendar';
 interface KeyMetricsProps {
   caCumule: number;
   caRealise: number;
+  /** Net cumulé estimé : CA cumulé − URSSAF − charges fixes (× mois actifs) − IR. */
+  netCumule: number;
   seuilMicro: number;
   /** Nom du mois sélectionné (ex. "Mai"). */
   monthName: string;
@@ -25,6 +27,7 @@ interface KeyMetricsProps {
 export const KeyMetrics: React.FC<KeyMetricsProps> = ({
   caCumule,
   caRealise,
+  netCumule,
   seuilMicro,
   monthName,
   caMensuel,
@@ -36,9 +39,9 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
 }) => {
   const realisedPct = Math.min(100, (caRealise / seuilMicro) * 100);
   const projectedPct = Math.min(100, (caCumule / seuilMicro) * 100);
-  const overflow = caCumule >= seuilMicro;
   const margeRestante = Math.max(0, seuilMicro - caCumule);
   const tauxNet = caMensuel > 0 ? Math.round((netMensuel / caMensuel) * 100) : 0;
+  const tauxRetentionAnnuel = caCumule > 0 ? Math.round((netCumule / caCumule) * 100) : 0;
 
   // La date renvoyée par calcSeuilDate peut être passée (dépassement déjà acté)
   // ou future (projection à venir). On distingue les deux cas.
@@ -94,7 +97,36 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
               / {formatEuro(seuilMicro)}€
             </span>
           </div>
-          <div className="text-[11px] text-secondary-container/85 font-mono tabular-nums mt-1 flex items-center gap-1.5 flex-wrap">
+
+          {/* Net cumulé estimé — sous-info juste sous le CA */}
+          {netCumule > 0 && (
+            <div className="mt-2 flex items-baseline justify-between gap-3">
+              <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-secondary-container/85 font-bold">
+                <Wallet className="w-3 h-3" aria-hidden="true" />
+                Net cumulé estimé
+              </span>
+              <span className="inline-flex items-baseline gap-1.5">
+                <span className="font-mono tabular-nums text-base sm:text-lg font-bold text-secondary-container">
+                  {formatEuro(netCumule)} €
+                </span>
+                <span
+                  className={cn(
+                    'text-[11px] font-bold font-mono tabular-nums',
+                    tauxRetentionAnnuel >= 60
+                      ? 'text-secondary-container'
+                      : tauxRetentionAnnuel >= 40
+                        ? 'text-amber-300'
+                        : 'text-red-300',
+                  )}
+                  title="Taux de rétention annuel (net cumulé / CA cumulé)"
+                >
+                  · {tauxRetentionAnnuel}%
+                </span>
+              </span>
+            </div>
+          )}
+
+          <div className="text-[11px] text-secondary-container/85 font-mono tabular-nums mt-2 flex items-center gap-1.5 flex-wrap">
             <span>
               Réalisé <span className="text-white">{formatEuro(caRealise)}€</span>
               <span className="mx-1">·</span>
@@ -112,18 +144,15 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
             </button>
           </div>
 
-          {/* Double progress bar — Réalisé (plein) + Projeté (fantôme overlay) */}
-          <div className="mt-4 relative h-2 w-full rounded-full bg-white/10 overflow-hidden">
+          {/* Triple jauge — Fond (course totale) + Projeté (où on va) + Réalisé (déjà encaissé) */}
+          <div className="mt-4 relative h-2.5 w-full rounded-full bg-white/8 overflow-hidden">
             <div
-              className="absolute inset-y-0 left-0 rounded-full bg-secondary-container/30"
+              className="absolute inset-y-0 left-0 rounded-full bg-secondary-container/45"
               style={{ width: `${projectedPct}%` }}
               aria-hidden="true"
             />
             <div
-              className={cn(
-                'absolute inset-y-0 left-0 rounded-full transition-all',
-                overflow ? 'bg-red-400' : 'bg-secondary-container',
-              )}
+              className="absolute inset-y-0 left-0 rounded-full transition-all bg-secondary-container shadow-[0_0_12px_rgba(108,248,187,0.35)]"
               style={{ width: `${realisedPct}%` }}
               role="progressbar"
               aria-label="Progression CA réalisé vs seuil micro"

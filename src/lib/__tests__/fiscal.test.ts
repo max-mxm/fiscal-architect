@@ -11,10 +11,12 @@ import {
   calcEquivDays,
   calcIR,
   calcMonthlyBreakdown,
+  calcNetCumule,
   calcNetMicro,
   calcReserveVacances,
   calcSeuilDate,
   calcTotalChargesFixes,
+  countMonthsWithActivity,
   generateChartData,
 } from '~/lib/fiscal';
 
@@ -287,6 +289,70 @@ describe('calcSeuilDate', () => {
     const date = calcSeuilDate(months, 500);
     expect(date).not.toBeNull();
     expect(SEUIL_MICRO).toBe(83_600);
+  });
+});
+
+describe('countMonthsWithActivity', () => {
+  it('compte les mois avec workedDays non vide', () => {
+    const months = monthsOf(2026, [
+      { workedDays: [1, 2] },
+      {},
+      { workedDays: [10] },
+      {},
+      {},
+    ]);
+    expect(countMonthsWithActivity(months)).toBe(2);
+  });
+
+  it('compte aussi les mois avec uniquement halfDays', () => {
+    const months = monthsOf(2026, [
+      { halfDays: [3] },
+      {},
+      { workedDays: [1], halfDays: [2] },
+    ]);
+    expect(countMonthsWithActivity(months)).toBe(2);
+  });
+
+  it('retourne 0 sur un calendrier vide', () => {
+    expect(countMonthsWithActivity(monthsOf(2026))).toBe(0);
+  });
+});
+
+describe('calcNetCumule', () => {
+  it('retourne 0 quand caCumule est 0', () => {
+    expect(calcNetCumule(0, 26.1, 555, 5, false)).toBe(0);
+  });
+
+  it('soustrait URSSAF, charges fixes pondérées par les mois et IR au barème', () => {
+    // CA = 30 000 €, URSSAF 22 % = 6 600 €, abattement 34 % → revenu imposable 19 800 €
+    // IR sur 19 800 € (parts=1) ≈ tranche 11 % entre 11 600 et 19 800 → ~902 €
+    // Charges fixes 555 € × 6 mois = 3 330 €
+    // Net ≈ 30 000 − 6 600 − 3 330 − 902 = 19 168 €
+    const net = calcNetCumule(30_000, 22, 555, 6, false);
+    // Tolérance ±2 € pour les arrondis IR
+    expect(net).toBeGreaterThan(19_165);
+    expect(net).toBeLessThan(19_172);
+  });
+
+  it('utilise le VL 2,2 % au lieu du barème quand activé', () => {
+    // CA = 30 000 €, URSSAF 22 % = 6 600 €, IR VL = 30 000 × 2,2 % = 660 €
+    // Charges fixes 555 € × 6 = 3 330 €
+    // Net = 30 000 − 6 600 − 3 330 − 660 = 19 410 €
+    expect(calcNetCumule(30_000, 22, 555, 6, true)).toBe(19_410);
+  });
+
+  it('ignore les mois négatifs (clamp à 0)', () => {
+    // Charges fixes ne doivent jamais ajouter de revenu
+    const net = calcNetCumule(10_000, 22, 200, -3, true);
+    // Aucune charge fixe soustraite (clamp 0) → net = 10 000 − 2 200 − 220 = 7 580
+    expect(net).toBe(7_580);
+  });
+
+  it('multiplie correctement les charges fixes par le nombre de mois', () => {
+    const netSansMois = calcNetCumule(20_000, 22, 500, 0, true);
+    const netAvec4Mois = calcNetCumule(20_000, 22, 500, 4, true);
+    // Différence = 4 × 500 = 2 000
+    expect(netSansMois - netAvec4Mois).toBe(2_000);
   });
 });
 

@@ -7,8 +7,10 @@ import {
   calcCaRealise,
   calcEquivDays,
   calcMonthlyBreakdown,
+  calcNetCumule,
   calcSeuilDate,
   calcTotalChargesFixes,
+  countMonthsWithActivity,
 } from '~/lib/fiscal';
 import {
   MONTH_NAMES,
@@ -105,6 +107,22 @@ export const Home: React.FC = () => {
   const { caRealise } = useMemo(
     () => calcCaRealise(fy.fiscalYear.months, profile.tjm, currentMonthIndex, todayDate),
     [fy.fiscalYear.months, profile.tjm, currentMonthIndex, todayDate],
+  );
+
+  const monthsWithActivity = useMemo(
+    () => countMonthsWithActivity(fy.fiscalYear.months),
+    [fy.fiscalYear.months],
+  );
+
+  const netCumule = useMemo(
+    () => calcNetCumule(
+      caCumule,
+      profile.urssafRate,
+      chargesFixesMensuelles,
+      monthsWithActivity,
+      profile.versementLiberatoire,
+    ),
+    [caCumule, profile.urssafRate, chargesFixesMensuelles, monthsWithActivity, profile.versementLiberatoire],
   );
 
   // Projection : on simule les mois courant + futurs sans données
@@ -224,11 +242,6 @@ export const Home: React.FC = () => {
   };
 
   const handleFillYear = () => {
-    if (!yearHasData()) {
-      fy.fillAll();
-      setAnnounce(`Tous les jours ouvrés ${year} ont été remplis.`);
-      return;
-    }
     openConfirm('fill-year');
   };
   const confirmFillYear = () => {
@@ -269,6 +282,7 @@ export const Home: React.FC = () => {
         <KeyMetrics
           caCumule={caCumule}
           caRealise={caRealise}
+          netCumule={netCumule}
           seuilMicro={profile.seuilMicro}
           monthName={MONTH_NAMES[selectedMonth]}
           caMensuel={caMensuel}
@@ -366,7 +380,11 @@ export const Home: React.FC = () => {
       <ConfirmModal
         open={confirmKind === 'fill-year'}
         title={`Remplir toute l'année ${year} ?`}
-        message="Tous les jours ouvrés des 12 mois seront marqués comme travaillés et les jours déjà saisis seront écrasés."
+        message={
+          yearHasData()
+            ? 'Tous les jours ouvrés des 12 mois seront marqués comme travaillés. Les jours déjà saisis seront écrasés.'
+            : 'Tous les jours ouvrés des 12 mois seront marqués comme travaillés (≈ 220 jours).'
+        }
         confirmLabel="Remplir l'année"
         destructive={false}
         onConfirm={confirmFillYear}
