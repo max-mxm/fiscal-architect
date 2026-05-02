@@ -1,13 +1,19 @@
-import type { ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import {
   Outlet,
   createRootRoute,
   HeadContent,
   Scripts,
+  useNavigate,
+  useRouterState,
 } from '@tanstack/react-router'
 import appCss from '~/styles/app.css?url'
-import { Sidebar, TopBar, MobileNav } from '~/components/Navigation'
+import { TopBar } from '~/components/Navigation'
 import { ProfileProvider, useProfile } from '~/context/ProfileContext'
+import { FiscalYearProvider, useFiscalYearCtx } from '~/context/FiscalYearContext'
+import { SettingsPopover } from '~/components/SettingsPopover'
+import { ConfirmModal } from '~/components/ConfirmModal'
+import { calcEquivDays } from '~/lib/fiscal'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -33,7 +39,9 @@ function RootComponent() {
   return (
     <RootDocument>
       <ProfileProvider>
-        <AppShell />
+        <FiscalYearProvider>
+          <AppShell />
+        </FiscalYearProvider>
       </ProfileProvider>
     </RootDocument>
   )
@@ -66,17 +74,54 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
 
 function AppShell() {
   const { profile, setProfile, handleExportGlobal } = useProfile()
+  const fy = useFiscalYearCtx()
+  const navigate = useNavigate()
+  const search = useRouterState({ select: (s) => s.location.search }) as Record<string, unknown>
+  const settingsOpen = search?.settings === 1 || search?.settings === '1'
+  const resetConfirmOpen = search?.confirm === 'reset-all'
+
+  const caCumule = useMemo(() => {
+    const totalDays = fy.fiscalYear.months.reduce((sum, m) => sum + calcEquivDays(m), 0)
+    return totalDays * profile.tjm
+  }, [fy.fiscalYear.months, profile.tjm])
+
+  const closeSettings = () => navigate({ to: '/', search: {} })
+  const askResetAll = () => navigate({ to: '/', search: { confirm: 'reset-all' } })
+  const confirmResetAll = () => {
+    fy.resetEverything()
+    navigate({ to: '/', search: {} })
+  }
+  const cancelReset = () => navigate({ to: '/', search: settingsOpen ? { settings: 1 } : {} })
 
   return (
-    <div className="min-h-screen bg-surface">
-      <Sidebar profile={profile} />
-      <TopBar profile={profile} onExportGlobal={handleExportGlobal} />
-      <main className="lg:ml-72 pt-20 lg:pt-24 px-6 lg:px-12 pb-20 lg:pb-16 min-h-screen">
+    <div className="min-h-screen bg-surface flex flex-col">
+      <TopBar
+        profile={profile}
+        caCumule={caCumule}
+        onExport={handleExportGlobal}
+        onOpenSettings={() => navigate({ to: '/', search: { settings: 1 } })}
+      />
+      <main className="flex-1 px-4 sm:px-6 lg:px-10 py-6 lg:py-10">
         <div className="max-w-7xl mx-auto">
           <Outlet />
         </div>
       </main>
-      <MobileNav />
+      <SettingsPopover
+        open={settingsOpen}
+        onClose={closeSettings}
+        profile={profile}
+        setProfile={setProfile}
+        onResetAll={askResetAll}
+      />
+      <ConfirmModal
+        open={resetConfirmOpen}
+        title="Tout réinitialiser ?"
+        message="Calendrier, profil, charges et sliders reviendront à leurs valeurs par défaut. Action irréversible."
+        confirmLabel="Tout réinitialiser"
+        destructive
+        onConfirm={confirmResetAll}
+        onCancel={cancelReset}
+      />
     </div>
   )
 }

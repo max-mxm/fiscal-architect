@@ -75,6 +75,11 @@ export function useFiscalYear(year: number) {
     setFiscalYear(createEmptyFiscalYear(year));
   }, [year, setFiscalYear]);
 
+  /** Restaure un snapshot de mois (utilisé par le pattern Undo). */
+  const restoreMonths = useCallback((months: import('~/types').CalendarMonth[]) => {
+    setFiscalYear((prev) => ({ ...prev, months }));
+  }, [setFiscalYear]);
+
   /** Vide tout + purge toutes les clés localStorage commençant par `fiscal-`. */
   const resetEverything = useCallback(() => {
     const keys = Object.keys(localStorage).filter((k) => k.startsWith('fiscal-'));
@@ -115,6 +120,7 @@ export function useFiscalYear(year: number) {
     fillAll,
     clearMonth,
     clearAll,
+    restoreMonths,
     resetEverything,
     exportCSV,
   };

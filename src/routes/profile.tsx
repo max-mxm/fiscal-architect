@@ -1,12 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { Profile } from '~/pages/Profile'
-import { useProfile } from '~/context/ProfileContext'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
+/**
+ * Route legacy `/profile` — redirige vers la single-page avec drawer Avancé ouvert.
+ * Préserve les bookmarks existants après la fusion Calendar + Profile.
+ */
 export const Route = createFileRoute('/profile')({
-  component: ProfileRoute,
+  beforeLoad: () => {
+    throw redirect({ to: '/', search: { sheet: 'advanced' } })
+  },
 })
-
-function ProfileRoute() {
-  const { profile, setProfile } = useProfile()
-  return <Profile profile={profile} setProfile={setProfile} />
-}
