@@ -1,93 +1,99 @@
+<div align="center">
+
 # Fiscal Architect
 
-Outil de simulation et suivi fiscal pour freelances et micro-entrepreneurs français. Simulez vos revenus, calculez vos charges URSSAF, et planifiez votre fiscalité en toute sérénité.
+**Simulateur fiscal et de revenus pour micro-entrepreneurs français.**
+Suivez votre CA, anticipez vos charges URSSAF, comparez les statuts — directement dans le navigateur, sans backend ni tracking.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![CI](https://github.com/max-mxm/fiscal-architect/actions/workflows/ci.yml/badge.svg)](https://github.com/max-mxm/fiscal-architect/actions/workflows/ci.yml)
+[![React 19](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white)](https://react.dev)
+[![TanStack Start](https://img.shields.io/badge/TanStack-Start-ff4154?logo=react)](https://tanstack.com/start)
+[![PWA](https://img.shields.io/badge/PWA-installable-5a0fc8)](./public/manifest.webmanifest)
+
+<!-- TODO: replace with real screenshot or GIF once produced -->
+<!-- <img src=".github/screenshots/hero.png" alt="Fiscal Architect — aperçu" width="100%"> -->
+
+</div>
+
+> [!TIP]
+> 🚀 **Démo live** : **[fiscal-architect.vercel.app](https://fiscal-architect-j1gfhjmps-maxmxms-projects.vercel.app/)**
+> *Vos données restent dans votre navigateur — aucune ne transite par un serveur.*
+
+---
+
+## Pourquoi ce projet ?
+
+Les calculatrices fiscales en ligne sont soit truffées de pubs, soit envoient vos chiffres à un serveur tiers, soit basées sur des constantes obsolètes. **Fiscal Architect** est l'inverse :
+
+- **100 % client-side** — vos données ne quittent jamais votre navigateur (`localStorage`).
+- **Constantes 2026 à jour** — seuil 83 600 €, taux URSSAF 26,1 %, abattement BNC 34 %, ACRE post-juillet 2026.
+- **Open source, MIT** — auditable, modifiable, déployable sur votre propre infra.
+- **PWA installable** — fonctionne offline une fois chargée.
 
 ## Fonctionnalités
 
-- **Dashboard** — Vue d'ensemble des revenus bruts/nets, graphiques mensuels, simulation en temps réel
-- **Comparaison de statuts** — Micro-entreprise vs SASU vs EURL avec simulation chiffrée
-- **Calendrier fiscal** — Suivi de facturation mensuel et progression vers le seuil micro-entreprise (83 600 €)
-- **Profil personnalisable** — TJM, jours travaillés, taux URSSAF, charges fixes récurrentes
+- **Calendrier de facturation interactif** — toggle jour par jour, drag pour remplir une plage, pré-remplissage des jours ouvrés.
+- **Suivi CA cumulé vs seuil** — projection automatique du dépassement micro-entreprise.
+- **Simulation temps réel** — sliders TJM / taux URSSAF / option versement libératoire ; tout se recalcule en live.
+- **Charges fixes récurrentes** — gérables individuellement, intégrées au net mensuel.
+- **Comparaison de statuts** — micro-entreprise vs SASU vs EURL avec calcul d'IS, dividendes, flat tax.
+- **Réserve vacances + IR projeté** — anticipez ce que vous garderez vraiment.
 
-## Stack technique
+## Stack
 
-React 19 · TypeScript 5.8 · Vite 6 · Tailwind CSS 4 · Recharts · Motion · Lucide React
+| Domaine | Choix |
+|---|---|
+| Framework | **React 19** + **TanStack Start** + **TanStack Router** |
+| Build | **Vite 8** |
+| Styles | **Tailwind CSS 4** (`@theme` tokens) |
+| Charts | **Recharts** |
+| Anim | **Motion** |
+| Icons | **Lucide React** |
+| Tests | **Vitest** |
+| Persistance | `localStorage` (hook `useLocalStorage`) |
 
-## Installation
+## Quick start
 
 ```bash
-# Cloner le repo
-git clone <url-du-repo>
+git clone https://github.com/max-mxm/fiscal-architect.git
 cd fiscal-architect
-
-# Installer les dépendances
 npm install
-
-# Lancer en développement
-npm run dev
+npm run dev          # http://localhost:4000
 ```
-
-L'application est accessible sur `http://localhost:3000`.
-
-## Scripts
 
 | Commande | Description |
-|----------|-------------|
-| `npm run dev` | Serveur de développement (port 3000) |
-| `npm run build` | Build de production |
-| `npm run lint` | Vérification TypeScript |
-| `npm run clean` | Suppression du dossier `dist/` |
+|---|---|
+| `npm run dev` | Serveur de dev (port 4000) |
+| `npm run build` | Build production |
+| `npm run lint` | Vérification TypeScript (`tsc --noEmit`) |
+| `npm test` | Tests Vitest |
+| `npm run clean` | Supprime `dist/`, `.output/`, `.vinxi/` |
 
-## Structure du projet
+> Node 22 requis (voir `.nvmrc`).
 
-```
-src/
-├── App.tsx              # Routeur principal + state global
-├── types.ts             # Interfaces TypeScript (UserProfile, Page)
-├── constants.ts         # Données par défaut et données de graphiques
-├── utils.ts             # Utilitaire cn() (clsx + tailwind-merge)
-├── index.css            # Design tokens, fonts, styles globaux
-├── components/
-│   └── Navigation.tsx   # Sidebar, TopBar, MobileNav
-└── pages/
-    ├── Dashboard.tsx    # Simulation de revenus et charges
-    ├── Comparison.tsx   # Comparaison micro / SASU / EURL
-    ├── Calendar.tsx     # Calendrier de facturation + seuil CA
-    └── Profile.tsx      # Configuration du profil freelance
-```
+## Constantes fiscales 2026
 
-## Variables d'environnement
+Périmètre couvert : freelance en prestations de services **BNC libéral non réglementé**. Source de vérité applicative : `src/lib/fiscal.ts`.
 
-Créer un fichier `.env` à la racine si nécessaire :
-
-```env
-GEMINI_API_KEY=       # Clé API Google Gemini (fonctionnalités IA optionnelles)
-```
-
-## Domaine métier — Fiscalité micro-entrepreneur (2026)
-
-Périmètre couvert par défaut : freelance en prestations de services relevant des **BNC** (bénéfices non commerciaux), libéral non réglementé. Les valeurs ci-dessous sont celles en vigueur au **1er janvier 2026**. La source de vérité applicative reste `src/lib/fiscal.ts`.
-
-### Constantes clés
-
-| Concept | Valeur 2026 | Référence code |
-|---------|-------------|----------------|
+| Concept | Valeur 2026 | Symbole |
+|---|---|---|
 | Seuil micro-entreprise (services BIC/BNC, 2026-2028) | **83 600 €** | `SEUIL_MICRO` |
-| Taux URSSAF cotisations BNC libéral non réglementé | **≈ 26,1 %** (+1 pt vs 2025) | `urssafRate` (profil) |
+| Taux URSSAF cotisations BNC libéral non réglementé | **≈ 26,1 %** *(+1 pt vs 2025)* | `urssafRate` |
 | Abattement forfaitaire BNC (assiette IR) | **34 %** | `ABATTEMENT_BNC` |
 | Versement libératoire BNC (option) | **2,2 %** du CA | `TAUX_VL_BNC` |
-| Tranches IR 2026 | 0 % / 11 % / 30 % / 41 % / 45 % | `TRANCHES_IR` |
-| ACRE (à partir du 01/07/2026) | exonération **25 %** des cotisations (vs 50 % avant) | non implémenté |
+| Tranches IR 2026 | 0 / 11 / 30 / 41 / 45 % | `TRANCHES_IR` |
+| ACRE (à partir du 01/07/2026) | exonération **25 %** *(vs 50 % avant)* | — |
 
 ### Évolutions 2026
 
-1. **Relèvement du seuil services** : 77 700 € → 83 600 €, applicable aux exercices 2026, 2027 et 2028.
+1. **Relèvement du seuil services** : 77 700 € → 83 600 € (applicable aux exercices 2026, 2027, 2028).
 2. **Hausse de 1 point** des cotisations sociales BNC libéral non réglementé au 1er janvier 2026.
-3. **ACRE** : le taux minoré passe à 75 % des cotisations habituelles à compter du 1er juillet 2026 (l'exonération tombe de 50 % à 25 %).
+3. **ACRE** : le taux minoré passe à 75 % des cotisations habituelles à compter du 1er juillet 2026.
 
 ### Formules clés (régime micro, sans VL)
 
-```
+```text
 CA mensuel        = TJM × jours travaillés
 URSSAF            = CA × taux_URSSAF
 Revenu imposable  = CA × (1 − abattement 34 %)
@@ -95,17 +101,41 @@ IR                = barème progressif appliqué au revenu imposable
 Net après IR      = CA − URSSAF − charges fixes − IR
 ```
 
-Avec **versement libératoire** (option), l'IR est remplacé par `CA × 2,2 %` prélevé en même temps que les cotisations URSSAF.
+Avec **versement libératoire** activé, l'IR est remplacé par `CA × 2,2 %` prélevé en même temps que les cotisations URSSAF.
 
-> Les statuts **SASU** (70 % salaire / 30 % dividendes) et **EURL** (TNS) sont implémentés à titre comparatif dans `src/lib/fiscal.ts` et utilisent l'IS réduit à 15 % jusqu'à 42 500 € de bénéfice puis 25 % au-delà.
+Les statuts **SASU** (70 % salaire / 30 % dividendes) et **EURL** (TNS) utilisent l'IS réduit à **15 %** jusqu'à 42 500 € de bénéfice puis **25 %** au-delà.
 
 ## Roadmap
 
-- [ ] Persistance des données via localStorage
-- [ ] Alertes de dépassement de seuil micro-entreprise
-- [ ] Gestion multi-années avec comparaison N/N-1
-- [ ] Simulation versement libératoire de l'IR (impact sur charges URSSAF totales avec/sans option)
+- [x] Persistance localStorage du profil et du calendrier
+- [x] Moteur fiscal centralisé (`src/lib/fiscal.ts`) avec tests Vitest
+- [x] Calendrier de facturation 12 mois interactif
+- [x] PWA installable (manifest + service worker)
+- [ ] Alertes push de dépassement de seuil
+- [ ] Export PDF / CSV global
+- [ ] Multi-années avec comparaison N / N-1
+- [ ] Mode clair / sombre
+
+## Disclaimer
+
+> [!WARNING]
+> Fiscal Architect fournit des **estimations à titre indicatif**. L'application **ne remplace pas** un conseil fiscal professionnel.
+> Vérifiez systématiquement vos calculs auprès de l'[URSSAF](https://www.autoentrepreneur.urssaf.fr/), de [Service-Public.fr](https://www.service-public.fr/), ou de votre comptable.
+> Les constantes fiscales évoluent — si vous repérez une incohérence, [ouvrez une issue](https://github.com/max-mxm/fiscal-architect/issues/new/choose).
+
+## Contributing
+
+Les contributions sont bienvenues ! Les corrections de constantes fiscales et les tests supplémentaires sont particulièrement appréciés.
+Voir [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Licence
 
-Projet privé.
+[MIT](./LICENSE) © Maxime Morellon
+
+## Remerciements
+
+- [TanStack](https://tanstack.com) pour Start & Router
+- [Recharts](https://recharts.org) pour les graphiques
+- [Lucide](https://lucide.dev) pour les icônes
+- [Tailwind CSS](https://tailwindcss.com) pour le design system
+- L'[URSSAF auto-entrepreneur](https://www.autoentrepreneur.urssaf.fr/) et [Service-Public.fr](https://www.service-public.fr/) — sources de vérité fiscale

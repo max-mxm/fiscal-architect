@@ -1,0 +1,38 @@
+name: Bug report
+description: Signaler un bug applicatif (UI, calcul, persistance, etc.)
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Que s'est-il passé, qu'attendiez-vous ?
+      placeholder: Quand je fais X, l'app fait Y au lieu de Z.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Étapes pour reproduire
+      placeholder: |
+        1. Aller sur la page Calendrier
+        2. Cliquer sur un jour
+        3. Voir l'erreur
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Navigateur / OS
+      placeholder: Chrome 130 / macOS 15
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Captures (optionnel)
+      description: Glissez/déposez les images directement dans la zone de texte.

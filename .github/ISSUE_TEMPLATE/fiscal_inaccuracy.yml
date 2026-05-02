@@ -1,0 +1,51 @@
+name: Incohérence de calcul fiscal
+description: Signaler une constante, un taux ou une formule fiscale erronée ou obsolète.
+title: "[fiscal] "
+labels: ["fiscal", "needs-verification"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de contribuer à la fiabilité du moteur fiscal !
+        Les calculs sont centralisés dans `src/lib/fiscal.ts` — c'est là qu'il faudra probablement intervenir.
+
+  - type: input
+    id: concept
+    attributes:
+      label: Concept fiscal concerné
+      placeholder: "ex : Taux URSSAF BNC libéral non réglementé 2026"
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Valeur actuelle dans l'app
+      description: Ce que l'application calcule ou affiche aujourd'hui.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Valeur attendue
+      description: Ce que la valeur devrait être selon vous.
+    validations:
+      required: true
+
+  - type: textarea
+    id: source
+    attributes:
+      label: Source officielle
+      description: Lien URSSAF, BOFiP, Service-Public.fr, JO, ou autre source faisant autorité.
+      placeholder: "https://www.service-public.fr/..."
+    validations:
+      required: true
+
+  - type: input
+    id: effective-date
+    attributes:
+      label: Date d'entrée en vigueur
+      placeholder: "01/01/2026"
+    validations:
+      required: false

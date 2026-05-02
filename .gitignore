@@ -13,3 +13,10 @@ src/routeTree.gen.ts
 # IDE
 .idea/
 .vscode/
+
+# Internal agent / authoring context (kept locally outside the public repo)
+.claude/
+CLAUDE.md
+agent.md
+docs/
+metadata.json
