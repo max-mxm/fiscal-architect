@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fiscal-architect-v1';
+const CACHE_NAME = 'fiscal-architect-v2';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -6,6 +6,7 @@ const PRECACHE_ASSETS = [
   '/favicon.svg',
   '/icon-192.png',
   '/icon-512.png',
+  '/apple-touch-icon-180.png',
 ];
 
 self.addEventListener('install', (event) => {

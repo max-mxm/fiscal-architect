@@ -16,7 +16,10 @@ src/routeTree.gen.ts
 
 # Internal agent / authoring context (kept locally outside the public repo)
 .claude/
+.agents/
 CLAUDE.md
 agent.md
 docs/
 metadata.json
+skills-lock.json
+

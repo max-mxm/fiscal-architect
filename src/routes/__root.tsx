@@ -13,6 +13,7 @@ import { ProfileProvider, useProfile } from '~/context/ProfileContext'
 import { FiscalYearProvider, useFiscalYearCtx } from '~/context/FiscalYearContext'
 import { SettingsPopover } from '~/components/SettingsPopover'
 import { ConfirmModal } from '~/components/ConfirmModal'
+import { PwaInstallController } from '~/components/PwaInstallController'
 import { calcEquivDays } from '~/lib/fiscal'
 
 export const Route = createRootRoute({
@@ -21,15 +22,29 @@ export const Route = createRootRoute({
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { title: 'Fiscal Architect — Simulation fiscale' },
+      {
+        name: 'description',
+        content:
+          "Suivi et simulation fiscale pour micro-entrepreneurs. 100% local — vos données restent dans votre navigateur.",
+      },
       { name: 'theme-color', content: '#006c49' },
+      { name: 'mobile-web-app-capable', content: 'yes' },
       { name: 'apple-mobile-web-app-capable', content: 'yes' },
-      { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
+      { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+      { name: 'apple-mobile-web-app-title', content: 'Fiscal Architect' },
     ],
     links: [
+      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+      { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
+      {
+        rel: 'stylesheet',
+        href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap',
+      },
       { rel: 'stylesheet', href: appCss },
       { rel: 'manifest', href: '/manifest.webmanifest' },
       { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
-      { rel: 'apple-touch-icon', href: '/icon-192.png' },
+      { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon-180.png' },
+      { rel: 'apple-touch-icon', sizes: '192x192', href: '/icon-192.png' },
     ],
   }),
   component: RootComponent,
@@ -122,6 +137,7 @@ function AppShell() {
         onConfirm={confirmResetAll}
         onCancel={cancelReset}
       />
+      <PwaInstallController />
     </div>
   )
 }
