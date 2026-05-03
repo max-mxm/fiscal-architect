@@ -27,6 +27,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # src/routeTree.gen.ts est généré par le plugin tanstackStart de Vite,
+      # mais tsc (lint) tourne hors Vite. On le génère donc explicitement.
+      - name: Generate route tree
+        run: pnpm generate:routes
+
       - name: Lint (tsc --noEmit)
         run: pnpm lint
 
