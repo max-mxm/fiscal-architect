@@ -45,6 +45,9 @@ importers:
         specifier: ^3.5.0
         version: 3.5.0
     devDependencies:
+      '@tanstack/router-generator':
+        specifier: ^1.166.39
+        version: 1.166.39
       '@types/node':
         specifier: ^22.14.0
         version: 22.19.17
