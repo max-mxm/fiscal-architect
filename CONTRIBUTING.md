@@ -7,11 +7,12 @@ Merci de votre intérêt ! Les corrections de constantes fiscales, l'ajout de te
 ```bash
 git clone https://github.com/max-mxm/fiscal-architect.git
 cd fiscal-architect
-npm install
-npm run dev          # http://localhost:4000
+corepack enable      # active pnpm à la version épinglée dans package.json
+pnpm install
+pnpm dev             # http://localhost:4000
 ```
 
-Node 22 requis (voir `.nvmrc`).
+Node 22 requis (voir `.nvmrc`). pnpm est le gestionnaire de paquets, sa version est épinglée via le champ `packageManager` du `package.json`.
 
 ## Workflow
 
@@ -19,9 +20,9 @@ Node 22 requis (voir `.nvmrc`).
 2. Faites vos changements. Toute modification fiscale doit passer par `src/lib/fiscal.ts` — pas de calcul inline dans les composants.
 3. Vérifiez :
    ```bash
-   npm run lint
-   npm test
-   npm run build
+   pnpm lint
+   pnpm test
+   pnpm build
    ```
 4. Ouvrez une PR. La CI doit passer au vert.
 

@@ -13,9 +13,9 @@
 
 ## Checklist
 
-- [ ] `npm run lint` passe localement
-- [ ] `npm test` passe localement
-- [ ] `npm run build` passe localement
+- [ ] `pnpm lint` passe localement
+- [ ] `pnpm test` passe localement
+- [ ] `pnpm build` passe localement
 - [ ] Pour les changements fiscaux : source officielle citée dans la description
 - [ ] Pour les changements UI : capture d'écran ajoutée ci-dessous
 

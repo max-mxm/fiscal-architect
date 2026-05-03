@@ -77,19 +77,19 @@ Après la première visite, l'app est aussi totalement utilisable **hors ligne**
 ```bash
 git clone https://github.com/max-mxm/fiscal-architect.git
 cd fiscal-architect
-npm install
-npm run dev          # http://localhost:4000
+pnpm install
+pnpm dev          # http://localhost:4000
 ```
 
 | Commande | Description |
 |---|---|
-| `npm run dev` | Serveur de dev (port 4000) |
-| `npm run build` | Build production |
-| `npm run lint` | Vérification TypeScript (`tsc --noEmit`) |
-| `npm test` | Tests Vitest |
-| `npm run clean` | Supprime `dist/`, `.output/`, `.vinxi/` |
+| `pnpm dev` | Serveur de dev (port 4000) |
+| `pnpm build` | Build production |
+| `pnpm lint` | Vérification TypeScript (`tsc --noEmit`) |
+| `pnpm test` | Tests Vitest |
+| `pnpm clean` | Supprime `dist/`, `.output/`, `.vinxi/` |
 
-> Node 22 requis (voir `.nvmrc`).
+> Node 22 requis (voir `.nvmrc`). Le gestionnaire de paquets est **pnpm** (version épinglée via `packageManager` dans `package.json`) ; activez-le avec `corepack enable`.
 
 ## Constantes fiscales 2026
 

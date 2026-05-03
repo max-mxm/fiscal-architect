@@ -79,19 +79,19 @@ After the first visit, the app is also fully usable **offline** — your calenda
 ```bash
 git clone https://github.com/max-mxm/fiscal-architect.git
 cd fiscal-architect
-npm install
-npm run dev          # http://localhost:4000
+pnpm install
+pnpm dev          # http://localhost:4000
 ```
 
 | Command | Description |
 |---|---|
-| `npm run dev` | Dev server (port 4000) |
-| `npm run build` | Production build |
-| `npm run lint` | TypeScript check (`tsc --noEmit`) |
-| `npm test` | Vitest suite |
-| `npm run clean` | Remove `dist/`, `.output/`, `.vinxi/` |
+| `pnpm dev` | Dev server (port 4000) |
+| `pnpm build` | Production build |
+| `pnpm lint` | TypeScript check (`tsc --noEmit`) |
+| `pnpm test` | Vitest suite |
+| `pnpm clean` | Remove `dist/`, `.output/`, `.vinxi/` |
 
-> Node 22 required (see `.nvmrc`).
+> Node 22 required (see `.nvmrc`). The package manager is **pnpm** (version pinned via `packageManager` in `package.json`); enable it with `corepack enable`.
 
 ## 2026 tax constants
 
