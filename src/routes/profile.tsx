@@ -1,11 +1,11 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 
 /**
- * Route legacy `/profile` — redirige vers la single-page avec drawer Avancé ouvert.
+ * Route legacy `/profile` — redirige vers la single-page avec l'onglet Profil ouvert.
  * Préserve les bookmarks existants après la fusion Calendar + Profile.
  */
 export const Route = createFileRoute('/profile')({
   beforeLoad: () => {
-    throw redirect({ to: '/', search: { sheet: 'advanced' } })
+    throw redirect({ to: '/', search: { settings: 'profile' } })
   },
 })

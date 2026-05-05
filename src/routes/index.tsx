@@ -1,17 +1,21 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Home } from '~/pages/Home'
 
+export type SettingsParam = 'profile' | 'fiscal' | 'costs'
+
 interface IndexSearch {
-  sheet?: 'advanced'
-  settings?: 1
+  settings?: SettingsParam
   confirm?: 'reset-all' | 'clear-year' | 'fill-year' | 'fill-month'
 }
+
+const SETTINGS_VALUES: ReadonlyArray<SettingsParam> = ['profile', 'fiscal', 'costs']
 
 export const Route = createFileRoute('/')({
   validateSearch: (raw: Record<string, unknown>): IndexSearch => {
     const out: IndexSearch = {}
-    if (raw.sheet === 'advanced') out.sheet = 'advanced'
-    if (raw.settings === 1 || raw.settings === '1') out.settings = 1
+    if (typeof raw.settings === 'string' && (SETTINGS_VALUES as readonly string[]).includes(raw.settings)) {
+      out.settings = raw.settings as SettingsParam
+    }
     if (raw.confirm === 'reset-all' || raw.confirm === 'clear-year' || raw.confirm === 'fill-year' || raw.confirm === 'fill-month') {
       out.confirm = raw.confirm
     }

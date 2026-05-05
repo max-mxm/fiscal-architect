@@ -67,9 +67,10 @@ export const SlidersBlock: React.FC<SlidersBlockProps> = ({
         <button
           type="button"
           onClick={onOpenAdvanced}
+          aria-label="Ouvrir les réglages fiscaux"
           className="inline-flex items-center gap-1 text-xs font-bold text-secondary hover:opacity-80 transition-opacity min-h-[28px] px-1"
         >
-          Avancé <ChevronRight className="w-3.5 h-3.5" />
+          Régler <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
 

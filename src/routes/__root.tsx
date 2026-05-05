@@ -11,10 +11,12 @@ import appCss from '~/styles/app.css?url'
 import { TopBar } from '~/components/Navigation'
 import { ProfileProvider, useProfile } from '~/context/ProfileContext'
 import { FiscalYearProvider, useFiscalYearCtx } from '~/context/FiscalYearContext'
-import { SettingsPopover } from '~/components/SettingsPopover'
+import { SettingsDrawer } from '~/components/SettingsDrawer'
+import { FiscalContextBar } from '~/components/FiscalContextBar'
 import { ConfirmModal } from '~/components/ConfirmModal'
 import { PwaInstallController } from '~/components/PwaInstallController'
 import { calcEquivDays } from '~/lib/fiscal'
+import type { SettingsTabId } from '~/components/settings/SettingsTabs'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -92,7 +94,10 @@ function AppShell() {
   const fy = useFiscalYearCtx()
   const navigate = useNavigate()
   const search = useRouterState({ select: (s) => s.location.search }) as Record<string, unknown>
-  const settingsOpen = search?.settings === 1 || search?.settings === '1'
+  const settingsParam = search?.settings as SettingsTabId | undefined
+  const isValidTab = settingsParam === 'profile' || settingsParam === 'fiscal' || settingsParam === 'costs'
+  const settingsOpen = isValidTab
+  const activeTab: SettingsTabId = isValidTab ? settingsParam : 'profile'
   const resetConfirmOpen = search?.confirm === 'reset-all'
 
   const caCumule = useMemo(() => {
@@ -100,13 +105,15 @@ function AppShell() {
     return totalDays * profile.tjm
   }, [fy.fiscalYear.months, profile.tjm])
 
+  const openSettings = (tab: SettingsTabId) => navigate({ to: '/', search: { settings: tab } })
   const closeSettings = () => navigate({ to: '/', search: {} })
   const askResetAll = () => navigate({ to: '/', search: { confirm: 'reset-all' } })
   const confirmResetAll = () => {
     fy.resetEverything()
     navigate({ to: '/', search: {} })
   }
-  const cancelReset = () => navigate({ to: '/', search: settingsOpen ? { settings: 1 } : {} })
+  const cancelReset = () =>
+    navigate({ to: '/', search: settingsOpen ? { settings: activeTab } : {} })
 
   return (
     <div className="min-h-screen bg-surface flex flex-col">
@@ -114,18 +121,28 @@ function AppShell() {
         profile={profile}
         caCumule={caCumule}
         onExport={handleExportGlobal}
-        onOpenSettings={() => navigate({ to: '/', search: { settings: 1 } })}
+        onOpenSettings={() => openSettings('profile')}
+      />
+      <FiscalContextBar
+        profile={profile}
+        missionStart={fy.missionStart}
+        onOpenTab={openSettings}
       />
       <main className="flex-1 px-4 sm:px-6 lg:px-10 py-6 lg:py-10">
         <div className="max-w-7xl mx-auto">
           <Outlet />
         </div>
       </main>
-      <SettingsPopover
+      <SettingsDrawer
         open={settingsOpen}
+        activeTab={activeTab}
+        onTabChange={openSettings}
         onClose={closeSettings}
+        year={fy.year}
         profile={profile}
         setProfile={setProfile}
+        missionStart={fy.missionStart}
+        onMissionStartChange={fy.setMissionStart}
         onResetAll={askResetAll}
       />
       <ConfirmModal

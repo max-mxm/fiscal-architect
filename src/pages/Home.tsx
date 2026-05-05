@@ -29,7 +29,6 @@ import { EmptyHero } from '~/components/EmptyHero';
 import { LiveAnnouncer } from '~/components/LiveAnnouncer';
 import { UndoToast } from '~/components/UndoToast';
 import { ConfirmModal } from '~/components/ConfirmModal';
-import { AdvancedSheet } from '~/components/AdvancedSheet';
 import type { CalendarMonth } from '~/types';
 
 type ConfirmKind = 'clear-year' | 'fill-month' | 'fill-year';
@@ -57,7 +56,6 @@ export const Home: React.FC = () => {
   const fy = useFiscalYearCtx();
   const navigate = useNavigate();
   const search = useRouterState({ select: (s) => s.location.search }) as Record<string, unknown>;
-  const sheetOpen = search?.sheet === 'advanced';
   const confirmKind = (search?.confirm as ConfirmKind | undefined) ?? null;
   const reducedMotion = usePrefersReducedMotion();
 
@@ -171,8 +169,7 @@ export const Home: React.FC = () => {
   };
 
   // --- Routing helpers (search params overlays) ---
-  const openSheet = () => navigate({ to: '/', search: { sheet: 'advanced' } });
-  const closeSheet = () => navigate({ to: '/', search: {} });
+  const openFiscalSettings = () => navigate({ to: '/', search: { settings: 'fiscal' } });
   const openConfirm = (kind: ConfirmKind) => navigate({ to: '/', search: { confirm: kind } });
   const closeConfirm = () => navigate({ to: '/', search: {} });
 
@@ -290,7 +287,7 @@ export const Home: React.FC = () => {
           joursTravailes={selectedMonthDays}
           missionStart={fy.missionStart}
           seuilDate={seuilDate}
-          onEditMissionStart={openSheet}
+          onEditMissionStart={openFiscalSettings}
         />
       )}
 
@@ -317,7 +314,10 @@ export const Home: React.FC = () => {
           </div>
           <CalendarToolbar
             monthShort={MONTH_SHORT[selectedMonth]}
+            monthLong={MONTH_NAMES[selectedMonth]}
             year={year}
+            monthHasData={monthHasData(selectedMonth)}
+            yearHasData={yearHasData()}
             onFill={(scope) => (scope === 'month' ? handleFillMonth() : handleFillYear())}
             onClear={(scope) => (scope === 'month' ? handleClearMonth() : handleClearYear())}
             onExport={() => fy.exportCSV(profile.tjm)}
@@ -340,7 +340,7 @@ export const Home: React.FC = () => {
             netMensuel={Math.round(monthBreakdown.net)}
             onTjmChange={(v) => setProfile((p) => ({ ...p, tjm: v }))}
             onUrssafChange={(v) => setProfile((p) => ({ ...p, urssafRate: v }))}
-            onOpenAdvanced={openSheet}
+            onOpenAdvanced={openFiscalSettings}
           />
           <MonthSummary
             monthName={MONTH_NAMES[selectedMonth]}
@@ -358,16 +358,6 @@ export const Home: React.FC = () => {
       </div>
 
       {/* Overlays */}
-      <AdvancedSheet
-        open={sheetOpen}
-        onClose={closeSheet}
-        year={year}
-        profile={profile}
-        setProfile={setProfile}
-        missionStart={fy.missionStart}
-        onMissionStartChange={fy.setMissionStart}
-      />
-
       <ConfirmModal
         open={confirmKind === 'clear-year'}
         title={`Vider toute l'année ${year} ?`}
