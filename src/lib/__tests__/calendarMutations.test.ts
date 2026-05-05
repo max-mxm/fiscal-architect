@@ -20,7 +20,7 @@ const emptyMonths = (year: number = YEAR): CalendarMonth[] =>
 describe('cycleDayInMonths', () => {
   it('vide → plein', () => {
     // 6 janvier 2025 = lundi, non férié
-    const result = cycleDayInMonths(emptyMonths(), YEAR, 0, 6, false, noFerie);
+    const result = cycleDayInMonths(emptyMonths(), YEAR, 0, 6, noFerie);
     expect(result[0].workedDays).toEqual([6]);
     expect(result[0].halfDays).toEqual([]);
   });
@@ -28,7 +28,7 @@ describe('cycleDayInMonths', () => {
   it('plein → demi', () => {
     const start = emptyMonths();
     start[0].workedDays = [6];
-    const result = cycleDayInMonths(start, YEAR, 0, 6, false, noFerie);
+    const result = cycleDayInMonths(start, YEAR, 0, 6, noFerie);
     expect(result[0].workedDays).toEqual([]);
     expect(result[0].halfDays).toEqual([6]);
   });
@@ -36,48 +36,44 @@ describe('cycleDayInMonths', () => {
   it('demi → vide', () => {
     const start = emptyMonths();
     start[0].halfDays = [6];
-    const result = cycleDayInMonths(start, YEAR, 0, 6, false, noFerie);
+    const result = cycleDayInMonths(start, YEAR, 0, 6, noFerie);
     expect(result[0].workedDays).toEqual([]);
     expect(result[0].halfDays).toEqual([]);
   });
 
   it('cycle complet vide → plein → demi → vide', () => {
     let m = emptyMonths();
-    m = cycleDayInMonths(m, YEAR, 0, 6, false, noFerie);
-    m = cycleDayInMonths(m, YEAR, 0, 6, false, noFerie);
-    m = cycleDayInMonths(m, YEAR, 0, 6, false, noFerie);
+    m = cycleDayInMonths(m, YEAR, 0, 6, noFerie);
+    m = cycleDayInMonths(m, YEAR, 0, 6, noFerie);
+    m = cycleDayInMonths(m, YEAR, 0, 6, noFerie);
     expect(m[0].workedDays).toEqual([]);
     expect(m[0].halfDays).toEqual([]);
   });
 
   it('ignore un jour de weekend', () => {
     // 4 janvier 2025 = samedi
-    const result = cycleDayInMonths(emptyMonths(), YEAR, 0, 4, false, noFerie);
+    const result = cycleDayInMonths(emptyMonths(), YEAR, 0, 4, noFerie);
     expect(result[0].workedDays).toEqual([]);
   });
 
-  it('ignore un jour férié sans force', () => {
+  it('ignore un jour férié', () => {
     // 1er janvier 2025 = férié
-    const result = cycleDayInMonths(emptyMonths(), YEAR, 0, 1, false, isFerie);
+    const result = cycleDayInMonths(emptyMonths(), YEAR, 0, 1, isFerie);
     expect(result[0].workedDays).toEqual([]);
-  });
-
-  it('applique sur un férié avec force=true', () => {
-    const result = cycleDayInMonths(emptyMonths(), YEAR, 0, 1, true, isFerie);
-    expect(result[0].workedDays).toEqual([1]);
+    expect(result[0].halfDays).toEqual([]);
   });
 
   it('garde les workedDays triés', () => {
     let m = emptyMonths();
-    m = cycleDayInMonths(m, YEAR, 0, 10, false, noFerie);
-    m = cycleDayInMonths(m, YEAR, 0, 3, false, noFerie);
-    m = cycleDayInMonths(m, YEAR, 0, 7, false, noFerie);
+    m = cycleDayInMonths(m, YEAR, 0, 10, noFerie);
+    m = cycleDayInMonths(m, YEAR, 0, 3, noFerie);
+    m = cycleDayInMonths(m, YEAR, 0, 7, noFerie);
     expect(m[0].workedDays).toEqual([3, 7, 10]);
   });
 
   it('ne touche pas les autres mois', () => {
     let m = emptyMonths();
-    m = cycleDayInMonths(m, YEAR, 0, 6, false, noFerie);
+    m = cycleDayInMonths(m, YEAR, 0, 6, noFerie);
     expect(m[1].workedDays).toEqual([]);
     expect(m[5].workedDays).toEqual([]);
   });

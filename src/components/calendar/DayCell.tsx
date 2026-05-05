@@ -11,7 +11,6 @@ interface DayCellProps {
   isToday: boolean;
   onMouseDown: () => void;
   onMouseEnter: () => void;
-  onDoubleClick: () => void;
 }
 
 function buildTitle(args: {
@@ -23,7 +22,7 @@ function buildTitle(args: {
 }): string | undefined {
   const { isWeekend, isFerie, ferieName, isWorked, isHalf } = args;
   if (isWeekend) return undefined;
-  if (isFerie) return (ferieName ?? 'Jour férié') + ' — double-clic pour sélectionner';
+  if (isFerie) return ferieName ?? 'Jour férié';
   if (!isWorked && !isHalf) return 'Clic : journée pleine — encore : demi-journée';
   if (isWorked) return 'Journée pleine — clic : demi-journée';
   if (isHalf) return 'Demi-journée — clic : effacer';
@@ -40,7 +39,6 @@ export const DayCell: React.FC<DayCellProps> = ({
   isToday,
   onMouseDown,
   onMouseEnter,
-  onDoubleClick,
 }) => {
   const title = buildTitle({ isWeekend, isFerie, ferieName, isWorked, isHalf });
 
@@ -48,7 +46,6 @@ export const DayCell: React.FC<DayCellProps> = ({
     <div
       onMouseDown={(e) => { e.preventDefault(); onMouseDown(); }}
       onMouseEnter={onMouseEnter}
-      onDoubleClick={onDoubleClick}
       title={title}
       className={cn(
         'h-14 w-full rounded-lg flex items-center justify-center text-sm font-bold transition-all select-none relative',

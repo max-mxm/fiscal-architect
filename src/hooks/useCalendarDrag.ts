@@ -6,7 +6,7 @@ interface UseCalendarDragOptions {
   isWeekendCell: (monthIndex: number, day: number) => boolean;
   isJourFerie: (monthIndex: number, day: number) => boolean;
   getDayState: (monthIndex: number, day: number) => DayState;
-  cycleDay: (monthIndex: number, day: number, force?: boolean) => void;
+  cycleDay: (monthIndex: number, day: number) => void;
   dragSetDay: (monthIndex: number, day: number, add: boolean) => void;
 }
 
@@ -17,7 +17,7 @@ interface UseCalendarDragOptions {
  * dès que le pointeur entre dans une autre cellule. Si mouseup arrive sans drag,
  * on déclenche un cycle 3 états (vide → plein → demi → vide).
  *
- * Le double-clic est dédié aux jours fériés (les seuls verrouillés cliquables).
+ * Les weekends et les jours fériés sont entièrement verrouillés.
  */
 export function useCalendarDrag({
   isWeekendCell,
@@ -57,12 +57,6 @@ export function useCalendarDrag({
     }
   }, [isWeekendCell, isJourFerie, dragSetDay]);
 
-  const onDayDoubleClick = useCallback((monthIndex: number, day: number) => {
-    if (isWeekendCell(monthIndex, day)) return;
-    if (!isJourFerie(monthIndex, day)) return;
-    cycleDay(monthIndex, day, true);
-  }, [isWeekendCell, isJourFerie, cycleDay]);
-
   const handleMouseUp = useCallback(() => {
     // Pas de drag → mouseup = clic simple → cycle 3 états
     if (pressMonth.current !== -1 && !dragging.current) {
@@ -78,5 +72,5 @@ export function useCalendarDrag({
     return () => window.removeEventListener('mouseup', handleMouseUp);
   }, [handleMouseUp]);
 
-  return { onDayMouseDown, onDayMouseEnter, onDayDoubleClick };
+  return { onDayMouseDown, onDayMouseEnter };
 }
