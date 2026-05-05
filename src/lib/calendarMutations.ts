@@ -3,17 +3,16 @@ import { getDaysInMonth, isWeekend } from '~/lib/calendar';
 
 type IsFerieFn = (monthIndex: number, day: number) => boolean;
 
-/** Cycle 3 états pour un jour : vide → plein → demi → vide. `force` outrepasse le verrou férié. */
+/** Cycle 3 états pour un jour : vide → plein → demi → vide. */
 export function cycleDayInMonths(
   months: CalendarMonth[],
   year: number,
   monthIndex: number,
   day: number,
-  force: boolean,
   isFerie: IsFerieFn,
 ): CalendarMonth[] {
   if (isWeekend(year, monthIndex, day)) return months;
-  if (!force && isFerie(monthIndex, day)) return months;
+  if (isFerie(monthIndex, day)) return months;
 
   return months.map((m, i) => {
     if (i !== monthIndex) return m;

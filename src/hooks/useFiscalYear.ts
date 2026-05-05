@@ -36,10 +36,10 @@ export function useFiscalYear(year: number) {
     [joursFeriesNames],
   );
 
-  const cycleDay = useCallback((monthIndex: number, day: number, force = false) => {
+  const cycleDay = useCallback((monthIndex: number, day: number) => {
     setFiscalYear((prev) => ({
       ...prev,
-      months: cycleDayInMonths(prev.months, year, monthIndex, day, force, isJourFerie),
+      months: cycleDayInMonths(prev.months, year, monthIndex, day, isJourFerie),
     }));
   }, [year, isJourFerie, setFiscalYear]);
 
