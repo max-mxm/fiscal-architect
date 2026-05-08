@@ -246,13 +246,35 @@ export const Home: React.FC = () => {
     setSelectedMonth(month);
   };
   const prevMonth = () => {
+    if (selectedMonth === 0) {
+      setNavDirection(-1);
+      fy.requestYearTransition(year - 1);
+      return;
+    }
     setNavDirection(-1);
-    setSelectedMonth((p) => (p === 0 ? 11 : p - 1));
+    setSelectedMonth((p) => p - 1);
   };
   const nextMonth = () => {
+    if (selectedMonth === 11) {
+      setNavDirection(1);
+      fy.requestYearTransition(year + 1);
+      return;
+    }
     setNavDirection(1);
-    setSelectedMonth((p) => (p === 11 ? 0 : p + 1));
+    setSelectedMonth((p) => p + 1);
   };
+
+  // Quand l'année active change (par ex. après confirmation d'une transition
+  // depuis le bouton « mois suivant » de décembre), on aligne le mois affiché
+  // sur la direction de navigation : janvier après un nextMonth, décembre
+  // après un prevMonth.
+  const previousYearRef = useRef(year);
+  useEffect(() => {
+    if (previousYearRef.current === year) return;
+    if (year > previousYearRef.current) setSelectedMonth(0);
+    else if (year < previousYearRef.current) setSelectedMonth(11);
+    previousYearRef.current = year;
+  }, [year]);
 
   // --- Routing helpers (search params overlays) ---
   const openFiscalSettings = () => navigate({ to: '/', search: { settings: 'fiscal' } });

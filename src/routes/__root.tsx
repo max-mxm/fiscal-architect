@@ -17,6 +17,8 @@ import { SettingsDrawer } from '~/components/SettingsDrawer'
 import { FiscalContextBar } from '~/components/FiscalContextBar'
 import { ConfirmModal } from '~/components/ConfirmModal'
 import { PwaInstallController } from '~/components/PwaInstallController'
+import { YearTransitionModal } from '~/components/YearTransitionModal'
+import { useYearAutoTransition } from '~/hooks/useYearAutoTransition'
 import { calcCAYearFromEntries } from '~/lib/fiscal'
 import type { SettingsTabId } from '~/components/settings/SettingsTabs'
 
@@ -125,7 +127,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 function AppShell() {
-  const { profile, setProfile, handleExportGlobal, years, activeYear, setActiveYear, addYear } = useProfile()
+  const { profile, setProfile, handleExportGlobal, years, activeYear, setActiveYear } = useProfile()
   const fy = useFiscalYearCtx()
   const navigate = useNavigate()
   const search = useRouterState({ select: (s) => s.location.search }) as Record<string, unknown>
@@ -134,6 +136,8 @@ function AppShell() {
   const settingsOpen = isValidTab
   const activeTab: SettingsTabId = isValidTab ? settingsParam : 'fiscal'
   const resetConfirmOpen = search?.confirm === 'reset-all'
+
+  useYearAutoTransition()
 
   const caCumule = useMemo(
     () => calcCAYearFromEntries(fy.fiscalYear.months, profile),
@@ -164,7 +168,7 @@ function AppShell() {
         years={years}
         activeYear={activeYear}
         onSelectYear={setActiveYear}
-        onAddYear={addYear}
+        onRequestYearTransition={fy.requestYearTransition}
         onOpenTab={openSettings}
       />
       <main className="flex-1 px-4 sm:px-6 lg:px-10 py-6 lg:py-10">
@@ -190,6 +194,13 @@ function AppShell() {
         destructive
         onConfirm={confirmResetAll}
         onCancel={cancelReset}
+      />
+      <YearTransitionModal
+        open={fy.transitionRequest != null}
+        targetYear={fy.transitionRequest?.targetYear ?? activeYear + 1}
+        sourceYear={fy.transitionRequest?.sourceYear ?? null}
+        onConfirm={fy.confirmYearTransition}
+        onCancel={fy.cancelYearTransition}
       />
       <PwaInstallController />
     </div>

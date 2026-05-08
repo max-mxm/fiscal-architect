@@ -3,7 +3,7 @@ import { Receipt } from 'lucide-react';
 import type { UserProfile } from '~/types';
 import type { SettingsTabId } from '~/components/settings/SettingsTabs';
 import { formatEuro } from '~/lib/format';
-import { YearSwitcher } from '~/components/YearSwitcher';
+import { YearStepper } from '~/components/YearStepper';
 import { cn } from '~/utils';
 
 interface FiscalContextBarProps {
@@ -11,7 +11,7 @@ interface FiscalContextBarProps {
   years: number[];
   activeYear: number;
   onSelectYear: (year: number) => void;
-  onAddYear: (year: number) => void;
+  onRequestYearTransition: (year: number) => void;
   onOpenTab: (tab: SettingsTabId) => void;
 }
 
@@ -49,21 +49,21 @@ export const FiscalContextBar: React.FC<FiscalContextBarProps> = ({
   years,
   activeYear,
   onSelectYear,
-  onAddYear,
+  onRequestYearTransition,
   onOpenTab,
 }) => {
   return (
     <div className="bg-surface border-b border-outline-variant/10">
       <div
-        className="px-4 sm:px-6 lg:px-10 py-2 flex items-center gap-1.5 overflow-x-auto scrollbar-none"
+        className="px-4 sm:px-6 lg:px-10 py-2 flex items-center gap-2 overflow-x-auto scrollbar-none"
         role="group"
         aria-label="Contexte fiscal"
       >
-        <YearSwitcher
+        <YearStepper
           years={years}
           activeYear={activeYear}
-          onSelect={onSelectYear}
-          onAdd={onAddYear}
+          onSelectYear={onSelectYear}
+          onRequestTransition={onRequestYearTransition}
         />
         <Chip
           Icon={Receipt}
