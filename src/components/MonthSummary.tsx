@@ -18,6 +18,18 @@ interface MonthSummaryProps {
   /** Taux VL effectif (0..1) à afficher sur le chip — issu de l'activité courante. */
   tauxVL?: number;
   onToggleVL: (next: boolean) => void;
+  /** CFP mensuel (€). Affiché si > 0. */
+  cfpMensuel: number;
+  /** Taux CFP en pourcentage (0..1) — utilisé pour le label. */
+  cfpRate: number;
+  /** Taxe consulaire mensuelle (€). Cachée si = 0. */
+  taxeConsulaireMensuelle: number;
+  /** Taux taxe consulaire (0..1). */
+  taxeConsulaireRate: number;
+  /** Réduction ACRE mensuelle déduite de l'URSSAF (€). 0 si non applicable. */
+  acreReductionMensuelle: number;
+  /** Taux ACRE appliqué (0, 0.25 ou 0.5). */
+  acreRate: number;
 }
 
 export const MonthSummary: React.FC<MonthSummaryProps> = ({
@@ -32,12 +44,22 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
   versementLiberatoire,
   tauxVL,
   onToggleVL,
+  cfpMensuel,
+  cfpRate,
+  taxeConsulaireMensuelle,
+  taxeConsulaireRate,
+  acreReductionMensuelle,
+  acreRate,
 }) => {
   const [showIrInfo, setShowIrInfo] = useState(false);
+  const [showAcreInfo, setShowAcreInfo] = useState(false);
   const tauxNet = caMensuel > 0 ? (netMensuel / caMensuel) * 100 : 0;
   const irLabel = versementLiberatoire
     ? `IR (VL ${tauxVL !== undefined ? (tauxVL * 100).toFixed(1).replace('.', ',') : '2,2'} %)`
     : 'IR estimé';
+  const acreActive = acreReductionMensuelle > 0 && acreRate > 0;
+  const acrePct = Math.round(acreRate * 100);
+  const taxeConsulaireVisible = taxeConsulaireRate > 0;
 
   return (
     <section
@@ -66,11 +88,48 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
           </span>
         </li>
         <li className="flex justify-between items-center">
-          <span className="text-on-surface-variant">URSSAF ({formatPercent(urssafRate)} %)</span>
+          <span className="text-on-surface-variant inline-flex items-center gap-1">
+            URSSAF ({formatPercent(urssafRate)} %)
+            {acreActive && (
+              <>
+                <span className="text-secondary font-bold"> · ACRE −{acrePct} %</span>
+                <button
+                  type="button"
+                  onClick={() => setShowAcreInfo((v) => !v)}
+                  aria-label="À propos de la réduction ACRE"
+                  aria-expanded={showAcreInfo}
+                  className="text-slate-500 hover:text-secondary transition-colors p-0.5 rounded"
+                >
+                  <Info className="w-3 h-3" />
+                </button>
+              </>
+            )}
+          </span>
           <span className="font-mono font-bold text-red-500 tabular-nums">
             −{formatEuro(urssafMensuel)}€
           </span>
         </li>
+        {showAcreInfo && (
+          <li className="text-[11px] text-on-surface-variant bg-surface-highest/30 rounded-lg px-3 py-2 leading-relaxed">
+            Réduction ACRE de {acrePct} % sur l'URSSAF, applicable pendant 12 mois après la création de l'activité.
+          </li>
+        )}
+        {cfpMensuel > 0 && (
+          <li className="flex justify-between items-center">
+            <span className="text-on-surface-variant">CFP ({formatPercent(cfpRate * 100, 2)} %)</span>
+            <span className="font-mono font-bold text-red-500 tabular-nums">
+              −{formatEuro(cfpMensuel)}€
+            </span>
+          </li>
+        )}
+        {taxeConsulaireVisible && (
+          <li className="flex justify-between items-center">
+            <span className="text-on-surface-variant">Taxe consulaire ({formatPercent(taxeConsulaireRate * 100, 3)} %)</span>
+            <span className="font-mono font-bold text-red-500 tabular-nums">
+              −{formatEuro(taxeConsulaireMensuelle)}€
+            </span>
+          </li>
+        )}
         <li className="flex justify-between items-center">
           <span className="text-on-surface-variant">Charges fixes</span>
           <span className="font-mono font-bold text-red-500 tabular-nums">

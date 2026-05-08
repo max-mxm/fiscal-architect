@@ -14,6 +14,11 @@ export const DEFAULT_PROFILE: UserProfile = {
   ],
   seuilMicro: 83_600,
   versementLiberatoire: false,
+  creationDate: undefined,
+  acreEnabled: false,
+  tvaAssujetti: false,
+  cfpEnabled: true,
+  taxeConsulaireEnabled: false,
 };
 
 export const MONTHS = [

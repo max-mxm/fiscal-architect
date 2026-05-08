@@ -4,14 +4,19 @@ import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useProfile } from '~/context/ProfileContext';
 import { useFiscalYearCtx } from '~/context/FiscalYearContext';
 import {
+  ACTIVITY_PARAMS,
+  calcACRE,
   calcCaRealise,
   calcEquivDays,
   calcMonthlyBreakdown,
   calcNetCumule,
   calcSeuilDate,
   calcTotalChargesFixes,
+  calcTVAStatus,
+  calcTVASeuilDate,
   countMonthsWithActivity,
   getFiscalParams,
+  getTVASeuils,
 } from '~/lib/fiscal';
 import {
   MONTH_NAMES,
@@ -96,9 +101,28 @@ export const Home: React.FC = () => {
   );
 
   const fiscalParams = useMemo(() => getFiscalParams(profile), [profile]);
+  const activityParams = ACTIVITY_PARAMS[profile.activity];
+  const cfpRate = profile.cfpEnabled ? activityParams.cfpRate : 0;
+  const taxeConsulaireRate = profile.taxeConsulaireEnabled ? activityParams.taxeConsulaireRate : 0;
+
+  // ACRE — réduction mensuelle calculée pour le mois sélectionné.
+  // On utilise le 15 du mois comme date de référence pour rester stable.
+  const acreInfo = useMemo(() => {
+    const creationDate = profile.creationDate ? new Date(profile.creationDate) : null;
+    const periodDate = new Date(year, selectedMonth, 15);
+    const urssafBrutMensuel = profile.tjm * profile.workingDays * (profile.urssafRate / 100);
+    return calcACRE(urssafBrutMensuel, creationDate, periodDate, profile.acreEnabled ?? false);
+  }, [profile.creationDate, profile.acreEnabled, profile.tjm, profile.workingDays, profile.urssafRate, year, selectedMonth]);
+
   const fiscalOpts = useMemo(
-    () => ({ abattement: fiscalParams.abattement, tauxVL: fiscalParams.tauxVL }),
-    [fiscalParams.abattement, fiscalParams.tauxVL],
+    () => ({
+      abattement: fiscalParams.abattement,
+      tauxVL: fiscalParams.tauxVL,
+      cfpRate,
+      taxeConsulaireRate,
+      acreReduction: acreInfo.reduction,
+    }),
+    [fiscalParams.abattement, fiscalParams.tauxVL, cfpRate, taxeConsulaireRate, acreInfo.reduction],
   );
 
   const totalWorkedDays = useMemo(
@@ -126,9 +150,10 @@ export const Home: React.FC = () => {
       chargesFixesMensuelles,
       monthsWithActivity,
       profile.versementLiberatoire,
-      fiscalOpts,
+      // ACRE annualisée : approximation sur les mois d'activité.
+      { ...fiscalOpts, acreReduction: acreInfo.reduction * monthsWithActivity },
     ),
-    [caCumule, profile.urssafRate, chargesFixesMensuelles, monthsWithActivity, profile.versementLiberatoire, fiscalOpts],
+    [caCumule, profile.urssafRate, chargesFixesMensuelles, monthsWithActivity, profile.versementLiberatoire, fiscalOpts, acreInfo.reduction],
   );
 
   // Projection : on simule les mois courant + futurs sans données
@@ -152,6 +177,14 @@ export const Home: React.FC = () => {
   const seuilDate = useMemo(
     () => calcSeuilDate(projectedMonths, profile.tjm, profile.seuilMicro),
     [projectedMonths, profile.tjm, profile.seuilMicro],
+  );
+
+  // --- TVA ---
+  const tvaSeuils = getTVASeuils(profile.activity);
+  const tvaStatus = useMemo(() => calcTVAStatus(caCumule, profile.activity), [caCumule, profile.activity]);
+  const tvaSeuilDate = useMemo(
+    () => calcTVASeuilDate(projectedMonths, profile.tjm, profile.activity),
+    [projectedMonths, profile.tjm, profile.activity],
   );
 
   const selectedMonthData = fy.fiscalYear.months[selectedMonth];
@@ -296,6 +329,10 @@ export const Home: React.FC = () => {
           missionStart={fy.missionStart}
           seuilDate={seuilDate}
           onEditMissionStart={openFiscalSettings}
+          seuilTVA={tvaSeuils.basique}
+          tvaStatus={tvaStatus}
+          tvaSeuilDate={tvaSeuilDate}
+          tvaAssujetti={profile.tvaAssujetti ?? false}
         />
       )}
 
@@ -363,6 +400,12 @@ export const Home: React.FC = () => {
             versementLiberatoire={profile.versementLiberatoire}
             tauxVL={fiscalParams.tauxVL}
             onToggleVL={(v) => setProfile((p) => ({ ...p, versementLiberatoire: v }))}
+            cfpMensuel={Math.round(monthBreakdown.cfp)}
+            cfpRate={cfpRate}
+            taxeConsulaireMensuelle={Math.round(monthBreakdown.taxeConsulaire)}
+            taxeConsulaireRate={taxeConsulaireRate}
+            acreReductionMensuelle={Math.round(monthBreakdown.acreReduction)}
+            acreRate={acreInfo.rate}
           />
         </aside>
       </div>

@@ -3,8 +3,12 @@ import { motion, AnimatePresence, type PanInfo } from 'motion/react';
 import { X, RotateCcw, User, Calculator, Receipt } from 'lucide-react';
 import type { UserProfile } from '~/types';
 import { MissionStartInput } from '~/components/fiscal/MissionStartInput';
+import { CreationDateInput } from '~/components/fiscal/CreationDateInput';
 import { ActivitySelector } from '~/components/fiscal/ActivitySelector';
+import { AutoChargesInfo } from '~/components/fiscal/AutoChargesInfo';
 import { VLToggle } from '~/components/fiscal/VLToggle';
+import { ACREToggle } from '~/components/fiscal/ACREToggle';
+import { TVAToggle } from '~/components/fiscal/TVAToggle';
 import { SeuilInput } from '~/components/fiscal/SeuilInput';
 import { FixedCostsList } from '~/components/fiscal/FixedCostsList';
 import { SettingsTabs, type SettingsTabId, type TabDef } from '~/components/settings/SettingsTabs';
@@ -221,10 +225,14 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   aria-labelledby={tabId('fiscal')}
                   className="space-y-8"
                 >
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-secondary mb-3">
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-secondary">
                       Période
                     </h3>
+                    <CreationDateInput
+                      value={profile.creationDate}
+                      onChange={(v) => updateProfile({ creationDate: v || undefined })}
+                    />
                     <MissionStartInput
                       value={missionStart}
                       onChange={onMissionStartChange}
@@ -232,7 +240,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     />
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-secondary">
                       Activité
                     </h3>
@@ -244,16 +252,31 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                           activity: next,
                           urssafRate: params.urssafRate,
                           seuilMicro: params.plafond,
+                          // Réactive la taxe consulaire automatiquement si la nouvelle activité y est soumise
+                          taxeConsulaireEnabled: params.taxeConsulaireRate > 0,
                         });
                       }}
                     />
+                    <AutoChargesInfo activity={profile.activity} />
                   </div>
 
-                  <div>
+                  <div className="space-y-5">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-secondary">
+                      Régime fiscal
+                    </h3>
+                    <ACREToggle
+                      value={profile.acreEnabled ?? false}
+                      onChange={(v) => updateProfile({ acreEnabled: v })}
+                      creationDate={profile.creationDate}
+                    />
                     <VLToggle
                       value={profile.versementLiberatoire}
                       onChange={(v) => updateProfile({ versementLiberatoire: v })}
                       tauxVL={ACTIVITY_PARAMS[profile.activity].tauxVL}
+                    />
+                    <TVAToggle
+                      value={profile.tvaAssujetti ?? false}
+                      onChange={(v) => updateProfile({ tvaAssujetti: v })}
                     />
                   </div>
 

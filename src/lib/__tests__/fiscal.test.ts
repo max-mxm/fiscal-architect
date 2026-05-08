@@ -2,11 +2,18 @@ import { describe, expect, it } from 'vitest';
 import type { CalendarMonth, UserProfile } from '~/types';
 import {
   ABATTEMENT_BNC,
+  ACRE_DURATION_MONTHS,
+  ACRE_RATE_AFTER,
+  ACRE_RATE_BEFORE,
+  ACRE_TRANSITION_DATE,
   ACTIVITY_PARAMS,
   SEUIL_MICRO,
   TAUX_VL_BNC,
+  TVA_FRANCHISE_2026,
+  calcACRE,
   calcCAMensuel,
   calcCAannuel,
+  calcCFP,
   calcCaRealise,
   calcChargesURSSAF,
   calcEquivDays,
@@ -16,10 +23,14 @@ import {
   calcNetMicro,
   calcReserveVacances,
   calcSeuilDate,
+  calcTaxeConsulaire,
   calcTotalChargesFixes,
+  calcTVAStatus,
+  calcTVASeuilDate,
   countMonthsWithActivity,
   generateChartData,
   getFiscalParams,
+  getTVASeuils,
 } from '~/lib/fiscal';
 
 const fixedCost = (id: string, amount: number): UserProfile['fixedCosts'][number] => ({
@@ -483,6 +494,247 @@ describe('calcNetMicro avec opts (par activité)', () => {
     });
     expect(venteVL.ir).toBeCloseTo(500); // 50k × 1 %
     expect(ssiVL.ir).toBeCloseTo(1_100); // 50k × 2,2 %
+  });
+});
+
+describe('calcCFP', () => {
+  it('vente : 0,1 % du CA', () => {
+    expect(calcCFP(50_000, 'vente')).toBeCloseTo(50);
+  });
+
+  it('serviceBic : 0,3 % du CA', () => {
+    expect(calcCFP(50_000, 'serviceBic')).toBeCloseTo(150);
+  });
+
+  it('liberalSsi : 0,2 % du CA', () => {
+    expect(calcCFP(50_000, 'liberalSsi')).toBeCloseTo(100);
+  });
+
+  it('liberalCipav : 0,2 % du CA', () => {
+    expect(calcCFP(50_000, 'liberalCipav')).toBeCloseTo(100);
+  });
+
+  it('retourne 0 quand CA <= 0', () => {
+    expect(calcCFP(0, 'liberalSsi')).toBe(0);
+    expect(calcCFP(-100, 'vente')).toBe(0);
+  });
+});
+
+describe('calcTaxeConsulaire', () => {
+  it('vente : 0,015 % (CCI commerçants)', () => {
+    expect(calcTaxeConsulaire(50_000, 'vente')).toBeCloseTo(7.5);
+  });
+
+  it('serviceBic : 0,044 % (CCI prestations)', () => {
+    expect(calcTaxeConsulaire(50_000, 'serviceBic')).toBeCloseTo(22);
+  });
+
+  it('libéraux : exonérés', () => {
+    expect(calcTaxeConsulaire(50_000, 'liberalSsi')).toBe(0);
+    expect(calcTaxeConsulaire(50_000, 'liberalCipav')).toBe(0);
+  });
+
+  it('retourne 0 quand CA <= 0', () => {
+    expect(calcTaxeConsulaire(0, 'vente')).toBe(0);
+  });
+});
+
+describe('calcACRE', () => {
+  const urssafBrut = 1000;
+
+  it('non applicable si désactivée', () => {
+    const result = calcACRE(urssafBrut, new Date('2025-06-01'), new Date('2025-09-01'), false);
+    expect(result.applicable).toBe(false);
+    expect(result.reduction).toBe(0);
+    expect(result.rate).toBe(0);
+  });
+
+  it('non applicable sans date de création', () => {
+    const result = calcACRE(urssafBrut, null, new Date('2025-09-01'), true);
+    expect(result.applicable).toBe(false);
+    expect(result.reduction).toBe(0);
+  });
+
+  it('applique 25 % pour création après 01/05/2024', () => {
+    const result = calcACRE(urssafBrut, new Date('2025-06-01'), new Date('2025-09-01'), true);
+    expect(result.applicable).toBe(true);
+    expect(result.rate).toBe(ACRE_RATE_AFTER);
+    expect(result.reduction).toBeCloseTo(250);
+  });
+
+  it('applique 50 % pour création avant 01/05/2024', () => {
+    const result = calcACRE(urssafBrut, new Date('2024-02-15'), new Date('2024-09-01'), true);
+    expect(result.applicable).toBe(true);
+    expect(result.rate).toBe(ACRE_RATE_BEFORE);
+    expect(result.reduction).toBeCloseTo(500);
+  });
+
+  it('non applicable au-delà de 12 mois après création', () => {
+    const result = calcACRE(urssafBrut, new Date('2024-06-01'), new Date('2025-08-01'), true);
+    expect(result.applicable).toBe(false);
+    expect(result.reduction).toBe(0);
+  });
+
+  it('exactement 12 mois après création = expiré', () => {
+    const result = calcACRE(urssafBrut, new Date('2024-06-01'), new Date('2025-06-01'), true);
+    expect(result.applicable).toBe(false);
+  });
+
+  it('non applicable si periodDate < creationDate', () => {
+    const result = calcACRE(urssafBrut, new Date('2025-06-01'), new Date('2025-03-01'), true);
+    expect(result.applicable).toBe(false);
+  });
+
+  it('transition exactement le 01/05/2024 → taux 25 %', () => {
+    const result = calcACRE(urssafBrut, ACRE_TRANSITION_DATE, new Date('2024-08-01'), true);
+    expect(result.rate).toBe(ACRE_RATE_AFTER);
+  });
+
+  it('durée fenêtre = ACRE_DURATION_MONTHS mois', () => {
+    expect(ACRE_DURATION_MONTHS).toBe(12);
+  });
+});
+
+describe('getTVASeuils', () => {
+  it('vente → 91 900 / 101 000 €', () => {
+    expect(getTVASeuils('vente')).toEqual(TVA_FRANCHISE_2026.vente);
+  });
+
+  it('serviceBic, libéraux → 36 800 / 39 100 €', () => {
+    expect(getTVASeuils('serviceBic')).toEqual(TVA_FRANCHISE_2026.services);
+    expect(getTVASeuils('liberalSsi')).toEqual(TVA_FRANCHISE_2026.services);
+    expect(getTVASeuils('liberalCipav')).toEqual(TVA_FRANCHISE_2026.services);
+  });
+});
+
+describe('calcTVAStatus', () => {
+  it('safe quand CA très en dessous du seuil basique', () => {
+    expect(calcTVAStatus(20_000, 'liberalSsi')).toBe('safe');
+    expect(calcTVAStatus(50_000, 'vente')).toBe('safe');
+  });
+
+  it('warning quand CA entre basique et majoré (services)', () => {
+    expect(calcTVAStatus(36_800, 'liberalSsi')).toBe('warning');
+    expect(calcTVAStatus(38_000, 'serviceBic')).toBe('warning');
+  });
+
+  it('breach quand CA >= seuil majoré (services)', () => {
+    expect(calcTVAStatus(39_100, 'liberalSsi')).toBe('breach');
+    expect(calcTVAStatus(45_000, 'liberalCipav')).toBe('breach');
+  });
+
+  it('warning quand CA entre basique et majoré (vente)', () => {
+    expect(calcTVAStatus(95_000, 'vente')).toBe('warning');
+  });
+
+  it('breach quand CA >= seuil majoré (vente)', () => {
+    expect(calcTVAStatus(101_000, 'vente')).toBe('breach');
+    expect(calcTVAStatus(150_000, 'vente')).toBe('breach');
+  });
+});
+
+describe('calcTVASeuilDate', () => {
+  const monthsOf2 = (year: number, fill: Partial<CalendarMonth>[] = []): CalendarMonth[] =>
+    Array.from({ length: 12 }, (_, i) => ({
+      month: i,
+      year,
+      workedDays: [],
+      halfDays: [],
+      ...fill[i],
+    }));
+
+  it('renvoie null si seuil non atteint', () => {
+    const months = monthsOf2(2026, [{ workedDays: [1, 2, 3] }]);
+    expect(calcTVASeuilDate(months, 500, 'liberalSsi')).toBeNull();
+  });
+
+  it('renvoie la date de bascule services à 36 800 €', () => {
+    // TJM 1000, seuil services 36 800 → 37e jour atteint le seuil
+    // Avec 30 jours en jan + 7 jours fév => atteint le 7 fév (cumul 37 000)
+    const months = monthsOf2(2026, [
+      { workedDays: Array.from({ length: 30 }, (_, i) => i + 1) }, // jan : 30 × 1000 = 30 000
+      { workedDays: Array.from({ length: 10 }, (_, i) => i + 1) }, // fev : 10 × 1000
+    ]);
+    const date = calcTVASeuilDate(months, 1000, 'liberalSsi');
+    expect(date).not.toBeNull();
+    expect(date!.getMonth()).toBe(1); // février
+    expect(date!.getDate()).toBe(7);
+  });
+
+  it('utilise le seuil vente 91 900 € pour activité vente', () => {
+    // TJM 1000, seuil vente 91 900 → atteint le 92e jour
+    const months = monthsOf2(2026, [
+      { workedDays: Array.from({ length: 31 }, (_, i) => i + 1) },
+      { workedDays: Array.from({ length: 28 }, (_, i) => i + 1) },
+      { workedDays: Array.from({ length: 31 }, (_, i) => i + 1) },
+      { workedDays: Array.from({ length: 5 }, (_, i) => i + 1) },
+    ]);
+    const date = calcTVASeuilDate(months, 1000, 'vente');
+    expect(date).not.toBeNull();
+    expect(date!.getMonth()).toBe(3); // avril
+  });
+});
+
+describe('calcNetMicro avec ACRE', () => {
+  it('réduit l\'URSSAF du montant ACRE passé en options', () => {
+    const sansAcre = calcNetMicro(50_000, 22, 0);
+    const avecAcre = calcNetMicro(50_000, 22, 0, false, { acreReduction: 5_500 });
+    expect(avecAcre.acreReductionAnnuelle).toBe(5_500);
+    expect(avecAcre.chargesURSSAF).toBeCloseTo(sansAcre.chargesURSSAF - 5_500);
+    expect(avecAcre.netApresIR).toBeCloseTo(sansAcre.netApresIR + 5_500);
+  });
+
+  it('clamp l\'ACRE à l\'URSSAF brut maximal', () => {
+    // URSSAF brut = 50000 × 0.22 = 11000. Si on passe 50000, on doit clamp à 11000.
+    const r = calcNetMicro(50_000, 22, 0, false, { acreReduction: 50_000 });
+    expect(r.acreReductionAnnuelle).toBeCloseTo(11_000);
+    expect(r.chargesURSSAF).toBe(0);
+  });
+});
+
+describe('calcNetMicro avec CFP et taxe consulaire', () => {
+  it('soustrait CFP et taxe consulaire du net', () => {
+    const sans = calcNetMicro(50_000, 22, 0);
+    const avec = calcNetMicro(50_000, 22, 0, false, { cfpRate: 0.002, taxeConsulaireRate: 0.00015 });
+    expect(avec.cfpAnnuel).toBeCloseTo(100);
+    expect(avec.taxeConsulaireAnnuelle).toBeCloseTo(7.5);
+    expect(avec.netApresIR).toBeCloseTo(sans.netApresIR - 100 - 7.5);
+  });
+
+  it('expose tvaStatus et tvaSeuilDate (défauts safe / null)', () => {
+    const r = calcNetMicro(50_000, 22, 0);
+    expect(r.tvaStatus).toBe('safe');
+    expect(r.tvaSeuilDate).toBeNull();
+
+    const date = new Date('2026-10-12');
+    const r2 = calcNetMicro(50_000, 22, 0, false, { tvaStatus: 'warning', tvaSeuilDate: date });
+    expect(r2.tvaStatus).toBe('warning');
+    expect(r2.tvaSeuilDate).toBe(date);
+  });
+});
+
+describe('calcMonthlyBreakdown avec CFP, taxe consulaire, ACRE', () => {
+  it('expose cfp, taxeConsulaire, acreReduction', () => {
+    const m = calcMonthlyBreakdown(5_000, 22, 0, false, {
+      cfpRate: 0.002,
+      taxeConsulaireRate: 0.00015,
+      acreReduction: 550, // 50 % de 1100 (URSSAF brut mensuel)
+    });
+    expect(m.cfp).toBeCloseTo(10);
+    expect(m.taxeConsulaire).toBeCloseTo(0.75);
+    expect(m.acreReduction).toBeCloseTo(550);
+    expect(m.urssaf).toBeCloseTo(550); // 1100 - 550
+  });
+
+  it('le net mensuel intègre CFP et taxe consulaire', () => {
+    const sans = calcMonthlyBreakdown(5_000, 22, 0);
+    const avec = calcMonthlyBreakdown(5_000, 22, 0, false, {
+      cfpRate: 0.002,
+      taxeConsulaireRate: 0.00015,
+    });
+    // avec doit avoir un net inférieur de cfp + taxe
+    expect(avec.net).toBeLessThan(sans.net);
+    expect(sans.net - avec.net).toBeCloseTo(10 + 0.75);
   });
 });
 

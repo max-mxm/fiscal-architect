@@ -1,8 +1,10 @@
 import React from 'react';
-import { AlertTriangle, CalendarClock, Pencil, Wallet } from 'lucide-react';
+import { Pencil, Wallet } from 'lucide-react';
 import { cn } from '~/utils';
 import { formatEuro } from '~/lib/format';
 import { formatDateFR, formatDaysFR } from '~/lib/calendar';
+import { ThresholdGauge, type GaugeStatusKind } from '~/components/ThresholdGauge';
+import type { TVAStatus } from '~/types';
 
 interface KeyMetricsProps {
   caCumule: number;
@@ -22,6 +24,14 @@ interface KeyMetricsProps {
   /** Date de franchissement projetée du seuil micro, ou null si pas dépassé. */
   seuilDate: Date | null;
   onEditMissionStart: () => void;
+  /** Seuil basique de franchise en base TVA pour l'activité courante. */
+  seuilTVA: number;
+  /** Statut TVA dérivé du CA cumulé. */
+  tvaStatus: TVAStatus;
+  /** Date projetée de bascule TVA, ou null si non dépassé. */
+  tvaSeuilDate: Date | null;
+  /** True si l'utilisateur facture déjà la TVA → masque la jauge, affiche un badge. */
+  tvaAssujetti: boolean;
 }
 
 export const KeyMetrics: React.FC<KeyMetricsProps> = ({
@@ -36,6 +46,10 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
   missionStart,
   seuilDate,
   onEditMissionStart,
+  seuilTVA,
+  tvaStatus,
+  tvaSeuilDate,
+  tvaAssujetti,
 }) => {
   const realisedPct = Math.min(100, (caRealise / seuilMicro) * 100);
   const projectedPct = Math.min(100, (caCumule / seuilMicro) * 100);
@@ -49,7 +63,7 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
   today.setHours(0, 0, 0, 0);
   const seuilDateIsPast = seuilDate ? seuilDate.getTime() < today.getTime() : false;
 
-  const seuilTone: 'overflow' | 'projected' | 'safe' = seuilDate
+  const seuilTone: GaugeStatusKind = seuilDate
     ? seuilDateIsPast
       ? 'overflow'
       : 'projected'
@@ -62,6 +76,29 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
     return seuilDateIsPast
       ? `Seuil dépassé le ${dateStr}`
       : `Franchissement projeté le ${dateStr}`;
+  })();
+
+  // --- Bloc TVA ---
+  const tvaRealisedPct = Math.min(100, (caRealise / seuilTVA) * 100);
+  const tvaProjectedPct = Math.min(100, (caCumule / seuilTVA) * 100);
+  const tvaMargeRestante = Math.max(0, seuilTVA - caCumule);
+  const tvaSeuilDateIsPast = tvaSeuilDate ? tvaSeuilDate.getTime() < today.getTime() : false;
+
+  const tvaTone: GaugeStatusKind =
+    tvaStatus === 'breach' ? 'overflow' : tvaStatus === 'warning' ? 'projected' : 'safe';
+
+  const tvaLabel = (() => {
+    if (tvaStatus === 'safe') return `TVA non applicable · marge ${formatEuro(tvaMargeRestante)} €`;
+    if (!tvaSeuilDate) {
+      return tvaStatus === 'breach'
+        ? 'Seuil TVA dépassé — bascule obligatoire'
+        : 'Seuil TVA atteint — vigilance';
+    }
+    const { day, monthName, year } = formatDateFR(tvaSeuilDate);
+    const dateStr = `${day} ${monthName.toLowerCase()} ${year}`;
+    return tvaSeuilDateIsPast
+      ? `Seuil TVA dépassé le ${dateStr} — bascule obligatoire`
+      : `Bascule TVA projetée le ${dateStr}`;
   })();
 
   const startLabel = (() => {
@@ -83,6 +120,14 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
         aria-labelledby="kpi-ca-label"
       >
         <div className="relative z-10">
+          {tvaAssujetti && (
+            <div className="absolute top-0 right-0 z-10">
+              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold bg-amber-400/15 text-amber-200">
+                TVA assujettie
+              </span>
+            </div>
+          )}
+
           <span
             id="kpi-ca-label"
             className="text-[11px] font-bold uppercase tracking-[0.18em] text-secondary-container/85"
@@ -144,43 +189,37 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
             </button>
           </div>
 
-          {/* Triple jauge — Fond (course totale) + Projeté (où on va) + Réalisé (déjà encaissé) */}
-          <div className="mt-4 relative h-2.5 w-full rounded-full bg-white/8 overflow-hidden">
-            <div
-              className="absolute inset-y-0 left-0 rounded-full bg-secondary-container/45"
-              style={{ width: `${projectedPct}%` }}
-              aria-hidden="true"
-            />
-            <div
-              className="absolute inset-y-0 left-0 rounded-full transition-all bg-secondary-container shadow-[0_0_12px_rgba(108,248,187,0.35)]"
-              style={{ width: `${realisedPct}%` }}
-              role="progressbar"
-              aria-label="Progression CA réalisé vs seuil micro"
-              aria-valuenow={Math.round(realisedPct)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
-          </div>
-          <div className="mt-1.5 flex items-center justify-between text-[10px] uppercase tracking-widest text-secondary-container/70 font-bold">
-            <span>{Math.round(realisedPct)}% réalisé</span>
-            <span>{Math.round(projectedPct)}% projeté</span>
-          </div>
+          <ThresholdGauge
+            realizedPct={realisedPct}
+            projectedPct={projectedPct}
+            tone="mint"
+            status={{ kind: seuilTone, label: seuilLabel }}
+            ariaLabel="Progression CA réalisé vs seuil micro"
+          />
 
-          <div
-            className={cn(
-              'mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold',
-              seuilTone === 'overflow' && 'bg-red-500/15 text-red-200',
-              seuilTone === 'projected' && 'bg-amber-400/10 text-amber-200',
-              seuilTone === 'safe' && 'bg-secondary-container/15 text-secondary-container',
-            )}
-          >
-            {seuilTone === 'overflow' ? (
-              <AlertTriangle className="w-3 h-3" />
-            ) : (
-              <CalendarClock className="w-3 h-3" />
-            )}
-            <span className="tracking-tight">{seuilLabel}</span>
-          </div>
+          {/* Sous-bloc Seuil TVA (caché si déjà assujetti) */}
+          {!tvaAssujetti && (
+            <div className="mt-5 pt-5 border-t border-white/8">
+              <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-200/85">
+                Seuil TVA · franchise en base
+              </span>
+              <div className="mt-1.5 flex items-baseline justify-between gap-3">
+                <span className="font-mono tabular-nums text-lg sm:text-xl font-bold truncate">
+                  {formatEuro(caCumule)}<span className="text-amber-200">€</span>
+                </span>
+                <span className="text-xs text-amber-200/85 font-mono tabular-nums shrink-0">
+                  / {formatEuro(seuilTVA)}€
+                </span>
+              </div>
+              <ThresholdGauge
+                realizedPct={tvaRealisedPct}
+                projectedPct={tvaProjectedPct}
+                tone="amber"
+                status={{ kind: tvaTone, label: tvaLabel }}
+                ariaLabel="Progression CA réalisé vs seuil TVA"
+              />
+            </div>
+          )}
         </div>
         <div
           className="hidden md:block motion-reduce:hidden absolute -right-12 -bottom-12 w-32 h-32 bg-secondary-container/20 blur-[60px] rounded-full"

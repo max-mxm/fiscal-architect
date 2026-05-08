@@ -15,12 +15,20 @@ const ProfileContext = createContext<ProfileContextType | null>(null);
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useLocalStorage('fiscal-profile', DEFAULT_PROFILE);
 
-  // Migration silencieuse pour les profils localStorage antérieurs à l'introduction du champ `activity`.
+  // Migration silencieuse pour les profils localStorage antérieurs aux ajouts de champs.
+  // Comble tous les champs absents avec les valeurs par défaut, en une seule passe.
   useEffect(() => {
-    if (!profile.activity) {
-      setProfile((p) => ({ ...p, activity: 'liberalSsi' }));
-    }
-  }, [profile.activity, setProfile]);
+    setProfile((p) => {
+      const next = { ...p };
+      let dirty = false;
+      if (!next.activity) { next.activity = DEFAULT_PROFILE.activity; dirty = true; }
+      if (next.acreEnabled === undefined) { next.acreEnabled = DEFAULT_PROFILE.acreEnabled; dirty = true; }
+      if (next.tvaAssujetti === undefined) { next.tvaAssujetti = DEFAULT_PROFILE.tvaAssujetti; dirty = true; }
+      if (next.cfpEnabled === undefined) { next.cfpEnabled = DEFAULT_PROFILE.cfpEnabled; dirty = true; }
+      if (next.taxeConsulaireEnabled === undefined) { next.taxeConsulaireEnabled = DEFAULT_PROFILE.taxeConsulaireEnabled; dirty = true; }
+      return dirty ? next : p;
+    });
+  }, [setProfile]);
 
   const handleExportGlobal = useCallback(() => {
     const chartData = generateChartData(profile);

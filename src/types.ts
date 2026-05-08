@@ -10,6 +10,17 @@ export interface UserProfile {
   fixedCosts: { id: string; name: string; description: string; amount: number; icon: string; color: string }[];
   seuilMicro: number;
   versementLiberatoire: boolean;
+  // Champs optionnels — peuvent être absents sur les profils localStorage antérieurs.
+  /** Date de création de l'activité (ISO 'YYYY-MM-DD'). Utilisée pour ACRE et exonérations. */
+  creationDate?: string;
+  /** ACRE activée : réduction d'URSSAF pendant 12 mois après création. */
+  acreEnabled?: boolean;
+  /** TVA assujettie : l'utilisateur facture la TVA (sortie du régime franchise en base). */
+  tvaAssujetti?: boolean;
+  /** CFP (Contribution Formation Pro) prise en compte dans les charges. Activé par défaut. */
+  cfpEnabled?: boolean;
+  /** Taxe pour frais de chambre consulaire (CCI/CMA). Activée par défaut selon activité. */
+  taxeConsulaireEnabled?: boolean;
 }
 
 // --- Types enrichis (FOUND-03) ---
@@ -26,6 +37,8 @@ export interface FiscalYear {
   months: CalendarMonth[];
 }
 
+export type TVAStatus = 'safe' | 'warning' | 'breach';
+
 export interface FiscalResult {
   caAnnuel: number;
   chargesURSSAF: number;
@@ -33,6 +46,11 @@ export interface FiscalResult {
   revenuImposable: number;
   ir: number;
   netApresIR: number;
+  cfpAnnuel: number;
+  taxeConsulaireAnnuelle: number;
+  acreReductionAnnuelle: number;
+  tvaStatus: TVAStatus;
+  tvaSeuilDate: Date | null;
 }
 
 export interface MonthlyBreakdown {
@@ -42,6 +60,10 @@ export interface MonthlyBreakdown {
   chargesFixes: number;
   net: number;
   tauxNet: number;
+  cfp: number;
+  taxeConsulaire: number;
+  /** Montant déduit de l'URSSAF par l'ACRE ce mois-ci (positif). */
+  acreReduction: number;
 }
 
 export interface MonthlyChartData {
