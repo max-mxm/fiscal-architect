@@ -18,6 +18,7 @@ import { FiscalContextBar } from '~/components/FiscalContextBar'
 import { ConfirmModal } from '~/components/ConfirmModal'
 import { PwaInstallController } from '~/components/PwaInstallController'
 import { YearTransitionModal } from '~/components/YearTransitionModal'
+import { BreakingUpdateGate } from '~/components/BreakingUpdateGate'
 import { useYearAutoTransition } from '~/hooks/useYearAutoTransition'
 import { calcCAYearFromEntries } from '~/lib/fiscal'
 import type { SettingsTabId } from '~/components/settings/SettingsTabs'
@@ -203,6 +204,7 @@ function AppShell() {
         onCancel={fy.cancelYearTransition}
       />
       <PwaInstallController />
+      <BreakingUpdateGate />
     </div>
   )
 }

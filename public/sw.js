@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fiscal-architect-v2';
+const CACHE_NAME = 'fiscal-architect-v3';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -29,6 +29,14 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
 
   if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+
+  // Always bypass cache for the version manifest — needed to detect breaking updates.
+  if (url.pathname === '/version.json') {
+    event.respondWith(fetch(request, { cache: 'no-store' }));
+    return;
+  }
 
   // Network-first for pages, cache-first for assets
   if (request.mode === 'navigate') {
