@@ -22,23 +22,23 @@ const ICONS: Record<RevenueModel, React.ComponentType<{ className?: string }>> =
 const META: Record<RevenueModel, { label: string; hint: string; tag: string; helpTermId?: FiscalTermId }> = {
   days: {
     label: 'Jours travaillés',
-    hint: 'Freelance / consultant — TJM × jours via calendrier',
+    hint: 'Freelance / consultant',
     tag: 'TJM',
     helpTermId: 'tjm',
   },
   forfait: {
     label: 'Prestations au forfait',
-    hint: 'Artisan / projet — devis ponctuels datés',
+    hint: 'Artisan / projet',
     tag: 'Forfait',
   },
   flat: {
     label: 'CA mensuel agrégé',
-    hint: 'E-commerce / VTC — un montant total par mois',
+    hint: 'E-commerce / VTC',
     tag: 'Mensuel',
   },
   mixed: {
     label: 'Mixte',
-    hint: 'Combine plusieurs modes au sein d\'un même mois',
+    hint: 'Combiné',
     tag: 'Mixte',
   },
 };
@@ -62,7 +62,7 @@ export const RevenueModeSelector: React.FC<RevenueModeSelectorProps> = ({ value,
             aria-checked={active}
             onClick={() => onChange(m)}
             className={cn(
-              'flex items-center gap-3 min-h-[64px] w-full rounded-2xl border p-3 text-left transition-colors',
+              'flex items-center gap-3 min-h-[64px] w-full min-w-0 max-w-full rounded-2xl border p-3 text-left transition-colors overflow-hidden',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40',
               active
                 ? 'border-secondary bg-secondary/5 ring-2 ring-secondary/20'
@@ -80,10 +80,10 @@ export const RevenueModeSelector: React.FC<RevenueModeSelectorProps> = ({ value,
             </span>
             <span className="flex flex-col flex-1 min-w-0">
               <span className="flex items-center gap-1.5 min-w-0">
-                <span className="text-sm font-bold text-on-surface truncate">{meta.label}</span>
+                <span className="text-sm font-bold text-on-surface truncate min-w-0 flex-1">{meta.label}</span>
                 {meta.helpTermId && <HelpTooltip termId={meta.helpTermId} />}
               </span>
-              <span className="text-[11px] text-on-surface-variant truncate">{meta.hint}</span>
+              <span className="block text-[11px] text-on-surface-variant truncate min-w-0">{meta.hint}</span>
             </span>
             <span
               className={cn(
