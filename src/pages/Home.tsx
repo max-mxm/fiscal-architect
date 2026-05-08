@@ -42,8 +42,9 @@ import { UndoToast } from '~/components/UndoToast';
 import { ConfirmModal } from '~/components/ConfirmModal';
 import { ForfaitList } from '~/components/fiscal/ForfaitList';
 import { FlatRevenueInput } from '~/components/fiscal/FlatRevenueInput';
-import { CompteProAlerte } from '~/components/CompteProAlerte';
+import { DismissableBanner } from '~/components/CompteProAlerte';
 import { PersonaPicker } from '~/components/onboarding/PersonaPicker';
+import { useNotificationsCtx } from '~/context/NotificationsContext';
 import type { CalendarMonth, RevenueEntry } from '~/types';
 
 type ConfirmKind = 'clear-year' | 'fill-month' | 'fill-year';
@@ -73,6 +74,7 @@ export const Home: React.FC = () => {
   const search = useRouterState({ select: (s) => s.location.search }) as Record<string, unknown>;
   const confirmKind = (search?.confirm as ConfirmKind | undefined) ?? null;
   const reducedMotion = usePrefersReducedMotion();
+  const notifications = useNotificationsCtx();
 
   const { year, currentMonthIndex, todayDate } = fy;
   const [selectedMonth, setSelectedMonth] = useState<number>(currentMonthIndex);
@@ -371,7 +373,15 @@ export const Home: React.FC = () => {
     >
       <h1 className="sr-only">Fiscal Architect — suivi fiscal {year}</h1>
 
-      <CompteProAlerte caCumule={caCumule} />
+      {(() => {
+        const compteProActive = notifications.active.find((n) => n.id === 'compte-pro') ?? null;
+        return (
+          <DismissableBanner
+            notification={compteProActive}
+            onDismiss={() => notifications.dismiss('compte-pro')}
+          />
+        );
+      })()}
 
       {/* Hero KPI ou Empty */}
       {isEmpty ? (

@@ -11,11 +11,12 @@ import appCss from '~/styles/app.css?url'
 import { TopBar } from '~/components/Navigation'
 import { ProfileProvider, useProfile } from '~/context/ProfileContext'
 import { FiscalYearProvider, useFiscalYearCtx } from '~/context/FiscalYearContext'
+import { NotificationsProvider } from '~/context/NotificationsContext'
 import { SettingsDrawer } from '~/components/SettingsDrawer'
 import { FiscalContextBar } from '~/components/FiscalContextBar'
 import { ConfirmModal } from '~/components/ConfirmModal'
 import { PwaInstallController } from '~/components/PwaInstallController'
-import { calcEquivDays } from '~/lib/fiscal'
+import { calcCAYearFromEntries } from '~/lib/fiscal'
 import type { SettingsTabId } from '~/components/settings/SettingsTabs'
 
 export const Route = createRootRoute({
@@ -57,7 +58,9 @@ function RootComponent() {
     <RootDocument>
       <ProfileProvider>
         <FiscalYearProvider>
-          <AppShell />
+          <NotificationsProvider>
+            <AppShell />
+          </NotificationsProvider>
         </FiscalYearProvider>
       </ProfileProvider>
     </RootDocument>
@@ -113,10 +116,10 @@ function AppShell() {
   const activeTab: SettingsTabId = isValidTab ? settingsParam : 'profile'
   const resetConfirmOpen = search?.confirm === 'reset-all'
 
-  const caCumule = useMemo(() => {
-    const totalDays = fy.fiscalYear.months.reduce((sum, m) => sum + calcEquivDays(m), 0)
-    return totalDays * profile.tjm
-  }, [fy.fiscalYear.months, profile.tjm])
+  const caCumule = useMemo(
+    () => calcCAYearFromEntries(fy.fiscalYear.months, profile),
+    [fy.fiscalYear.months, profile],
+  )
 
   const openSettings = (tab: SettingsTabId) => navigate({ to: '/', search: { settings: tab } })
   const closeSettings = () => navigate({ to: '/', search: {} })

@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
-import { AlertTriangle, Download, Settings as SettingsIcon } from 'lucide-react';
+import React from 'react';
+import { Download, Settings as SettingsIcon } from 'lucide-react';
 import { cn } from '~/utils';
 import type { UserProfile } from '~/types';
-import { calcCAannuel } from '~/lib/fiscal';
 import { formatEuro } from '~/lib/format';
+import { NotificationBell } from '~/components/notifications/NotificationBell';
 
 interface TopBarProps {
   profile: UserProfile;
@@ -14,14 +14,7 @@ interface TopBarProps {
 
 export const TopBar: React.FC<TopBarProps> = ({ profile, caCumule, onExport, onOpenSettings }) => {
   const seuil = profile.seuilMicro;
-  const caProjete = useMemo(
-    () => calcCAannuel(profile.tjm, profile.workingDays),
-    [profile.tjm, profile.workingDays],
-  );
-
   const pctReal = Math.min(100, (caCumule / seuil) * 100);
-  const pctProj = Math.min(100, (caProjete / seuil) * 100);
-  const showAlert = pctProj >= 80;
   const isOver = caCumule >= seuil;
 
   return (
@@ -76,6 +69,7 @@ export const TopBar: React.FC<TopBarProps> = ({ profile, caCumule, onExport, onO
           >
             <Download className="w-5 h-5" />
           </button>
+          <NotificationBell />
           <button
             type="button"
             onClick={onOpenSettings}
@@ -87,25 +81,6 @@ export const TopBar: React.FC<TopBarProps> = ({ profile, caCumule, onExport, onO
           </button>
         </div>
       </div>
-
-      {showAlert && (
-        <div
-          className={cn(
-            'w-full px-4 py-2 flex items-center justify-center gap-2 text-xs font-medium border-t',
-            isOver
-              ? 'bg-red-50 text-red-700 border-red-200/60'
-              : 'bg-amber-50 text-amber-700 border-amber-200/60',
-          )}
-          role="status"
-        >
-          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">
-            {isOver
-              ? `Seuil micro dépassé — ${formatEuro(caCumule)}€ / ${formatEuro(seuil)}€`
-              : `${pctProj.toFixed(0)}% du seuil micro projeté — ${formatEuro(caProjete)}€ / ${formatEuro(seuil)}€`}
-          </span>
-        </div>
-      )}
     </header>
   );
 };

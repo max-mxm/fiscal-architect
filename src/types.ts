@@ -130,3 +130,21 @@ export interface MonthlyChartData {
   brut: number;
   net: number;
 }
+
+// --- Notifications (centre de notifs) ---
+
+export type NotificationLevel = 'info' | 'warning' | 'critical';
+
+/** Identifiants stables. Changer d'ID = nouvelle notification (pas de propagation du dismiss). */
+export type NotificationKind =
+  | 'compte-pro'
+  | 'seuil-micro-projected'
+  | 'seuil-micro-breach';
+
+export interface Notification {
+  id: NotificationKind;
+  level: NotificationLevel;
+  title: string;
+  body: string;
+  icon: 'compte-pro' | 'seuil';
+}
