@@ -3,6 +3,20 @@ export type Activity = 'vente' | 'serviceBic' | 'liberalSsi' | 'liberalCipav';
 /** Mode de saisie du chiffre d'affaires par défaut au niveau du profil. */
 export type RevenueModel = 'days' | 'forfait' | 'flat' | 'mixed';
 
+/**
+ * Une déclaration d'activité au sein du profil. Le micro-entrepreneur peut en
+ * cumuler plusieurs (ex. dev BNC + vente de templates) — chaque entry de revenu
+ * pointe alors vers son `activityId`.
+ */
+export interface ActivityEntry {
+  id: string;
+  type: Activity;
+  /** Libellé libre (ex. "Conseil dev", "Vente templates"). */
+  label?: string;
+  /** L'activité par défaut pour les revenue entries sans activityId. Une seule par profil. */
+  isPrimary: boolean;
+}
+
 export interface UserProfile {
   name: string;
   role: string;
@@ -26,6 +40,11 @@ export interface UserProfile {
   taxeConsulaireEnabled?: boolean;
   /** Mode de saisie du CA. Défaut: 'days' (TJM × jours travaillés). */
   revenueModel?: RevenueModel;
+  /**
+   * Liste d'activités déclarées. Optionnel pour rétro-compat — si absent,
+   * dérivé au montage à partir de `activity` (1 seule activité primaire).
+   */
+  activities?: ActivityEntry[];
 }
 
 // --- Types enrichis (FOUND-03) ---
@@ -37,9 +56,9 @@ export interface UserProfile {
  * - `flat` : montant unique « CA du mois » saisi directement
  */
 export type RevenueEntry =
-  | { kind: 'days'; id: string; days: number[]; halfDays?: number[]; tjmOverride?: number }
-  | { kind: 'forfait'; id: string; date: string; amount: number; label?: string }
-  | { kind: 'flat'; id: string; amount: number; label?: string };
+  | { kind: 'days'; id: string; days: number[]; halfDays?: number[]; tjmOverride?: number; activityId?: string }
+  | { kind: 'forfait'; id: string; date: string; amount: number; label?: string; activityId?: string }
+  | { kind: 'flat'; id: string; amount: number; label?: string; activityId?: string };
 
 export interface CalendarMonth {
   month: number; // 0-11

@@ -1,4 +1,4 @@
-import type { Activity, UserProfile, FiscalResult, MonthlyBreakdown, MonthlyChartData, CalendarMonth, RevenueEntry, TVAStatus } from '~/types';
+import type { Activity, ActivityEntry, UserProfile, FiscalResult, MonthlyBreakdown, MonthlyChartData, CalendarMonth, RevenueEntry, TVAStatus } from '~/types';
 
 // --- Paramètres fiscaux par activité (2026) ---
 
@@ -98,7 +98,7 @@ export function resolveEntries(month: CalendarMonth): RevenueEntry[] {
   ];
 }
 
-function entryAmount(entry: RevenueEntry, profile: UserProfile): number {
+export function entryAmount(entry: RevenueEntry, profile: UserProfile): number {
   switch (entry.kind) {
     case 'days': {
       const equiv = entry.days.length + (entry.halfDays?.length ?? 0) * 0.5;
@@ -241,6 +241,185 @@ export function monthHasRevenue(month: CalendarMonth): boolean {
     if (e.kind === 'days') return e.days.length > 0 || (e.halfDays?.length ?? 0) > 0;
     return e.amount > 0;
   });
+}
+
+// --- Multi-activité ---
+
+/** Liste effective des activités du profil (fallback : dérivée de profile.activity). */
+export function getActivities(profile: UserProfile): ActivityEntry[] {
+  if (profile.activities && profile.activities.length > 0) return profile.activities;
+  return [{ id: 'fallback-primary', type: profile.activity, isPrimary: true }];
+}
+
+/** L'activité primaire du profil — défaut pour les revenue entries sans activityId. */
+export function getPrimaryActivity(profile: UserProfile): ActivityEntry {
+  const acts = getActivities(profile);
+  return acts.find((a) => a.isPrimary) ?? acts[0];
+}
+
+/** Type d'activité applicable à une revenue entry (via activityId ou activité primaire). */
+export function resolveActivityType(entry: RevenueEntry, profile: UserProfile): Activity {
+  if (entry.activityId) {
+    const acts = getActivities(profile);
+    const found = acts.find((a) => a.id === entry.activityId);
+    if (found) return found.type;
+  }
+  return getPrimaryActivity(profile).type;
+}
+
+/** Ventile le CA annuel par type d'activité. Activités absentes du profil → 0. */
+export function calcCAByActivity(
+  months: CalendarMonth[],
+  profile: UserProfile,
+): Record<Activity, number> {
+  const result: Record<Activity, number> = { vente: 0, serviceBic: 0, liberalSsi: 0, liberalCipav: 0 };
+  for (const m of months) {
+    for (const e of resolveEntries(m)) {
+      const type = resolveActivityType(e, profile);
+      result[type] += entryAmount(e, profile);
+    }
+  }
+  return result;
+}
+
+/**
+ * Indique si une activité relève du seuil TVA « vente » ou « services ».
+ * `vente` est seul dans la catégorie vente ; les 3 autres sont services/BNC.
+ */
+export function activityCategory(activity: Activity): 'vente' | 'services' {
+  return activity === 'vente' ? 'vente' : 'services';
+}
+
+export interface MixedTVASeuils {
+  /** Seuil franchise TVA pour les ventes, si l'activité est présente. */
+  vente?: { basique: number; majore: number };
+  /** Seuil franchise TVA pour les services/BNC, si présent. */
+  services?: { basique: number; majore: number };
+}
+
+/** Seuils TVA applicables selon les catégories d'activités présentes dans le profil. */
+export function getMixedTVASeuils(profile: UserProfile): MixedTVASeuils {
+  const cats = new Set(getActivities(profile).map((a) => activityCategory(a.type)));
+  const out: MixedTVASeuils = {};
+  if (cats.has('vente')) out.vente = TVA_FRANCHISE_2026.vente;
+  if (cats.has('services')) out.services = TVA_FRANCHISE_2026.services;
+  return out;
+}
+
+/**
+ * Calcul fiscal multi-activité — boucle par type d'activité, applique le bon
+ * URSSAF/CFP/taxe consulaire à chaque branche, et somme. L'IR au barème
+ * progressif est calculé sur le revenu imposable global (somme des CA × (1 −
+ * abattement_par_activité)). En VL, l'IR est CA × tauxVL_par_activité.
+ *
+ * `acreReduction` (annualisée) est ventilée au prorata du CA par activité,
+ * borné par l'URSSAF brut de chaque branche.
+ */
+export function calcNetMicroMulti(
+  profile: UserProfile,
+  caByActivity: Record<Activity, number>,
+  chargesFixes: number,
+  versementLiberatoire: boolean = false,
+  opts: FiscalCalcOptions = {},
+): FiscalResult {
+  const cfpEnabled = profile.cfpEnabled ?? true;
+  const taxeConsulaireEnabled = profile.taxeConsulaireEnabled ?? false;
+  const acreTotal = Math.max(0, opts.acreReduction ?? 0);
+
+  let chargesURSSAFBrutTotal = 0;
+  for (const a of Object.keys(caByActivity) as Activity[]) {
+    const ca = caByActivity[a];
+    if (ca <= 0) continue;
+    const params = ACTIVITY_PARAMS[a];
+    chargesURSSAFBrutTotal += ca * (params.urssafRate / 100);
+  }
+
+  let chargesURSSAF = 0;
+  let cfpAnnuel = 0;
+  let taxeConsulaireAnnuelle = 0;
+  let revenuImposableTotal = 0;
+  let irVL = 0;
+  let acreReductionApplied = 0;
+
+  for (const a of Object.keys(caByActivity) as Activity[]) {
+    const ca = caByActivity[a];
+    if (ca <= 0) continue;
+    const params = ACTIVITY_PARAMS[a];
+    const urssafBrutBranche = ca * (params.urssafRate / 100);
+    // Ventilation ACRE au prorata
+    const acreBranche = chargesURSSAFBrutTotal > 0
+      ? Math.min(urssafBrutBranche, acreTotal * (urssafBrutBranche / chargesURSSAFBrutTotal))
+      : 0;
+    chargesURSSAF += urssafBrutBranche - acreBranche;
+    acreReductionApplied += acreBranche;
+
+    if (cfpEnabled) cfpAnnuel += ca * params.cfpRate;
+    if (taxeConsulaireEnabled) taxeConsulaireAnnuelle += ca * params.taxeConsulaireRate;
+
+    if (versementLiberatoire) {
+      irVL += ca * params.tauxVL;
+    } else {
+      revenuImposableTotal += ca * (1 - params.abattement);
+    }
+  }
+
+  const totalChargesObligatoires = chargesURSSAF + cfpAnnuel + taxeConsulaireAnnuelle;
+  const caTotal = Object.values(caByActivity).reduce((s, v) => s + v, 0);
+
+  const tvaStatus: TVAStatus = opts.tvaStatus ?? 'safe';
+  const tvaSeuilDate = opts.tvaSeuilDate ?? null;
+
+  if (versementLiberatoire) {
+    const netApresIR = caTotal - totalChargesObligatoires - chargesFixes - irVL;
+    return {
+      caAnnuel: caTotal,
+      chargesURSSAF,
+      chargesFixes,
+      revenuImposable: caTotal,
+      ir: irVL,
+      netApresIR,
+      cfpAnnuel,
+      taxeConsulaireAnnuelle,
+      acreReductionAnnuelle: acreReductionApplied,
+      tvaStatus,
+      tvaSeuilDate,
+    };
+  }
+
+  const ir = calcIR(revenuImposableTotal);
+  const netApresIR = caTotal - totalChargesObligatoires - chargesFixes - ir;
+  return {
+    caAnnuel: caTotal,
+    chargesURSSAF,
+    chargesFixes,
+    revenuImposable: revenuImposableTotal,
+    ir,
+    netApresIR,
+    cfpAnnuel,
+    taxeConsulaireAnnuelle,
+    acreReductionAnnuelle: acreReductionApplied,
+    tvaStatus,
+    tvaSeuilDate,
+  };
+}
+
+/**
+ * Net cumulé multi-activité — équivalent de `calcNetCumule` mais ventilé.
+ * Les charges fixes sont pondérées par les mois avec activité.
+ */
+export function calcNetCumuleMulti(
+  profile: UserProfile,
+  caByActivity: Record<Activity, number>,
+  chargesFixesMensuelles: number,
+  monthsWithActivity: number,
+  versementLiberatoire: boolean = false,
+  opts: FiscalCalcOptions = {},
+): number {
+  const caTotal = Object.values(caByActivity).reduce((s, v) => s + v, 0);
+  if (caTotal <= 0) return 0;
+  const chargesFixesTotal = chargesFixesMensuelles * Math.max(0, monthsWithActivity);
+  const result = calcNetMicroMulti(profile, caByActivity, chargesFixesTotal, versementLiberatoire, opts);
+  return Math.round(result.netApresIR);
 }
 
 export function calcChargesURSSAF(ca: number, taux: number): number {

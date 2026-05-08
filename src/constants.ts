@@ -20,6 +20,7 @@ export const DEFAULT_PROFILE: UserProfile = {
   cfpEnabled: true,
   taxeConsulaireEnabled: false,
   revenueModel: 'days',
+  activities: [{ id: 'act-default', type: 'liberalSsi', isPrimary: true }],
 };
 
 export const MONTHS = [

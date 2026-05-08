@@ -27,6 +27,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       if (next.cfpEnabled === undefined) { next.cfpEnabled = DEFAULT_PROFILE.cfpEnabled; dirty = true; }
       if (next.taxeConsulaireEnabled === undefined) { next.taxeConsulaireEnabled = DEFAULT_PROFILE.taxeConsulaireEnabled; dirty = true; }
       if (next.revenueModel === undefined) { next.revenueModel = DEFAULT_PROFILE.revenueModel; dirty = true; }
+      if (!next.activities || next.activities.length === 0) {
+        next.activities = [{
+          id: `act-${Date.now()}`,
+          type: next.activity,
+          isPrimary: true,
+        }];
+        dirty = true;
+      }
       return dirty ? next : p;
     });
   }, [setProfile]);

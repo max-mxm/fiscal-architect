@@ -5,6 +5,7 @@ import type { UserProfile } from '~/types';
 import { MissionStartInput } from '~/components/fiscal/MissionStartInput';
 import { CreationDateInput } from '~/components/fiscal/CreationDateInput';
 import { ActivitySelector } from '~/components/fiscal/ActivitySelector';
+import { ActivityManager } from '~/components/fiscal/ActivityManager';
 import { RevenueModeSelector } from '~/components/fiscal/RevenueModeSelector';
 import { AutoChargesInfo } from '~/components/fiscal/AutoChargesInfo';
 import { VLToggle } from '~/components/fiscal/VLToggle';
@@ -256,21 +257,42 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 
                   <div className="space-y-3">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-secondary">
-                      Activité
+                      Activités
                     </h3>
-                    <ActivitySelector
-                      value={profile.activity}
-                      onChange={(next: Activity) => {
-                        const params = ACTIVITY_PARAMS[next];
-                        updateProfile({
-                          activity: next,
-                          urssafRate: params.urssafRate,
-                          seuilMicro: params.plafond,
-                          // Réactive la taxe consulaire automatiquement si la nouvelle activité y est soumise
-                          taxeConsulaireEnabled: params.taxeConsulaireRate > 0,
-                        });
-                      }}
-                    />
+                    <p className="text-[11px] text-on-surface-variant leading-relaxed -mt-1">
+                      Vous pouvez en cumuler plusieurs (ex. dev + vente de templates).
+                      L'activité primaire pilote URSSAF, abattement et seuil.
+                    </p>
+                    {(profile.activities && profile.activities.length > 0) ? (
+                      <ActivityManager
+                        activities={profile.activities}
+                        onChange={(next) => {
+                          const primary = next.find((a) => a.isPrimary) ?? next[0];
+                          const params = ACTIVITY_PARAMS[primary.type];
+                          updateProfile({
+                            activities: next,
+                            // Sync legacy `activity` avec la primaire pour rétro-compat
+                            activity: primary.type,
+                            urssafRate: params.urssafRate,
+                            seuilMicro: params.plafond,
+                            taxeConsulaireEnabled: params.taxeConsulaireRate > 0,
+                          });
+                        }}
+                      />
+                    ) : (
+                      <ActivitySelector
+                        value={profile.activity}
+                        onChange={(next: Activity) => {
+                          const params = ACTIVITY_PARAMS[next];
+                          updateProfile({
+                            activity: next,
+                            urssafRate: params.urssafRate,
+                            seuilMicro: params.plafond,
+                            taxeConsulaireEnabled: params.taxeConsulaireRate > 0,
+                          });
+                        }}
+                      />
+                    )}
                     <AutoChargesInfo activity={profile.activity} />
                   </div>
 

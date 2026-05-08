@@ -29,6 +29,13 @@ import {
   calcSeuilDateFromEntries,
   calcTaxeConsulaire,
   monthHasRevenue,
+  getActivities,
+  getMixedTVASeuils,
+  getPrimaryActivity,
+  resolveActivityType,
+  calcCAByActivity,
+  calcNetMicroMulti,
+  activityCategory,
   calcTotalChargesFixes,
   calcTVAStatus,
   calcTVASeuilDate,
@@ -1047,5 +1054,183 @@ describe('monthHasRevenue', () => {
         entries: [{ kind: 'flat', id: 'a', amount: 0 }],
       }),
     ).toBe(false);
+  });
+});
+
+// --- Multi-activité ---
+
+const multiProfile: UserProfile = {
+  ...baseProfile,
+  activity: 'liberalSsi',
+  activities: [
+    { id: 'svc', type: 'liberalSsi', isPrimary: true, label: 'Conseil dev' },
+    { id: 'shop', type: 'vente', isPrimary: false, label: 'Vente templates' },
+  ],
+};
+
+describe('getActivities / getPrimaryActivity / resolveActivityType', () => {
+  it('retourne les activities du profil si présentes', () => {
+    expect(getActivities(multiProfile)).toHaveLength(2);
+  });
+
+  it('fallback vers profile.activity si activities absent', () => {
+    const acts = getActivities(baseProfile);
+    expect(acts).toHaveLength(1);
+    expect(acts[0].type).toBe('liberalSsi');
+    expect(acts[0].isPrimary).toBe(true);
+  });
+
+  it('getPrimaryActivity retourne celle marquée isPrimary', () => {
+    expect(getPrimaryActivity(multiProfile).id).toBe('svc');
+  });
+
+  it('resolveActivityType fallback vers la primaire si activityId absent', () => {
+    const entry: import('~/types').RevenueEntry = { kind: 'flat', id: 'f', amount: 1000 };
+    expect(resolveActivityType(entry, multiProfile)).toBe('liberalSsi');
+  });
+
+  it('resolveActivityType résout via activityId quand présent', () => {
+    const entry: import('~/types').RevenueEntry = { kind: 'flat', id: 'f', amount: 1000, activityId: 'shop' };
+    expect(resolveActivityType(entry, multiProfile)).toBe('vente');
+  });
+});
+
+describe('calcCAByActivity', () => {
+  it('ventile correctement les entries entre activités', () => {
+    const months: CalendarMonth[] = [
+      {
+        month: 0,
+        year: 2026,
+        workedDays: [],
+        halfDays: [],
+        entries: [
+          { kind: 'forfait', id: 'a', date: '2026-01-10', amount: 3_000, activityId: 'svc' },
+          { kind: 'forfait', id: 'b', date: '2026-01-20', amount: 1_200, activityId: 'shop' },
+        ],
+      },
+      {
+        month: 1,
+        year: 2026,
+        workedDays: [],
+        halfDays: [],
+        entries: [{ kind: 'flat', id: 'c', amount: 5_000 }], // pas d'activityId → primaire
+      },
+    ];
+    const result = calcCAByActivity(months, multiProfile);
+    expect(result.liberalSsi).toBe(3_000 + 5_000); // svc + flat sans activityId
+    expect(result.vente).toBe(1_200);
+    expect(result.serviceBic).toBe(0);
+    expect(result.liberalCipav).toBe(0);
+  });
+
+  it('mode legacy (sans entries) impute tout à la primaire', () => {
+    const months: CalendarMonth[] = [
+      { month: 0, year: 2026, workedDays: [1, 2, 3, 4, 5], halfDays: [] },
+    ];
+    const result = calcCAByActivity(months, multiProfile);
+    expect(result.liberalSsi).toBe(5 * 500);
+    expect(result.vente).toBe(0);
+  });
+});
+
+describe('getMixedTVASeuils', () => {
+  it('mono-activité services → seuil services uniquement', () => {
+    const seuils = getMixedTVASeuils(baseProfile);
+    expect(seuils.services).toBeDefined();
+    expect(seuils.vente).toBeUndefined();
+  });
+
+  it('multi-activité services + vente → les deux seuils', () => {
+    const seuils = getMixedTVASeuils(multiProfile);
+    expect(seuils.services?.basique).toBe(36_800);
+    expect(seuils.vente?.basique).toBe(91_900);
+  });
+
+  it("activityCategory : seul 'vente' est en catégorie vente", () => {
+    expect(activityCategory('vente')).toBe('vente');
+    expect(activityCategory('serviceBic')).toBe('services');
+    expect(activityCategory('liberalSsi')).toBe('services');
+    expect(activityCategory('liberalCipav')).toBe('services');
+  });
+});
+
+describe('calcNetMicroMulti', () => {
+  it('mono-activité produit le même résultat que calcNetMicro pour libéral SSI', () => {
+    const ca = 60_000;
+    const params = ACTIVITY_PARAMS.liberalSsi;
+    const single = calcNetMicro(ca, params.urssafRate, 0, false, {
+      abattement: params.abattement,
+      tauxVL: params.tauxVL,
+    });
+    const multi = calcNetMicroMulti(
+      {
+        ...multiProfile,
+        cfpEnabled: false,
+        taxeConsulaireEnabled: false,
+        activities: [{ id: 'a', type: 'liberalSsi', isPrimary: true }],
+      },
+      { vente: 0, serviceBic: 0, liberalSsi: ca, liberalCipav: 0 },
+      0,
+      false,
+    );
+    expect(multi.netApresIR).toBeCloseTo(single.netApresIR, 0);
+    expect(multi.chargesURSSAF).toBeCloseTo(single.chargesURSSAF, 0);
+  });
+
+  it('multi-activité ventile URSSAF par branche', () => {
+    const result = calcNetMicroMulti(
+      multiProfile,
+      { vente: 30_000, serviceBic: 0, liberalSsi: 60_000, liberalCipav: 0 },
+      0,
+      false,
+    );
+    // URSSAF : 30 000 × 12,3 % + 60 000 × 26,1 %
+    const expectedURSSAF = 30_000 * 0.123 + 60_000 * 0.261;
+    expect(result.chargesURSSAF).toBeCloseTo(expectedURSSAF, 0);
+  });
+
+  it('VL : IR ventilé par taux d\'activité', () => {
+    const result = calcNetMicroMulti(
+      multiProfile,
+      { vente: 30_000, serviceBic: 0, liberalSsi: 60_000, liberalCipav: 0 },
+      0,
+      true,
+    );
+    // IR VL : 30 000 × 1 % + 60 000 × 2,2 %
+    const expectedIR = 30_000 * 0.01 + 60_000 * 0.022;
+    expect(result.ir).toBeCloseTo(expectedIR, 0);
+  });
+
+  it('barème progressif : IR sur revenu imposable global ventilé', () => {
+    const result = calcNetMicroMulti(
+      { ...multiProfile, cfpEnabled: false, taxeConsulaireEnabled: false },
+      { vente: 30_000, serviceBic: 0, liberalSsi: 60_000, liberalCipav: 0 },
+      0,
+      false,
+    );
+    // RI = 30 000 × (1 - 0,71) + 60 000 × (1 - 0,34) = 8 700 + 39 600 = 48 300
+    expect(result.revenuImposable).toBeCloseTo(48_300, 0);
+    expect(result.ir).toBe(calcIR(48_300));
+  });
+
+  it('CFP désactivé → cfpAnnuel = 0 quel que soit le CA', () => {
+    const result = calcNetMicroMulti(
+      { ...multiProfile, cfpEnabled: false },
+      { vente: 0, serviceBic: 0, liberalSsi: 60_000, liberalCipav: 0 },
+      0,
+      false,
+    );
+    expect(result.cfpAnnuel).toBe(0);
+  });
+
+  it('ACRE répartie au prorata du CA URSSAF par branche', () => {
+    const result = calcNetMicroMulti(
+      multiProfile,
+      { vente: 30_000, serviceBic: 0, liberalSsi: 60_000, liberalCipav: 0 },
+      0,
+      false,
+      { acreReduction: 1_000 },
+    );
+    expect(result.acreReductionAnnuelle).toBeCloseTo(1_000, 0);
   });
 });

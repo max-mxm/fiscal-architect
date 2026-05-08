@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import type { RevenueEntry } from '~/types';
+import type { ActivityEntry, RevenueEntry } from '~/types';
 import { formatEuro } from '~/lib/format';
+import { ActivityChip } from '~/components/fiscal/ActivityChip';
 
 interface FlatRevenueInputProps {
   entries: RevenueEntry[];
   monthName: string;
   onChange: (next: RevenueEntry[]) => void;
+  activities: ActivityEntry[];
 }
 
-export const FlatRevenueInput: React.FC<FlatRevenueInputProps> = ({ entries, monthName, onChange }) => {
+export const FlatRevenueInput: React.FC<FlatRevenueInputProps> = ({ entries, monthName, onChange, activities }) => {
+  const multi = activities.length > 1;
   const flat = entries.find((e): e is Extract<RevenueEntry, { kind: 'flat' }> => e.kind === 'flat');
   const [draft, setDraft] = useState<string>(flat ? String(flat.amount) : '');
 
@@ -30,8 +33,15 @@ export const FlatRevenueInput: React.FC<FlatRevenueInputProps> = ({ entries, mon
       id: flat?.id ?? `flat-${Date.now()}`,
       amount,
       label: flat?.label,
+      activityId: flat?.activityId,
     };
     onChange([...others, next]);
+  };
+
+  const setActivity = (id: string) => {
+    const others = entries.filter((e) => e.kind !== 'flat');
+    if (!flat) return;
+    onChange([...others, { ...flat, activityId: id }]);
   };
 
   return (
@@ -81,6 +91,15 @@ export const FlatRevenueInput: React.FC<FlatRevenueInputProps> = ({ entries, mon
           )}
         </p>
       </div>
+
+      {multi && flat && flat.amount > 0 && (
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
+            Activité
+          </span>
+          <ActivityChip activities={activities} value={flat.activityId} onChange={setActivity} />
+        </div>
+      )}
     </section>
   );
 };

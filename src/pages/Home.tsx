@@ -6,15 +6,17 @@ import { useFiscalYearCtx } from '~/context/FiscalYearContext';
 import {
   ACTIVITY_PARAMS,
   calcACRE,
+  calcCAByActivity,
   calcCAFromEntries,
   calcCaRealiseFromEntries,
   calcCAYearFromEntries,
   calcEquivDays,
   calcMonthlyBreakdown,
-  calcNetCumule,
+  calcNetCumuleMulti,
   calcSeuilDateFromEntries,
   calcTotalChargesFixes,
   calcTVAStatus,
+  getActivities,
   getFiscalParams,
   getTVASeuils,
   monthHasRevenue,
@@ -155,17 +157,22 @@ export const Home: React.FC = () => {
     [fy.fiscalYear.months],
   );
 
+  const caByActivity = useMemo(
+    () => calcCAByActivity(fy.fiscalYear.months, profile),
+    [fy.fiscalYear.months, profile],
+  );
+
   const netCumule = useMemo(
-    () => calcNetCumule(
-      caCumule,
-      profile.urssafRate,
+    () => calcNetCumuleMulti(
+      profile,
+      caByActivity,
       chargesFixesMensuelles,
       monthsWithActivity,
       profile.versementLiberatoire,
       // ACRE annualisée : approximation sur les mois d'activité.
       { ...fiscalOpts, acreReduction: acreInfo.reduction * monthsWithActivity },
     ),
-    [caCumule, profile.urssafRate, chargesFixesMensuelles, monthsWithActivity, profile.versementLiberatoire, fiscalOpts, acreInfo.reduction],
+    [profile, caByActivity, chargesFixesMensuelles, monthsWithActivity, fiscalOpts, acreInfo.reduction],
   );
 
   // Projection : en mode 'days' on extrapole les mois sans données via le rythme nominal.
@@ -379,6 +386,8 @@ export const Home: React.FC = () => {
           tvaStatus={tvaStatus}
           tvaSeuilDate={tvaSeuilDate}
           tvaAssujetti={profile.tvaAssujetti ?? false}
+          activities={getActivities(profile)}
+          caByActivity={caByActivity}
         />
       )}
 
@@ -426,6 +435,7 @@ export const Home: React.FC = () => {
               monthIndex={selectedMonth}
               monthName={MONTH_NAMES[selectedMonth]}
               onChange={handleEntriesChange}
+              activities={getActivities(profile)}
             />
           )}
 
@@ -434,6 +444,7 @@ export const Home: React.FC = () => {
               entries={selectedEntries}
               monthName={MONTH_NAMES[selectedMonth]}
               onChange={handleEntriesChange}
+              activities={getActivities(profile)}
             />
           )}
 

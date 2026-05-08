@@ -1,8 +1,10 @@
 import React, { useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Trash2, Check } from 'lucide-react';
-import type { RevenueEntry } from '~/types';
+import type { ActivityEntry, RevenueEntry } from '~/types';
+import { ACTIVITY_PARAMS } from '~/lib/fiscal';
 import { formatEuro } from '~/lib/format';
+import { ActivityChip } from '~/components/fiscal/ActivityChip';
 
 interface ForfaitListProps {
   /** Toutes les entries du mois — on filtre les `forfait` ici. */
@@ -12,6 +14,8 @@ interface ForfaitListProps {
   monthIndex: number;
   monthName: string;
   onChange: (next: RevenueEntry[]) => void;
+  /** Liste des activités du profil — affiche un sélecteur si > 1. */
+  activities: ActivityEntry[];
 }
 
 function pad2(n: number): string {
@@ -24,12 +28,15 @@ function formatForfaitDate(iso: string): string {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 }
 
-export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIndex, monthName, onChange }) => {
+export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIndex, monthName, onChange, activities }) => {
+  const multi = activities.length > 1;
+  const primaryId = activities.find((a) => a.isPrimary)?.id ?? activities[0]?.id ?? '';
   const [showAdd, setShowAdd] = useState(false);
   const [draft, setDraft] = useState({
     date: `${year}-${pad2(monthIndex + 1)}-01`,
     amount: '',
     label: '',
+    activityId: primaryId,
   });
 
   const forfaits = entries.filter((e): e is Extract<RevenueEntry, { kind: 'forfait' }> => e.kind === 'forfait');
@@ -47,11 +54,12 @@ export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIn
       date: draft.date,
       amount,
       label: draft.label.trim() || undefined,
+      activityId: multi ? draft.activityId : undefined,
     };
     onChange([...entries, next]);
-    setDraft({ date: monthMin, amount: '', label: '' });
+    setDraft({ date: monthMin, amount: '', label: '', activityId: primaryId });
     setShowAdd(false);
-  }, [draft, entries, onChange, monthMin]);
+  }, [draft, entries, onChange, monthMin, multi, primaryId]);
 
   const handleDelete = useCallback(
     (id: string) => {
@@ -123,12 +131,24 @@ export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIn
                   className="w-32 bg-white border-none rounded-lg py-2 px-3 text-sm font-mono font-bold focus:ring-2 focus:ring-secondary/20 min-h-[44px]"
                 />
               </div>
+              {multi && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
+                    Activité
+                  </span>
+                  <ActivityChip
+                    activities={activities}
+                    value={draft.activityId}
+                    onChange={(id) => setDraft({ ...draft, activityId: id })}
+                  />
+                </div>
+              )}
               <div className="flex gap-2 justify-end">
                 <button
                   type="button"
                   onClick={() => {
                     setShowAdd(false);
-                    setDraft({ date: monthMin, amount: '', label: '' });
+                    setDraft({ date: monthMin, amount: '', label: '', activityId: primaryId });
                   }}
                   className="px-3 min-h-[36px] text-xs font-bold text-on-surface-variant hover:bg-slate-100 rounded-lg transition-colors"
                 >
@@ -165,9 +185,21 @@ export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIn
                 <span className="text-[11px] font-mono tabular-nums text-on-surface-variant w-14 shrink-0">
                   {formatForfaitDate(f.date)}
                 </span>
-                <span className="text-xs font-medium text-slate-700 truncate">
-                  {f.label ?? 'Prestation'}
-                </span>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-medium text-slate-700 truncate">
+                    {f.label ?? 'Prestation'}
+                  </span>
+                  {multi && (() => {
+                    const act = activities.find((a) => a.id === f.activityId) ?? activities.find((a) => a.isPrimary);
+                    if (!act) return null;
+                    const display = act.label?.trim() || ACTIVITY_PARAMS[act.type].label;
+                    return (
+                      <span className="text-[10px] text-on-surface-variant truncate">
+                        {display}
+                      </span>
+                    );
+                  })()}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold font-mono text-slate-900 tabular-nums">

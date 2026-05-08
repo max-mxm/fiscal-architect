@@ -4,7 +4,8 @@ import { cn } from '~/utils';
 import { formatEuro } from '~/lib/format';
 import { formatDateFR, formatDaysFR } from '~/lib/calendar';
 import { ThresholdGauge, type GaugeStatusKind } from '~/components/ThresholdGauge';
-import type { TVAStatus } from '~/types';
+import { ACTIVITY_PARAMS } from '~/lib/fiscal';
+import type { Activity, ActivityEntry, TVAStatus } from '~/types';
 
 interface KeyMetricsProps {
   caCumule: number;
@@ -32,6 +33,10 @@ interface KeyMetricsProps {
   tvaSeuilDate: Date | null;
   /** True si l'utilisateur facture déjà la TVA → masque la jauge, affiche un badge. */
   tvaAssujetti: boolean;
+  /** Liste des activités du profil (pour ventilation multi-activité). */
+  activities?: ActivityEntry[];
+  /** CA cumulé ventilé par type d'activité (pour mini-table). */
+  caByActivity?: Record<Activity, number>;
 }
 
 export const KeyMetrics: React.FC<KeyMetricsProps> = ({
@@ -50,6 +55,8 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
   tvaStatus,
   tvaSeuilDate,
   tvaAssujetti,
+  activities,
+  caByActivity,
 }) => {
   const realisedPct = Math.min(100, (caRealise / seuilMicro) * 100);
   const projectedPct = Math.min(100, (caCumule / seuilMicro) * 100);
@@ -196,6 +203,35 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
             status={{ kind: seuilTone, label: seuilLabel }}
             ariaLabel="Progression CA réalisé vs seuil micro"
           />
+
+          {/* Mini-ventilation par activité — seulement si > 1 activité déclarée */}
+          {activities && activities.length > 1 && caByActivity && (
+            <div className="mt-4 space-y-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-secondary-container/85">
+                CA par activité
+              </span>
+              <ul className="space-y-1">
+                {activities.map((a) => {
+                  const ca = caByActivity[a.type] ?? 0;
+                  if (ca <= 0) return null;
+                  const params = ACTIVITY_PARAMS[a.type];
+                  const display = a.label?.trim() || params.label;
+                  const pct = (ca / params.plafond) * 100;
+                  return (
+                    <li key={a.id} className="flex items-baseline justify-between gap-2 text-[11px]">
+                      <span className="text-white/80 truncate">{display}</span>
+                      <span className="font-mono tabular-nums shrink-0">
+                        <span className="text-white">{formatEuro(ca)}€</span>
+                        <span className="text-secondary-container/70 ml-1">
+                          ({pct.toLocaleString('fr-FR', { maximumFractionDigits: 1 })}%)
+                        </span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           {/* Sous-bloc Seuil TVA (caché si déjà assujetti) */}
           {!tvaAssujetti && (
