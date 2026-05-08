@@ -19,7 +19,7 @@ interface ThresholdGaugeProps {
 const TONE_BG: Record<GaugeTone, { projected: string; realized: string; legend: string }> = {
   mint: {
     projected: 'bg-secondary-container/45',
-    realized: 'bg-secondary-container shadow-[0_0_12px_rgba(108,248,187,0.35)]',
+    realized: 'bg-secondary-container shadow-[0_0_12px_rgba(143,216,179,0.35)]',
     legend: 'text-secondary-container/70',
   },
   amber: {

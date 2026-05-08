@@ -40,7 +40,7 @@ export const ACREToggle: React.FC<ACREToggleProps> = ({ value, onChange, creatio
           <label htmlFor="acre-toggle" className="text-xs font-bold uppercase tracking-wider text-secondary block">
             ACRE
           </label>
-          <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{description}</p>
+          <p className="text-[11px] text-on-surface-variant mt-0.5 leading-relaxed">{description}</p>
         </div>
         <button
           id="acre-toggle"
@@ -53,10 +53,10 @@ export const ACREToggle: React.FC<ACREToggleProps> = ({ value, onChange, creatio
           className={cn(
             'relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200',
             disabled
-              ? 'bg-slate-200 cursor-not-allowed opacity-60'
+              ? 'bg-surface-highest cursor-not-allowed opacity-60'
               : value
                 ? 'bg-secondary cursor-pointer'
-                : 'bg-slate-300 cursor-pointer',
+                : 'bg-surface-highest cursor-pointer',
           )}
         >
           <span

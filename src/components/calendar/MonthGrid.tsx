@@ -82,10 +82,10 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
           <ChevronLeft className="w-4 h-4 text-on-surface-variant" />
         </button>
         <div className="text-center">
-          <h3 className="font-headline text-xl font-bold text-slate-900">{monthName}</h3>
+          <h3 className="font-headline text-xl font-bold text-on-surface">{monthName}</h3>
           <span className={cn(
             'text-xs font-bold uppercase tracking-widest',
-            workedDaysEquiv > 0 ? 'text-secondary' : 'text-slate-400 italic',
+            workedDaysEquiv > 0 ? 'text-secondary' : 'text-on-surface-variant/60 italic',
           )}>
             {workedDaysEquiv > 0
               ? `${formatDaysFR(workedDaysEquiv)} jours travaillés`
@@ -110,7 +110,7 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
         >
           <div className="grid grid-cols-7 gap-2.5" role="grid" aria-label="Calendrier des jours travaillés">
             {DAY_HEADERS.map((d) => (
-              <div key={d} className="text-xs text-slate-400 font-bold uppercase text-center pb-1" role="columnheader">{d}</div>
+              <div key={d} className="text-xs text-on-surface-variant/60 font-bold uppercase text-center pb-1" role="columnheader">{d}</div>
             ))}
             {cells}
           </div>

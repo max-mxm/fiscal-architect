@@ -30,7 +30,7 @@ export const FixedCostsList: React.FC<FixedCostsListProps> = ({ costs, onChange 
         description: '',
         amount,
         icon: 'receipt',
-        color: 'bg-violet-100 text-violet-600',
+        color: 'bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300',
       },
     ]);
     setDraft({ name: '', amount: '' });
@@ -92,7 +92,7 @@ export const FixedCostsList: React.FC<FixedCostsListProps> = ({ costs, onChange 
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
                 autoFocus
                 aria-label="Libellé de la charge"
-                className="w-full bg-white border-none rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-secondary/20 min-h-[40px]"
+                className="w-full bg-surface-lowest border-none rounded-lg py-2 px-3 text-sm text-on-surface focus:ring-2 focus:ring-secondary/20 min-h-[40px]"
               />
               <input
                 type="number"
@@ -103,20 +103,20 @@ export const FixedCostsList: React.FC<FixedCostsListProps> = ({ costs, onChange 
                 onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
                 aria-label="Montant en euros"
-                className="w-full bg-white border-none rounded-lg py-2 px-3 text-sm font-mono focus:ring-2 focus:ring-secondary/20 min-h-[40px]"
+                className="w-full bg-surface-lowest border-none rounded-lg py-2 px-3 text-sm font-mono text-on-surface focus:ring-2 focus:ring-secondary/20 min-h-[40px]"
               />
               <div className="flex gap-2 justify-end">
                 <button
                   type="button"
                   onClick={() => { setShowAdd(false); setDraft({ name: '', amount: '' }); }}
-                  className="px-3 min-h-[36px] text-xs font-bold text-on-surface-variant hover:bg-slate-100 rounded-lg transition-colors"
+                  className="px-3 min-h-[36px] text-xs font-bold text-on-surface-variant hover:bg-surface-highest/40 rounded-lg transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   type="button"
                   onClick={handleAdd}
-                  className="px-3 min-h-[36px] bg-secondary text-white text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-1"
+                  className="px-3 min-h-[36px] bg-secondary text-on-secondary text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-1"
                 >
                   <Check className="w-3.5 h-3.5" /> Ajouter
                 </button>
@@ -128,7 +128,7 @@ export const FixedCostsList: React.FC<FixedCostsListProps> = ({ costs, onChange 
 
       <ul className="space-y-1">
         {costs.length === 0 && (
-          <li className="text-xs text-slate-500 italic py-2">
+          <li className="text-xs text-on-surface-variant italic py-2">
             Aucune charge fixe — ajoutez vos abonnements et frais récurrents.
           </li>
         )}
@@ -145,7 +145,7 @@ export const FixedCostsList: React.FC<FixedCostsListProps> = ({ costs, onChange 
                   onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
                   onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
                   aria-label="Libellé"
-                  className="bg-white border-none rounded-md py-1.5 px-2 text-xs font-bold flex-1 focus:ring-2 focus:ring-secondary/20 min-h-[32px]"
+                  className="bg-surface-lowest border-none rounded-md py-1.5 px-2 text-xs font-bold text-on-surface flex-1 focus:ring-2 focus:ring-secondary/20 min-h-[32px]"
                 />
                 <input
                   type="number"
@@ -154,7 +154,7 @@ export const FixedCostsList: React.FC<FixedCostsListProps> = ({ costs, onChange 
                   onChange={(e) => setEditDraft({ ...editDraft, amount: e.target.value })}
                   onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
                   aria-label="Montant"
-                  className="bg-white border-none rounded-md py-1.5 px-2 text-xs font-bold font-mono w-20 focus:ring-2 focus:ring-secondary/20 min-h-[32px]"
+                  className="bg-surface-lowest border-none rounded-md py-1.5 px-2 text-xs font-bold font-mono text-on-surface w-20 focus:ring-2 focus:ring-secondary/20 min-h-[32px]"
                 />
                 <button
                   type="button"
@@ -175,9 +175,9 @@ export const FixedCostsList: React.FC<FixedCostsListProps> = ({ costs, onChange 
               </div>
             ) : (
               <>
-                <span className="text-xs font-medium text-slate-700 truncate">{cost.name}</span>
+                <span className="text-xs font-medium text-on-surface truncate">{cost.name}</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold font-mono text-slate-900 tabular-nums">
+                  <span className="text-xs font-bold font-mono text-on-surface tabular-nums">
                     {formatEuro(cost.amount)}€
                   </span>
                   <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
@@ -207,7 +207,7 @@ export const FixedCostsList: React.FC<FixedCostsListProps> = ({ costs, onChange 
 
       <div className="mt-3 pt-2 border-t border-outline-variant/20 flex justify-between items-center">
         <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Total</span>
-        <span className="text-sm font-black font-mono text-slate-900 tabular-nums">
+        <span className="text-sm font-black font-mono text-on-surface tabular-nums">
           {formatEuro(total)}€
         </span>
       </div>

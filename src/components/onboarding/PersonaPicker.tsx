@@ -148,7 +148,7 @@ export const PersonaPicker: React.FC<PersonaPickerProps> = ({ open, onPick, onSk
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-overlay backdrop-blur-sm"
           onClick={onSkip}
         >
           <motion.div
@@ -160,7 +160,7 @@ export const PersonaPicker: React.FC<PersonaPickerProps> = ({ open, onPick, onSk
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 max-h-[92dvh] overflow-y-auto"
+            className="relative bg-surface-lowest rounded-3xl shadow-2xl max-w-lg w-full p-6 max-h-[92dvh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -171,7 +171,7 @@ export const PersonaPicker: React.FC<PersonaPickerProps> = ({ open, onPick, onSk
             >
               <X className="w-5 h-5" />
             </button>
-            <h2 id={titleId} className="font-headline text-xl font-black text-slate-900 pr-8">
+            <h2 id={titleId} className="font-headline text-xl font-black text-on-surface pr-8">
               Bienvenue
             </h2>
             <p className="text-sm text-on-surface-variant mt-1.5 leading-relaxed pr-8">
@@ -199,7 +199,7 @@ export const PersonaPicker: React.FC<PersonaPickerProps> = ({ open, onPick, onSk
                         <Icon className="w-5 h-5" />
                       </span>
                       <span className="flex flex-col flex-1 min-w-0">
-                        <span className="text-sm font-bold text-slate-900">{p.label}</span>
+                        <span className="text-sm font-bold text-on-surface">{p.label}</span>
                         <span className="text-[11px] text-on-surface-variant">{p.hint}</span>
                       </span>
                     </button>

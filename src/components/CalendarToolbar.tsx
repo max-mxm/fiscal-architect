@@ -31,7 +31,7 @@ const FillButton: React.FC<FillButtonProps> = ({ label, ariaLabel, title, onClic
     title={title}
     className={cn(
       'min-h-[48px] md:min-h-[44px] w-full inline-flex items-center justify-center gap-2',
-      'rounded-2xl bg-secondary text-white text-sm font-bold tracking-tight',
+      'rounded-2xl bg-secondary text-on-secondary text-sm font-bold tracking-tight',
       'shadow-sm hover:bg-secondary/90 active:bg-secondary/85 transition-colors',
       'focus:outline-none focus:ring-2 focus:ring-secondary/40 focus:ring-offset-1',
     )}
@@ -61,8 +61,8 @@ const ClearLink: React.FC<ClearLinkProps> = ({ label, ariaLabel, title, onClick,
       'rounded-xl text-xs font-bold tracking-tight transition-colors',
       'focus:outline-none focus:ring-2 focus:ring-red-500/30',
       disabled
-        ? 'text-slate-400 cursor-not-allowed'
-        : 'text-red-600 hover:bg-red-50 active:bg-red-100',
+        ? 'text-on-surface-variant/50 cursor-not-allowed'
+        : 'text-red-600 hover:bg-red-50 active:bg-red-100 dark:text-red-400 dark:hover:bg-red-500/10 dark:active:bg-red-500/20',
     )}
   >
     <Eraser className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
@@ -102,7 +102,7 @@ export const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
             onClick={onReset}
             aria-label="Tout réinitialiser"
             title="Tout réinitialiser"
-            className="w-11 h-11 md:w-9 md:h-9 inline-flex items-center justify-center rounded-xl text-red-500 hover:bg-red-50 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/30"
+            className="w-11 h-11 md:w-9 md:h-9 inline-flex items-center justify-center rounded-xl text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/30"
           >
             <RotateCcw className="w-4 h-4" />
           </button>

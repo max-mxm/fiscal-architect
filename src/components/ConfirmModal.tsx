@@ -83,7 +83,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.12 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-overlay backdrop-blur-sm"
           onClick={handleBackdrop}
         >
           <motion.div
@@ -96,20 +96,22 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.96 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="relative bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6"
+            className="relative bg-surface-lowest rounded-3xl shadow-2xl max-w-sm w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-4">
               <div
                 className={cn(
                   'h-11 w-11 rounded-2xl flex items-center justify-center shrink-0',
-                  destructive ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600',
+                  destructive
+                    ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300'
+                    : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300',
                 )}
               >
                 {destructive ? <AlertTriangle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 id={titleId} className="font-headline text-base font-bold text-slate-900">
+                <h3 id={titleId} className="font-headline text-base font-bold text-on-surface">
                   {title}
                 </h3>
                 <div id={descId} className="text-sm text-on-surface-variant mt-1.5 leading-relaxed">
@@ -122,7 +124,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 ref={cancelBtnRef}
                 type="button"
                 onClick={onCancel}
-                className="px-4 min-h-[44px] rounded-xl text-sm font-bold text-on-surface-variant hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary/30"
+                className="px-4 min-h-[44px] rounded-xl text-sm font-bold text-on-surface-variant hover:bg-surface-highest/40 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary/30"
               >
                 {cancelLabel}
               </button>
@@ -130,10 +132,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 type="button"
                 onClick={onConfirm}
                 className={cn(
-                  'px-4 min-h-[44px] rounded-xl text-sm font-bold text-white transition-colors focus:outline-none focus:ring-2',
+                  'px-4 min-h-[44px] rounded-xl text-sm font-bold transition-colors focus:outline-none focus:ring-2',
                   destructive
-                    ? 'bg-red-500 hover:bg-red-600 focus:ring-red-500/30'
-                    : 'bg-secondary hover:opacity-90 focus:ring-secondary/30',
+                    ? 'bg-red-500 hover:bg-red-600 text-white focus:ring-red-500/30'
+                    : 'bg-secondary hover:opacity-90 text-on-secondary focus:ring-secondary/30',
                 )}
               >
                 {confirmLabel}

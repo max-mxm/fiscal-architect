@@ -46,7 +46,7 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({ value, onCha
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40',
               active
                 ? 'border-secondary bg-secondary/5 ring-2 ring-secondary/20'
-                : 'border-outline-variant/30 bg-white hover:bg-surface-highest/30 active:bg-surface-highest/50',
+                : 'border-outline-variant/30 bg-surface-lowest hover:bg-surface-highest/30 active:bg-surface-highest/50',
             )}
           >
             <span
@@ -59,7 +59,7 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({ value, onCha
               <Icon className="w-5 h-5" />
             </span>
             <span className="flex flex-col flex-1 min-w-0">
-              <span className="text-sm font-bold text-slate-900 truncate">{params.label}</span>
+              <span className="text-sm font-bold text-on-surface truncate">{params.label}</span>
               <span className="text-[11px] text-on-surface-variant truncate">
                 {params.hint} · plafond {shortPlafond(params.plafond)}€
               </span>
@@ -67,7 +67,7 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({ value, onCha
             <span
               className={cn(
                 'inline-flex items-center gap-1 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums',
-                active ? 'bg-secondary text-white' : 'bg-surface-highest/60 text-on-surface-variant',
+                active ? 'bg-secondary text-on-secondary' : 'bg-surface-highest/60 text-on-surface-variant',
               )}
             >
               {params.urssafRate.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%

@@ -123,7 +123,7 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5">
       {/* Hero sombre — CA cumulé / seuil */}
       <section
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 shadow-2xl lg:col-span-7"
+        className="relative overflow-hidden rounded-3xl hero-panel p-6 shadow-2xl lg:col-span-7"
         aria-labelledby="kpi-ca-label"
       >
         <div className="relative z-10">
@@ -277,7 +277,7 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
           </span>
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-xs text-on-surface-variant">CA brut</span>
-            <span className="font-mono tabular-nums text-lg font-bold text-slate-900">
+            <span className="font-mono tabular-nums text-lg font-bold text-on-surface">
               {formatEuro(caMensuel)} €
             </span>
           </div>

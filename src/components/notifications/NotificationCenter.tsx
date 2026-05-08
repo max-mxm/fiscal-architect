@@ -75,11 +75,11 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, on
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: -4 }}
           transition={{ duration: 0.15, ease: 'easeOut' }}
-          className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] z-[85] bg-white rounded-2xl shadow-2xl border border-outline-variant/15 overflow-hidden"
+          className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] z-[85] bg-surface-lowest rounded-2xl shadow-2xl border border-outline-variant/15 overflow-hidden"
         >
           <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-outline-variant/15">
             <div className="flex items-center gap-2 min-w-0">
-              <h2 className="font-headline text-sm font-bold text-slate-900">Alertes</h2>
+              <h2 className="font-headline text-sm font-bold text-on-surface">Alertes</h2>
               {total > 0 && (
                 <span className="text-[11px] font-bold tabular-nums px-1.5 py-0.5 rounded-full bg-surface-highest/60 text-on-surface-variant">
                   {total}
@@ -103,7 +103,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, on
                 <span aria-hidden="true" className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/10 text-secondary">
                   <CheckCircle2 className="w-6 h-6" />
                 </span>
-                <p className="text-sm font-bold text-slate-900">Aucune alerte</p>
+                <p className="text-sm font-bold text-on-surface">Aucune alerte</p>
                 <p className="text-[11px] text-on-surface-variant leading-relaxed">
                   Tout est sous contrôle.
                 </p>

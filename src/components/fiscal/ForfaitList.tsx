@@ -72,7 +72,7 @@ export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIn
     <section className="bg-surface-lowest rounded-3xl shadow-sm p-5">
       <div className="flex justify-between items-center mb-3">
         <div>
-          <h2 className="font-headline text-lg font-bold text-slate-900">{monthName}</h2>
+          <h2 className="font-headline text-lg font-bold text-on-surface">{monthName}</h2>
           <p className="text-xs text-on-surface-variant mt-0.5 font-medium">
             {forfaits.length === 0
               ? 'Aucune prestation'
@@ -106,7 +106,7 @@ export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIn
                 onChange={(e) => setDraft({ ...draft, label: e.target.value })}
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
                 aria-label="Libellé de la prestation"
-                className="w-full bg-white border-none rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-secondary/20 min-h-[44px]"
+                className="w-full bg-surface-lowest border-none rounded-lg py-2 px-3 text-sm text-on-surface focus:ring-2 focus:ring-secondary/20 min-h-[44px]"
               />
               <div className="flex gap-2">
                 <input
@@ -116,7 +116,7 @@ export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIn
                   max={monthMax}
                   onChange={(e) => setDraft({ ...draft, date: e.target.value })}
                   aria-label="Date de la prestation"
-                  className="flex-1 bg-white border-none rounded-lg py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-secondary/20 min-h-[44px]"
+                  className="flex-1 bg-surface-lowest border-none rounded-lg py-2 px-3 text-sm font-medium text-on-surface focus:ring-2 focus:ring-secondary/20 min-h-[44px]"
                 />
                 <input
                   type="number"
@@ -128,7 +128,7 @@ export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIn
                   onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
                   onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
                   aria-label="Montant en euros"
-                  className="w-32 bg-white border-none rounded-lg py-2 px-3 text-sm font-mono font-bold focus:ring-2 focus:ring-secondary/20 min-h-[44px]"
+                  className="w-32 bg-surface-lowest border-none rounded-lg py-2 px-3 text-sm font-mono font-bold text-on-surface focus:ring-2 focus:ring-secondary/20 min-h-[44px]"
                 />
               </div>
               {multi && (
@@ -150,14 +150,14 @@ export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIn
                     setShowAdd(false);
                     setDraft({ date: monthMin, amount: '', label: '', activityId: primaryId });
                   }}
-                  className="px-3 min-h-[36px] text-xs font-bold text-on-surface-variant hover:bg-slate-100 rounded-lg transition-colors"
+                  className="px-3 min-h-[36px] text-xs font-bold text-on-surface-variant hover:bg-surface-highest/40 rounded-lg transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   type="button"
                   onClick={handleAdd}
-                  className="px-3 min-h-[36px] bg-secondary text-white text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-1"
+                  className="px-3 min-h-[36px] bg-secondary text-on-secondary text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-1"
                 >
                   <Check className="w-3.5 h-3.5" /> Ajouter
                 </button>
@@ -169,7 +169,7 @@ export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIn
 
       <ul className="space-y-1">
         {forfaits.length === 0 && !showAdd && (
-          <li className="text-xs text-slate-500 italic py-4 text-center">
+          <li className="text-xs text-on-surface-variant italic py-4 text-center">
             Aucune prestation pour {monthName}. Cliquez sur « Ajouter » pour saisir un devis ou une facture.
           </li>
         )}
@@ -186,7 +186,7 @@ export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIn
                   {formatForfaitDate(f.date)}
                 </span>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-medium text-slate-700 truncate">
+                  <span className="text-xs font-medium text-on-surface truncate">
                     {f.label ?? 'Prestation'}
                   </span>
                   {multi && (() => {
@@ -202,7 +202,7 @@ export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIn
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold font-mono text-slate-900 tabular-nums">
+                <span className="text-sm font-bold font-mono text-on-surface tabular-nums">
                   {formatEuro(f.amount)}€
                 </span>
                 <button

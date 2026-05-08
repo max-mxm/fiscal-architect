@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence, type PanInfo } from 'motion/react';
-import { X, RotateCcw, User, Calculator, Receipt } from 'lucide-react';
+import { X, RotateCcw, User, Calculator, Receipt, Monitor, Sun, Moon } from 'lucide-react';
+import { useTheme, type ThemeMode } from '~/context/ThemeContext';
 import type { UserProfile } from '~/types';
 import { MissionStartInput } from '~/components/fiscal/MissionStartInput';
 import { CreationDateInput } from '~/components/fiscal/CreationDateInput';
@@ -58,6 +59,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const { mode: themeMode, setMode: setThemeMode } = useTheme();
 
   useEffect(() => {
     if (!open) return;
@@ -111,7 +113,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-[80] bg-slate-900/40 backdrop-blur-sm flex md:items-stretch md:justify-end items-end justify-center"
+          className="fixed inset-0 z-[80] bg-overlay backdrop-blur-sm flex md:items-stretch md:justify-end items-end justify-center"
           onClick={onClose}
         >
           <motion.aside
@@ -129,17 +131,17 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             dragMomentum={false}
             onDragEnd={handleDragEnd}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-full md:max-w-[440px] xl:max-w-[480px] bg-white rounded-t-3xl md:rounded-t-none md:rounded-l-3xl shadow-2xl h-[92dvh] md:h-screen md:max-h-screen overflow-hidden flex flex-col"
+            className="relative w-full max-w-full md:max-w-[440px] xl:max-w-[480px] bg-surface-lowest rounded-t-3xl md:rounded-t-none md:rounded-l-3xl shadow-2xl h-[92dvh] md:h-screen md:max-h-screen overflow-hidden flex flex-col"
           >
             {/* Drag handle (mobile only) */}
             <div className="md:hidden pt-2 pb-1 flex justify-center cursor-grab active:cursor-grabbing">
-              <div className="w-10 h-1 rounded-full bg-slate-300" aria-hidden="true" />
+              <div className="w-10 h-1 rounded-full bg-outline-variant" aria-hidden="true" />
             </div>
 
             {/* Header */}
             <div className="px-6 pt-3 pb-3 md:pt-6 flex items-start justify-between">
               <div>
-                <h2 className="font-headline text-lg font-bold text-slate-900">Réglages</h2>
+                <h2 className="font-headline text-lg font-bold text-on-surface">Réglages</h2>
                 <p className="text-xs text-on-surface-variant mt-0.5">
                   Profil, paramètres fiscaux et charges fixes.
                 </p>
@@ -187,7 +189,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       value={profile.name}
                       onChange={(e) => updateProfile({ name: e.target.value })}
                       autoComplete="name"
-                      className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all min-h-[44px]"
+                      className="w-full bg-surface-lowest border border-outline-variant rounded-xl py-2.5 px-3 text-sm font-medium text-on-surface focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all min-h-[44px]"
                     />
                   </div>
 
@@ -204,15 +206,57 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       value={profile.role}
                       onChange={(e) => updateProfile({ role: e.target.value })}
                       autoComplete="organization-title"
-                      className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all min-h-[44px]"
+                      className="w-full bg-surface-lowest border border-outline-variant rounded-xl py-2.5 px-3 text-sm font-medium text-on-surface focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all min-h-[44px]"
                     />
+                  </div>
+
+                  <div>
+                    <h3 className="block text-xs font-bold uppercase tracking-wider text-secondary mb-3">
+                      Apparence
+                    </h3>
+                    <fieldset
+                      role="radiogroup"
+                      aria-label="Thème de l'interface"
+                      className="grid grid-cols-3 gap-2 p-0 m-0 border-0"
+                    >
+                      {(
+                        [
+                          { id: 'system', label: 'Système', Icon: Monitor },
+                          { id: 'light', label: 'Clair', Icon: Sun },
+                          { id: 'dark', label: 'Sombre', Icon: Moon },
+                        ] as const
+                      ).map(({ id, label, Icon }) => {
+                        const active = themeMode === id;
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            role="radio"
+                            aria-checked={active}
+                            onClick={() => setThemeMode(id as ThemeMode)}
+                            className={
+                              'min-h-[44px] inline-flex items-center justify-center gap-1.5 rounded-2xl border px-2 py-2 text-sm font-bold transition-colors ' +
+                              (active
+                                ? 'border-secondary bg-secondary/5 ring-2 ring-secondary/20 text-secondary'
+                                : 'border-outline-variant/30 bg-surface-lowest text-on-surface hover:bg-surface-highest/30')
+                            }
+                          >
+                            <Icon className="w-4 h-4" />
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </fieldset>
+                    <p className="mt-2 text-[11px] text-on-surface-variant leading-relaxed">
+                      Suit le thème système si activé.
+                    </p>
                   </div>
 
                   <div className="pt-2 border-t border-outline-variant/15 space-y-3">
                     <button
                       type="button"
                       onClick={onResetAll}
-                      className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] rounded-xl bg-red-50 text-red-600 text-sm font-bold hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                      className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] rounded-xl bg-red-50 text-red-600 text-sm font-bold hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/30"
                     >
                       <RotateCcw className="w-4 h-4" /> Tout réinitialiser
                     </button>
@@ -361,7 +405,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                               'min-h-[44px] rounded-2xl border px-3 py-2 text-sm font-bold text-left transition-colors ' +
                               (active
                                 ? 'border-secondary bg-secondary/5 ring-2 ring-secondary/20 text-secondary'
-                                : 'border-outline-variant/30 bg-white text-slate-900 hover:bg-surface-highest/30')
+                                : 'border-outline-variant/30 bg-surface-lowest text-on-surface hover:bg-surface-highest/30')
                             }
                           >
                             {period === 'monthly' ? 'Mensuelle' : 'Trimestrielle'}

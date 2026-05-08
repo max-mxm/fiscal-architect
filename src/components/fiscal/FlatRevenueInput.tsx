@@ -47,7 +47,7 @@ export const FlatRevenueInput: React.FC<FlatRevenueInputProps> = ({ entries, mon
   return (
     <section className="bg-surface-lowest rounded-3xl shadow-sm p-5 space-y-4">
       <div>
-        <h2 className="font-headline text-lg font-bold text-slate-900">{monthName}</h2>
+        <h2 className="font-headline text-lg font-bold text-on-surface">{monthName}</h2>
         <p className="text-xs text-on-surface-variant mt-0.5 font-medium">
           CA total encaissé sur le mois
         </p>
@@ -78,7 +78,7 @@ export const FlatRevenueInput: React.FC<FlatRevenueInputProps> = ({ entries, mon
                 (e.target as HTMLInputElement).blur();
               }
             }}
-            className="font-headline font-black text-3xl text-slate-900 bg-transparent border-b-2 border-secondary/30 focus:border-secondary focus:ring-0 outline-none flex-1 min-w-0 tabular-nums appearance-none"
+            className="font-headline font-black text-3xl text-on-surface bg-transparent border-b-2 border-secondary/30 focus:border-secondary focus:ring-0 outline-none flex-1 min-w-0 tabular-nums appearance-none"
           />
           <span className="font-headline font-black text-2xl text-secondary">€</span>
         </div>

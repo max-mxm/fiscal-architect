@@ -8,7 +8,7 @@ interface EmptyHeroProps {
 
 export const EmptyHero: React.FC<EmptyHeroProps> = ({ seuilMicro }) => {
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 md:p-8 shadow-2xl">
+    <div className="relative overflow-hidden rounded-3xl hero-panel p-6 md:p-8 shadow-2xl">
       <div className="relative z-10 flex flex-col gap-3">
         <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest">
           <Sparkles className="w-3 h-3 text-secondary-container" />

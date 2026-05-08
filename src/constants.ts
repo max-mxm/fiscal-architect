@@ -8,9 +8,9 @@ export const DEFAULT_PROFILE: UserProfile = {
   workingDays: 19,
   urssafRate: 26.1,
   fixedCosts: [
-    { id: '1', name: 'Outils & SaaS', description: 'Adobe, Slack, Notion', amount: 85, icon: 'laptop', color: 'bg-blue-100 text-blue-600' },
-    { id: '2', name: 'Espace coworking', description: 'Location bureau mensuel', amount: 350, icon: 'users', color: 'bg-emerald-100 text-emerald-600' },
-    { id: '3', name: 'Assurance pro', description: 'RC Pro + Mutuelle', amount: 120, icon: 'shield', color: 'bg-slate-100 text-slate-600' },
+    { id: '1', name: 'Outils & SaaS', description: 'Adobe, Slack, Notion', amount: 85, icon: 'laptop', color: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300' },
+    { id: '2', name: 'Espace coworking', description: 'Location bureau mensuel', amount: 350, icon: 'users', color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300' },
+    { id: '3', name: 'Assurance pro', description: 'RC Pro + Mutuelle', amount: 120, icon: 'shield', color: 'bg-slate-100 text-slate-600 dark:bg-slate-500/20 dark:text-slate-300' },
   ],
   seuilMicro: 83_600,
   versementLiberatoire: false,

@@ -21,7 +21,7 @@ export const IJToggle: React.FC<IJToggleProps> = ({ value, onChange, activities 
           <label htmlFor="ij-toggle" className="text-xs font-bold uppercase tracking-wider text-secondary block">
             Indemnités journalières
           </label>
-          <p className="text-[11px] text-slate-500 mt-0.5">
+          <p className="text-[11px] text-on-surface-variant mt-0.5">
             {disabled
               ? 'Disponible uniquement pour les activités libérales (SSI/CIPAV).'
               : `Cotisation ${tauxLabel} % du CA pour ouvrir des droits aux IJ maladie.`}
@@ -37,8 +37,8 @@ export const IJToggle: React.FC<IJToggleProps> = ({ value, onChange, activities 
           onClick={() => !disabled && onChange(!value)}
           className={cn(
             'relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200',
-            disabled ? 'cursor-not-allowed bg-slate-200' : 'cursor-pointer',
-            !disabled && (value ? 'bg-secondary' : 'bg-slate-300'),
+            disabled ? 'cursor-not-allowed bg-surface-highest' : 'cursor-pointer',
+            !disabled && (value ? 'bg-secondary' : 'bg-surface-highest'),
           )}
         >
           <span

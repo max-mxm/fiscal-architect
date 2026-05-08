@@ -37,7 +37,7 @@ export const AnnualMiniBars: React.FC<AnnualMiniBarsProps> = ({ months, selected
                     isSelected
                       ? 'bg-secondary'
                       : hasData
-                        ? 'bg-secondary-container group-hover:bg-secondary/40'
+                        ? 'bg-half-accent group-hover:bg-secondary/40'
                         : 'bg-surface-highest/40',
                   )}
                   style={{ height: hasData ? `${Math.max(8, heightPercent)}%` : '8%' }}
@@ -45,7 +45,7 @@ export const AnnualMiniBars: React.FC<AnnualMiniBarsProps> = ({ months, selected
               </div>
               <span className={cn(
                 'text-[7px] font-bold uppercase',
-                isSelected ? 'text-secondary' : 'text-slate-400',
+                isSelected ? 'text-secondary' : 'text-on-surface-variant/60',
               )}>
                 {MONTH_SHORT[i]}
               </span>

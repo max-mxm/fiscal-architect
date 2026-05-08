@@ -57,13 +57,13 @@ export const UndoToast: React.FC<UndoToastProps> = ({
           transition={{ duration: 0.18, ease: 'easeOut' }}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] w-[min(440px,calc(100vw-2rem))]"
         >
-          <div className="relative overflow-hidden rounded-2xl bg-slate-900 text-white shadow-2xl">
+          <div className="relative overflow-hidden rounded-2xl bg-slate-900 text-white dark:bg-surface-lowest dark:text-on-surface dark:border dark:border-outline-variant/30 shadow-2xl">
             <div className="flex items-center gap-3 p-4">
               <span className="text-sm font-medium flex-1 truncate">{message}</span>
               <button
                 type="button"
                 onClick={onUndo}
-                className="inline-flex items-center gap-1.5 px-3 min-h-[36px] rounded-xl bg-secondary-container/20 text-secondary-container text-sm font-bold hover:bg-secondary-container/30 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary-container/50"
+                className="inline-flex items-center gap-1.5 px-3 min-h-[36px] rounded-xl bg-secondary-container/20 text-secondary-container dark:bg-secondary/15 dark:text-secondary text-sm font-bold hover:bg-secondary-container/30 dark:hover:bg-secondary/25 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary-container/50"
               >
                 <Undo2 className="w-3.5 h-3.5" /> Annuler
               </button>
@@ -71,7 +71,7 @@ export const UndoToast: React.FC<UndoToastProps> = ({
                 type="button"
                 onClick={onDismiss}
                 aria-label="Fermer la notification"
-                className="text-white/60 hover:text-white p-1.5 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+                className="text-white/60 hover:text-white dark:text-on-surface-variant dark:hover:text-on-surface p-1.5 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>

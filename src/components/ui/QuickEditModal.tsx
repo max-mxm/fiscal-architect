@@ -88,7 +88,7 @@ export const QuickEditModal: React.FC<QuickEditModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-[90] bg-slate-900/40 backdrop-blur-sm flex md:items-center md:justify-center items-end justify-center"
+          className="fixed inset-0 z-[90] bg-overlay backdrop-blur-sm flex md:items-center md:justify-center items-end justify-center"
           onClick={onClose}
         >
           <motion.div
@@ -103,7 +103,7 @@ export const QuickEditModal: React.FC<QuickEditModalProps> = ({
             transition={{ duration: 0.18, ease: 'easeOut' }}
             onClick={(e) => e.stopPropagation()}
             className={cn(
-              'relative bg-white shadow-2xl flex flex-col',
+              'relative bg-surface-lowest shadow-2xl flex flex-col',
               // Mobile : pleine largeur, bord supérieur arrondi, max-h
               'w-full max-w-full rounded-t-3xl max-h-[90dvh]',
               // Desktop : modale centrée, bords arrondis partout, largeur fixe
@@ -112,13 +112,13 @@ export const QuickEditModal: React.FC<QuickEditModalProps> = ({
           >
             {/* Drag handle visuel mobile uniquement (pas de drag réel) */}
             <div className="md:hidden pt-2 pb-1 flex justify-center">
-              <div className="w-10 h-1 rounded-full bg-slate-300" aria-hidden="true" />
+              <div className="w-10 h-1 rounded-full bg-outline-variant" aria-hidden="true" />
             </div>
 
             {/* Header */}
             <div className="px-6 pt-3 pb-4 md:pt-6 flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <h3 id={titleId} className="font-headline text-lg font-bold text-slate-900">
+                <h3 id={titleId} className="font-headline text-lg font-bold text-on-surface">
                   {title}
                 </h3>
                 {description && (
@@ -149,7 +149,7 @@ export const QuickEditModal: React.FC<QuickEditModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 min-h-[44px] rounded-xl text-sm font-bold text-on-surface-variant hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary/30"
+                  className="px-4 min-h-[44px] rounded-xl text-sm font-bold text-on-surface-variant hover:bg-surface-highest/40 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary/30"
                 >
                   Annuler
                 </button>
@@ -158,10 +158,10 @@ export const QuickEditModal: React.FC<QuickEditModalProps> = ({
                   onClick={primaryAction.onClick}
                   disabled={primaryAction.disabled}
                   className={cn(
-                    'px-4 min-h-[44px] rounded-xl text-sm font-bold text-white transition-colors focus:outline-none focus:ring-2 focus:ring-secondary/30',
+                    'px-4 min-h-[44px] rounded-xl text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-secondary/30',
                     primaryAction.disabled
-                      ? 'bg-slate-300 cursor-not-allowed'
-                      : 'bg-secondary hover:opacity-90',
+                      ? 'bg-surface-highest text-on-surface-variant cursor-not-allowed'
+                      : 'bg-secondary text-on-secondary hover:opacity-90',
                   )}
                 >
                   {primaryAction.label}

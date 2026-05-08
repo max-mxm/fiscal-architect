@@ -22,7 +22,7 @@ export const ActivityChip: React.FC<ActivityChipProps> = ({ activities, value, o
       value={effective}
       onChange={(e) => onChange(e.target.value)}
       aria-label={ariaLabel}
-      className="bg-white border border-slate-200 rounded-lg py-1.5 px-2 text-xs font-medium text-slate-900 focus:ring-2 focus:ring-secondary/20 focus:border-secondary min-h-[36px]"
+      className="bg-surface-lowest border border-outline-variant rounded-lg py-1.5 px-2 text-xs font-medium text-on-surface focus:ring-2 focus:ring-secondary/20 focus:border-secondary min-h-[36px]"
     >
       {activities.map((a) => {
         const params = ACTIVITY_PARAMS[a.type];

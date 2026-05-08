@@ -84,7 +84,7 @@ export const ActivityManager: React.FC<ActivityManagerProps> = ({ activities, on
                   'rounded-2xl border p-3 transition-colors',
                   activity.isPrimary
                     ? 'border-secondary bg-secondary/5'
-                    : 'border-outline-variant/30 bg-white',
+                    : 'border-outline-variant/30 bg-surface-lowest',
                 )}
               >
                 <div className="flex items-start gap-3">
@@ -102,7 +102,7 @@ export const ActivityManager: React.FC<ActivityManagerProps> = ({ activities, on
                       value={activity.type}
                       onChange={(e) => handlePatch(activity.id, { type: e.target.value as Activity })}
                       aria-label="Type d'activité"
-                      className="w-full bg-white border border-slate-200 rounded-lg py-2 px-2 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-secondary/20 focus:border-secondary min-h-[40px]"
+                      className="w-full bg-surface-lowest border border-outline-variant rounded-lg py-2 px-2 text-sm font-bold text-on-surface focus:ring-2 focus:ring-secondary/20 focus:border-secondary min-h-[40px]"
                     >
                       {ACTIVITY_ORDER.map((t) => (
                         <option key={t} value={t}>
@@ -116,7 +116,7 @@ export const ActivityManager: React.FC<ActivityManagerProps> = ({ activities, on
                       onChange={(e) => handlePatch(activity.id, { label: e.target.value || undefined })}
                       placeholder={`ex. ${params.hint.split(',')[0]}`}
                       aria-label="Libellé de l'activité"
-                      className="w-full bg-white border border-slate-200 rounded-lg py-2 px-2 text-sm focus:ring-2 focus:ring-secondary/20 focus:border-secondary min-h-[40px]"
+                      className="w-full bg-surface-lowest border border-outline-variant rounded-lg py-2 px-2 text-sm text-on-surface focus:ring-2 focus:ring-secondary/20 focus:border-secondary min-h-[40px]"
                     />
                     <div className="flex items-center justify-between gap-2 pt-1">
                       <span className="text-[11px] text-on-surface-variant tabular-nums font-mono">
@@ -131,7 +131,7 @@ export const ActivityManager: React.FC<ActivityManagerProps> = ({ activities, on
                           className={cn(
                             'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-bold transition-colors min-h-[32px]',
                             activity.isPrimary
-                              ? 'bg-secondary text-white'
+                              ? 'bg-secondary text-on-secondary'
                               : 'bg-surface-highest/40 text-on-surface-variant hover:bg-surface-highest/60',
                           )}
                         >

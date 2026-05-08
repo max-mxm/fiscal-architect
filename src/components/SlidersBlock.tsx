@@ -26,11 +26,11 @@ const Mini: React.FC<{ label: string; value: string; tone?: 'neutral' | 'positiv
   tone = 'neutral',
 }) => (
   <div className="flex flex-col gap-0.5">
-    <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">{label}</span>
+    <span className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">{label}</span>
     <span
       className={cn(
         'text-sm font-mono font-black tabular-nums',
-        tone === 'positive' ? 'text-secondary' : 'text-slate-900',
+        tone === 'positive' ? 'text-secondary' : 'text-on-surface',
       )}
     >
       {value}

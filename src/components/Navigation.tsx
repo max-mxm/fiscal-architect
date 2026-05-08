@@ -43,12 +43,12 @@ export const TopBar: React.FC<TopBarProps> = ({ profile, caCumule, onExport, onO
         <div className="flex items-center gap-3 min-w-0">
           <div
             aria-hidden="true"
-            className="w-9 h-9 rounded-xl bg-secondary text-white flex items-center justify-center font-headline font-black text-sm shadow-md shrink-0"
+            className="w-9 h-9 rounded-xl bg-secondary text-on-secondary flex items-center justify-center font-headline font-black text-sm shadow-md shrink-0"
           >
             FA
           </div>
           <div className="min-w-0">
-            <h1 className="font-headline font-black text-sm sm:text-base text-slate-900 leading-tight truncate">
+            <h1 className="font-headline font-black text-sm sm:text-base text-on-surface leading-tight truncate">
               Fiscal Architect
             </h1>
             <EditableField
@@ -69,9 +69,9 @@ export const TopBar: React.FC<TopBarProps> = ({ profile, caCumule, onExport, onO
           <div className="flex-1">
             <div className="flex items-baseline justify-between text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
               <span>CA / seuil</span>
-              <span className="font-mono tabular-nums text-slate-700">
+              <span className="font-mono tabular-nums text-on-surface">
                 {formatEuro(caCumule)}€
-                <span className="text-slate-500 font-normal"> / {formatEuro(seuil)}€</span>
+                <span className="text-on-surface-variant font-normal"> / {formatEuro(seuil)}€</span>
               </span>
             </div>
             <div className="mt-1 h-1.5 w-full rounded-full bg-surface-highest/60 overflow-hidden">
@@ -131,7 +131,7 @@ export const TopBar: React.FC<TopBarProps> = ({ profile, caCumule, onExport, onO
                 if (e.key === 'Enter' && draftName.trim()) saveIdentity();
               }}
               autoComplete="name"
-              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all min-h-[44px]"
+              className="w-full bg-surface-lowest border border-outline-variant rounded-xl py-2.5 px-3 text-sm font-medium text-on-surface focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all min-h-[44px]"
             />
           </div>
           <div>
@@ -150,7 +150,7 @@ export const TopBar: React.FC<TopBarProps> = ({ profile, caCumule, onExport, onO
                 if (e.key === 'Enter' && draftName.trim()) saveIdentity();
               }}
               autoComplete="organization-title"
-              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all min-h-[44px]"
+              className="w-full bg-surface-lowest border border-outline-variant rounded-xl py-2.5 px-3 text-sm font-medium text-on-surface focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all min-h-[44px]"
             />
           </div>
         </div>

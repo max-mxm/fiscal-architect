@@ -43,7 +43,7 @@ export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRC
                 const n = parseInt(v, 10);
                 if (!isNaN(n) && n >= 0) onRFRChange(n);
               }}
-              className="font-mono font-bold text-base text-slate-900 bg-white border border-slate-200 rounded-lg w-full py-2 px-3 focus:ring-2 focus:ring-secondary/20 focus:border-secondary appearance-none min-h-[44px]"
+              className="font-mono font-bold text-base text-on-surface bg-surface-lowest border border-outline-variant rounded-lg w-full py-2 px-3 focus:ring-2 focus:ring-secondary/20 focus:border-secondary appearance-none min-h-[44px]"
             />
             <span className="text-secondary font-bold text-sm">€</span>
           </div>
@@ -67,7 +67,7 @@ export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRC
               const v = parseFloat(e.target.value);
               if (!isNaN(v) && v >= 1) onPartsChange(v);
             }}
-            className="font-mono font-bold text-base text-slate-900 bg-white border border-slate-200 rounded-lg w-20 py-2 px-3 focus:ring-2 focus:ring-secondary/20 focus:border-secondary appearance-none min-h-[44px] text-center"
+            className="font-mono font-bold text-base text-on-surface bg-surface-lowest border border-outline-variant rounded-lg w-20 py-2 px-3 focus:ring-2 focus:ring-secondary/20 focus:border-secondary appearance-none min-h-[44px] text-center"
           />
         </div>
       </div>
@@ -78,7 +78,7 @@ export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRC
             'flex items-start gap-2 rounded-xl px-3 py-2 text-[11px] leading-relaxed',
             eligibility.eligible
               ? 'bg-secondary-container/15 text-secondary border border-secondary/20'
-              : 'bg-red-50 text-red-700 border border-red-200',
+              : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/30',
           )}
         >
           <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />

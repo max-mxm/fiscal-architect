@@ -74,7 +74,7 @@ export const SettingsTabs: React.FC<SettingsTabsProps> = ({
               'focus:outline-none focus:ring-2 focus:ring-secondary/30',
               isActive
                 ? 'text-secondary bg-secondary/10'
-                : 'text-on-surface-variant hover:text-slate-900 hover:bg-surface-highest/40',
+                : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-highest/40',
             )}
           >
             <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />

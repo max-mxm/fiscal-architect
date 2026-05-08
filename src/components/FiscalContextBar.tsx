@@ -47,7 +47,7 @@ const Chip: React.FC<ChipProps> = ({ Icon, label, value, ariaLabel, onClick }) =
     <span className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
       {label}
     </span>
-    <span className="text-xs font-bold text-slate-900 truncate max-w-[160px]">
+    <span className="text-xs font-bold text-on-surface truncate max-w-[160px]">
       {value}
     </span>
   </button>

@@ -12,6 +12,7 @@ import { TopBar } from '~/components/Navigation'
 import { ProfileProvider, useProfile } from '~/context/ProfileContext'
 import { FiscalYearProvider, useFiscalYearCtx } from '~/context/FiscalYearContext'
 import { NotificationsProvider } from '~/context/NotificationsContext'
+import { ThemeProvider } from '~/context/ThemeContext'
 import { SettingsDrawer } from '~/components/SettingsDrawer'
 import { FiscalContextBar } from '~/components/FiscalContextBar'
 import { ConfirmModal } from '~/components/ConfirmModal'
@@ -56,13 +57,15 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <RootDocument>
-      <ProfileProvider>
-        <FiscalYearProvider>
-          <NotificationsProvider>
-            <AppShell />
-          </NotificationsProvider>
-        </FiscalYearProvider>
-      </ProfileProvider>
+      <ThemeProvider>
+        <ProfileProvider>
+          <FiscalYearProvider>
+            <NotificationsProvider>
+              <AppShell />
+            </NotificationsProvider>
+          </FiscalYearProvider>
+        </ProfileProvider>
+      </ThemeProvider>
     </RootDocument>
   )
 }
@@ -74,6 +77,22 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <HeadContent />
       </head>
       <body>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var raw = localStorage.getItem('fiscal-theme');
+                  var mode = (raw === 'light' || raw === 'dark' || raw === 'system') ? raw : 'system';
+                  var isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                  if (isDark) document.documentElement.classList.add('dark');
+                  var meta = document.querySelector('meta[name="theme-color"]');
+                  if (meta) meta.setAttribute('content', isDark ? '#0e1512' : '#006c49');
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
         {children}
         <Scripts />
         <script

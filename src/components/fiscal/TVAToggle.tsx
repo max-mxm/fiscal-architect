@@ -14,7 +14,7 @@ export const TVAToggle: React.FC<TVAToggleProps> = ({ value, onChange }) => {
           <label htmlFor="tva-toggle" className="text-xs font-bold uppercase tracking-wider text-secondary block">
             TVA assujettie
           </label>
-          <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+          <p className="text-[11px] text-on-surface-variant mt-0.5 leading-relaxed">
             Désactivé = franchise en base. À activer si vous facturez la TVA à vos clients.
           </p>
         </div>
@@ -26,7 +26,7 @@ export const TVAToggle: React.FC<TVAToggleProps> = ({ value, onChange }) => {
           onClick={() => onChange(!value)}
           className={cn(
             'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200',
-            value ? 'bg-amber-500' : 'bg-slate-300',
+            value ? 'bg-amber-500' : 'bg-surface-highest',
           )}
         >
           <span

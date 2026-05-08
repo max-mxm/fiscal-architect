@@ -48,7 +48,7 @@ export const SeuilInput: React.FC<SeuilInputProps> = ({ value, onChange, default
           <span className="text-secondary font-bold text-xs">€</span>
         </div>
       </div>
-      <p className="text-[11px] text-slate-500 leading-relaxed">
+      <p className="text-[11px] text-on-surface-variant leading-relaxed">
         Plafond annuel de chiffre d'affaires pour rester en micro-entreprise (services BIC/BNC).
       </p>
     </div>

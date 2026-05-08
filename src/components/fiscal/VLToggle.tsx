@@ -29,13 +29,13 @@ export const VLToggle: React.FC<VLToggleProps> = ({ value, onChange, tauxVL = TA
           'inline-flex items-center gap-1.5 px-2.5 min-h-[28px] rounded-full text-[11px] font-bold tracking-tight transition-colors',
           value
             ? 'bg-secondary/10 text-secondary hover:bg-secondary/15'
-            : 'bg-slate-100 text-slate-500 hover:bg-slate-200',
+            : 'bg-surface-highest/60 text-on-surface-variant hover:bg-surface-highest',
         )}
       >
         <span
           className={cn(
             'w-1.5 h-1.5 rounded-full',
-            value ? 'bg-secondary' : 'bg-slate-400',
+            value ? 'bg-secondary' : 'bg-outline-variant',
           )}
         />
         VL {tauxLabel}%
@@ -50,7 +50,7 @@ export const VLToggle: React.FC<VLToggleProps> = ({ value, onChange, tauxVL = TA
           <label htmlFor="vl-toggle" className="text-xs font-bold uppercase tracking-wider text-secondary block">
             Versement libératoire
           </label>
-          <p className="text-[11px] text-slate-500 mt-0.5">
+          <p className="text-[11px] text-on-surface-variant mt-0.5">
             Taux forfaitaire {tauxLabel}% en remplacement de l'IR au barème.
           </p>
         </div>
@@ -64,8 +64,8 @@ export const VLToggle: React.FC<VLToggleProps> = ({ value, onChange, tauxVL = TA
           onClick={() => !blocked && onChange(!value)}
           className={cn(
             'relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200',
-            blocked ? 'cursor-not-allowed bg-slate-200' : 'cursor-pointer',
-            !blocked && (value ? 'bg-secondary' : 'bg-slate-300'),
+            blocked ? 'cursor-not-allowed bg-surface-highest' : 'cursor-pointer',
+            !blocked && (value ? 'bg-secondary' : 'bg-surface-highest'),
           )}
         >
           <span
@@ -77,7 +77,7 @@ export const VLToggle: React.FC<VLToggleProps> = ({ value, onChange, tauxVL = TA
         </button>
       </div>
       {ineligibleReason && (
-        <div className="mt-2 flex items-start gap-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 px-3 py-2 text-[11px] leading-relaxed">
+        <div className="mt-2 flex items-start gap-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:border-amber-500/30 px-3 py-2 text-[11px] leading-relaxed">
           <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
           <span>{ineligibleReason}</span>
         </div>

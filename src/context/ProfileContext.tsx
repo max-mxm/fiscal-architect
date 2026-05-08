@@ -41,6 +41,30 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       // onboardingDone : on ne réinitialise PAS sur les profils existants —
       // si tu as déjà des données, c'est que tu n'as pas besoin de l'onboarding.
       if (next.onboardingDone === undefined) { next.onboardingDone = true; dirty = true; }
+
+      // Migration dark theme : append les variantes dark: aux classes color des charges fixes
+      // si elles ne sont pas déjà présentes. Idempotent.
+      if (Array.isArray(next.fixedCosts)) {
+        const migrated = next.fixedCosts.map((c) => {
+          if (!c.color || c.color.includes('dark:')) return c;
+          const tone = (() => {
+            if (c.color.includes('blue-')) return 'dark:bg-blue-500/20 dark:text-blue-300';
+            if (c.color.includes('emerald-')) return 'dark:bg-emerald-500/20 dark:text-emerald-300';
+            if (c.color.includes('amber-')) return 'dark:bg-amber-500/20 dark:text-amber-300';
+            if (c.color.includes('violet-')) return 'dark:bg-violet-500/20 dark:text-violet-300';
+            if (c.color.includes('red-')) return 'dark:bg-red-500/20 dark:text-red-300';
+            if (c.color.includes('slate-')) return 'dark:bg-slate-500/20 dark:text-slate-300';
+            return 'dark:bg-secondary/15 dark:text-secondary';
+          })();
+          return { ...c, color: `${c.color} ${tone}` };
+        });
+        const changed = migrated.some((c, i) => c.color !== next.fixedCosts[i].color);
+        if (changed) {
+          next.fixedCosts = migrated;
+          dirty = true;
+        }
+      }
+
       return dirty ? next : p;
     });
   }, [setProfile]);

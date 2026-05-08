@@ -78,7 +78,7 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 id="month-summary-title" className="font-headline text-lg font-bold text-slate-900">
+          <h2 id="month-summary-title" className="font-headline text-lg font-bold text-on-surface">
             {monthName}
           </h2>
           <p className="text-xs text-on-surface-variant mt-0.5 font-medium">
@@ -93,7 +93,7 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
       <ul className="space-y-2 text-sm">
         <li className="flex justify-between items-center">
           <span className="text-on-surface-variant">CA brut</span>
-          <span className="font-mono font-bold text-slate-900 tabular-nums">
+          <span className="font-mono font-bold text-on-surface tabular-nums">
             {formatEuro(caMensuel)}€
           </span>
         </li>
@@ -108,7 +108,7 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
                   onClick={() => setShowAcreInfo((v) => !v)}
                   aria-label="À propos de la réduction ACRE"
                   aria-expanded={showAcreInfo}
-                  className="text-slate-500 hover:text-secondary transition-colors p-0.5 rounded"
+                  className="text-on-surface-variant hover:text-secondary transition-colors p-0.5 rounded"
                 >
                   <Info className="w-3 h-3" />
                 </button>
@@ -162,7 +162,7 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
               onClick={() => setShowIrInfo((v) => !v)}
               aria-label="À propos de l'IR mensualisé"
               aria-expanded={showIrInfo}
-              className="text-slate-500 hover:text-secondary transition-colors p-0.5 rounded"
+              className="text-on-surface-variant hover:text-secondary transition-colors p-0.5 rounded"
             >
               <Info className="w-3 h-3" />
             </button>

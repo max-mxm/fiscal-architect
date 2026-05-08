@@ -28,12 +28,12 @@ export const InstallPromptToast: React.FC<InstallPromptToastProps> = ({
           transition={{ duration: 0.18, ease: 'easeOut' }}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] w-[min(440px,calc(100vw-2rem))]"
         >
-          <div className="relative overflow-hidden rounded-2xl bg-slate-900 text-white shadow-2xl">
+          <div className="relative overflow-hidden rounded-2xl bg-slate-900 text-white dark:bg-surface-lowest dark:text-on-surface dark:border dark:border-outline-variant/30 shadow-2xl">
             <button
               type="button"
               onClick={onDismiss}
               aria-label="Fermer"
-              className="absolute top-2 right-2 text-white/60 hover:text-white p-1.5 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+              className="absolute top-2 right-2 text-white/60 hover:text-white dark:text-on-surface-variant dark:hover:text-on-surface p-1.5 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
             >
               <X className="w-4 h-4" />
             </button>
@@ -49,7 +49,7 @@ export const InstallPromptToast: React.FC<InstallPromptToastProps> = ({
                   </p>
                   <p
                     id="pwa-install-desc"
-                    className="mt-1 flex items-center gap-1.5 text-xs text-white/75"
+                    className="mt-1 flex items-center gap-1.5 text-xs text-white/75 dark:text-on-surface-variant"
                   >
                     <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
                     <span>
@@ -64,7 +64,7 @@ export const InstallPromptToast: React.FC<InstallPromptToastProps> = ({
                   <button
                     type="button"
                     onClick={onDismiss}
-                    className="px-3 min-h-[36px] rounded-xl text-white/70 text-sm hover:text-white hover:bg-white/5 transition-colors"
+                    className="px-3 min-h-[36px] rounded-xl text-white/70 text-sm hover:text-white hover:bg-white/5 dark:text-on-surface-variant dark:hover:text-on-surface dark:hover:bg-surface-highest/40 transition-colors"
                   >
                     Plus tard
                   </button>
@@ -78,7 +78,7 @@ export const InstallPromptToast: React.FC<InstallPromptToastProps> = ({
                 </div>
               ) : (
                 <div className="mt-3 space-y-2">
-                  <p className="text-xs text-white/75 flex items-center gap-1.5 flex-wrap">
+                  <p className="text-xs text-white/75 dark:text-on-surface-variant flex items-center gap-1.5 flex-wrap">
                     <span>Appuyez sur</span>
                     <Share className="w-4 h-4 inline-block" aria-label="Partager" />
                     <span>puis</span>

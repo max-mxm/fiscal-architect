@@ -17,8 +17,8 @@ const ICONS: Record<Notification['icon'], React.ComponentType<{ className?: stri
 
 const TONE: Record<Notification['level'], string> = {
   info: 'bg-secondary/10 text-secondary',
-  warning: 'bg-amber-100 text-amber-700',
-  critical: 'bg-red-100 text-red-700',
+  warning: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+  critical: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
 };
 
 export const NotificationItem: React.FC<NotificationItemProps> = ({ notification, isDismissed, onToggle }) => {
@@ -27,7 +27,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
   return (
     <div
       className={cn(
-        'flex items-start gap-3 rounded-2xl bg-white border border-outline-variant/20 p-3 transition-opacity',
+        'flex items-start gap-3 rounded-2xl bg-surface-lowest border border-outline-variant/20 p-3 transition-opacity',
         isDismissed && 'opacity-60',
       )}
     >
@@ -38,7 +38,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
         <Icon className="w-4 h-4" />
       </span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-slate-900">{notification.title}</p>
+        <p className="text-sm font-bold text-on-surface">{notification.title}</p>
         <p className="text-[11px] text-on-surface-variant mt-0.5 leading-relaxed">{notification.body}</p>
       </div>
       <button
