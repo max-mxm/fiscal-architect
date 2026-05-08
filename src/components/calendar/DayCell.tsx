@@ -9,8 +9,8 @@ interface DayCellProps {
   isWorked: boolean;
   isHalf: boolean;
   isToday: boolean;
-  onPointerDown: () => void;
-  onPointerEnter: () => void;
+  onMouseDown: () => void;
+  onMouseEnter: () => void;
 }
 
 function buildTitle(args: {
@@ -37,25 +37,18 @@ export const DayCell: React.FC<DayCellProps> = ({
   isWorked,
   isHalf,
   isToday,
-  onPointerDown,
-  onPointerEnter,
+  onMouseDown,
+  onMouseEnter,
 }) => {
   const title = buildTitle({ isWeekend, isFerie, ferieName, isWorked, isHalf });
 
   return (
     <div
-      onPointerDown={(e) => {
-        e.preventDefault();
-        // Le pointerdown capture implicitement le pointer sur cette cellule en tactile,
-        // ce qui empêche les pointerenter de se déclencher sur les cellules voisines.
-        // On relâche pour rétablir le comportement « le pointer suit le doigt ».
-        e.currentTarget.releasePointerCapture(e.pointerId);
-        onPointerDown();
-      }}
-      onPointerEnter={onPointerEnter}
+      onMouseDown={(e) => { e.preventDefault(); onMouseDown(); }}
+      onMouseEnter={onMouseEnter}
       title={title}
       className={cn(
-        'h-14 w-full rounded-lg flex items-center justify-center text-sm font-bold transition-all select-none touch-none relative',
+        'h-14 w-full rounded-lg flex items-center justify-center text-sm font-bold transition-all select-none relative',
         isWeekend
           ? 'bg-surface-highest/30 text-on-surface-variant/40 cursor-default'
           : isFerie && !isWorked && !isHalf

@@ -26,8 +26,8 @@ interface MonthGridProps {
   onPrev: () => void;
   onNext: () => void;
   dragHandlers: {
-    onDayPointerDown: (monthIndex: number, day: number) => void;
-    onDayPointerEnter: (monthIndex: number, day: number) => void;
+    onDayMouseDown: (monthIndex: number, day: number) => void;
+    onDayMouseEnter: (monthIndex: number, day: number) => void;
   };
 }
 
@@ -66,8 +66,8 @@ export const MonthGrid: React.FC<MonthGridProps> = ({
         isWorked={workedDays.includes(d)}
         isHalf={halfDays.includes(d)}
         isToday={d === todayInMonth}
-        onPointerDown={() => dragHandlers.onDayPointerDown(monthIndex, d)}
-        onPointerEnter={() => dragHandlers.onDayPointerEnter(monthIndex, d)}
+        onMouseDown={() => dragHandlers.onDayMouseDown(monthIndex, d)}
+        onMouseEnter={() => dragHandlers.onDayMouseEnter(monthIndex, d)}
       />,
     );
   }

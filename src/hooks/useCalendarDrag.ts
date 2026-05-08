@@ -11,10 +11,10 @@ interface UseCalendarDragOptions {
 }
 
 /**
- * Logique drag/tap 3 états pour la grille du calendrier (souris + tactile via Pointer Events).
+ * Logique drag/clic 3 états pour la grille du calendrier.
  *
- * Au pointerdown sur une cellule, on prépare un drag potentiel ; on bascule en mode drag
- * dès que le pointeur entre dans une autre cellule. Si pointerup arrive sans drag,
+ * Au mousedown sur une cellule, on prépare un drag potentiel ; on bascule en mode drag
+ * dès que le pointeur entre dans une autre cellule. Si mouseup arrive sans drag,
  * on déclenche un cycle 3 états (vide → plein → demi → vide).
  *
  * Les weekends et les jours fériés sont entièrement verrouillés.
@@ -31,7 +31,7 @@ export function useCalendarDrag({
   const dragging = useRef(false);
   const dragMode = useRef<'add' | 'remove'>('add');
 
-  const onDayPointerDown = useCallback((monthIndex: number, day: number) => {
+  const onDayMouseDown = useCallback((monthIndex: number, day: number) => {
     if (isWeekendCell(monthIndex, day)) return;
     if (isJourFerie(monthIndex, day)) return;
     pressMonth.current = monthIndex;
@@ -41,13 +41,13 @@ export function useCalendarDrag({
     dragMode.current = getDayState(monthIndex, day) === 'empty' ? 'add' : 'remove';
   }, [isWeekendCell, isJourFerie, getDayState]);
 
-  const onDayPointerEnter = useCallback((monthIndex: number, day: number) => {
+  const onDayMouseEnter = useCallback((monthIndex: number, day: number) => {
     if (pressMonth.current === -1) return;
     if (monthIndex !== pressMonth.current) return;
     if (isWeekendCell(monthIndex, day)) return;
     if (isJourFerie(monthIndex, day)) return;
-    // Premier pointerenter sur une cellule différente : on entre en mode drag
-    // et on applique aussi sur la cellule de départ (rien n'a été appliqué au pointerdown).
+    // Premier mouseEnter sur une cellule différente : on entre en mode drag
+    // et on applique aussi sur la cellule de départ (rien n'a été appliqué au mousedown).
     if (!dragging.current && day !== pressDay.current) {
       dragging.current = true;
       dragSetDay(pressMonth.current, pressDay.current, dragMode.current === 'add');
@@ -57,8 +57,8 @@ export function useCalendarDrag({
     }
   }, [isWeekendCell, isJourFerie, dragSetDay]);
 
-  const endPress = useCallback(() => {
-    // Pas de drag → pointerup = tap simple → cycle 3 états
+  const handleMouseUp = useCallback(() => {
+    // Pas de drag → mouseup = clic simple → cycle 3 états
     if (pressMonth.current !== -1 && !dragging.current) {
       cycleDay(pressMonth.current, pressDay.current);
     }
@@ -67,20 +67,10 @@ export function useCalendarDrag({
     dragging.current = false;
   }, [cycleDay]);
 
-  const cancelPress = useCallback(() => {
-    pressMonth.current = -1;
-    pressDay.current = -1;
-    dragging.current = false;
-  }, []);
-
   useEffect(() => {
-    window.addEventListener('pointerup', endPress);
-    window.addEventListener('pointercancel', cancelPress);
-    return () => {
-      window.removeEventListener('pointerup', endPress);
-      window.removeEventListener('pointercancel', cancelPress);
-    };
-  }, [endPress, cancelPress]);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => window.removeEventListener('mouseup', handleMouseUp);
+  }, [handleMouseUp]);
 
-  return { onDayPointerDown, onDayPointerEnter };
+  return { onDayMouseDown, onDayMouseEnter };
 }
