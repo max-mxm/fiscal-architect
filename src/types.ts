@@ -1,5 +1,8 @@
 export type Activity = 'vente' | 'serviceBic' | 'liberalSsi' | 'liberalCipav';
 
+/** Mode de saisie du chiffre d'affaires par défaut au niveau du profil. */
+export type RevenueModel = 'days' | 'forfait' | 'flat' | 'mixed';
+
 export interface UserProfile {
   name: string;
   role: string;
@@ -21,15 +24,33 @@ export interface UserProfile {
   cfpEnabled?: boolean;
   /** Taxe pour frais de chambre consulaire (CCI/CMA). Activée par défaut selon activité. */
   taxeConsulaireEnabled?: boolean;
+  /** Mode de saisie du CA. Défaut: 'days' (TJM × jours travaillés). */
+  revenueModel?: RevenueModel;
 }
 
 // --- Types enrichis (FOUND-03) ---
+
+/**
+ * Ligne de revenu d'un mois, polymorphe selon le mode de saisie.
+ * - `days` : agrégation depuis le calendrier (jours pleins + demi × 0.5) × TJM
+ * - `forfait` : prestation ponctuelle à montant fixe et date
+ * - `flat` : montant unique « CA du mois » saisi directement
+ */
+export type RevenueEntry =
+  | { kind: 'days'; id: string; days: number[]; halfDays?: number[]; tjmOverride?: number }
+  | { kind: 'forfait'; id: string; date: string; amount: number; label?: string }
+  | { kind: 'flat'; id: string; amount: number; label?: string };
 
 export interface CalendarMonth {
   month: number; // 0-11
   year: number;
   workedDays: number[]; // jours pleins (1-31)
   halfDays?: number[]; // demi-journées (1-31), optionnel pour rétro-compat localStorage
+  /**
+   * Lignes de revenu du mois (mode mixte). Optionnel pour rétro-compat — si absent,
+   * on dérive virtuellement une ligne `days` depuis workedDays/halfDays.
+   */
+  entries?: RevenueEntry[];
 }
 
 export interface FiscalYear {

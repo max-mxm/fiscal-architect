@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { FiscalYear } from '~/types';
+import type { FiscalYear, RevenueEntry } from '~/types';
 import { useLocalStorage } from '~/hooks/useLocalStorage';
 import {
   MONTH_NAMES,
@@ -80,6 +80,14 @@ export function useFiscalYear(year: number) {
     setFiscalYear((prev) => ({ ...prev, months }));
   }, [setFiscalYear]);
 
+  /** Met à jour les entries (forfait/flat/days mixés) d'un mois. */
+  const setMonthEntries = useCallback((monthIndex: number, entries: RevenueEntry[]) => {
+    setFiscalYear((prev) => ({
+      ...prev,
+      months: prev.months.map((m, i) => (i === monthIndex ? { ...m, entries } : m)),
+    }));
+  }, [setFiscalYear]);
+
   /** Vide tout + purge toutes les clés localStorage commençant par `fiscal-`. */
   const resetEverything = useCallback(() => {
     const keys = Object.keys(localStorage).filter((k) => k.startsWith('fiscal-'));
@@ -121,6 +129,7 @@ export function useFiscalYear(year: number) {
     clearMonth,
     clearAll,
     restoreMonths,
+    setMonthEntries,
     resetEverything,
     exportCSV,
   };

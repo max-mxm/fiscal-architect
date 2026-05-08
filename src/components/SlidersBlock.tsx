@@ -16,6 +16,8 @@ interface SlidersBlockProps {
   onTjmChange: (next: number) => void;
   onUrssafChange: (next: number) => void;
   onOpenAdvanced: () => void;
+  /** Affiche le slider TJM. Défaut true (pertinent uniquement en mode 'days'/'mixed'). */
+  showTjmSlider?: boolean;
 }
 
 const Mini: React.FC<{ label: string; value: string; tone?: 'neutral' | 'positive' }> = ({
@@ -54,6 +56,7 @@ export const SlidersBlock: React.FC<SlidersBlockProps> = ({
   onTjmChange,
   onUrssafChange,
   onOpenAdvanced,
+  showTjmSlider = true,
 }) => {
   return (
     <section
@@ -77,11 +80,18 @@ export const SlidersBlock: React.FC<SlidersBlockProps> = ({
         </button>
       </div>
 
-      <TjmSlider value={tjm} onChange={onTjmChange} />
+      {showTjmSlider && <TjmSlider value={tjm} onChange={onTjmChange} />}
       <UrssafSlider value={urssafRate} onChange={onUrssafChange} defaultRate={urssafDefault} />
 
-      <div className="pt-4 border-t border-outline-variant/15 grid grid-cols-3 gap-3">
-        <Mini label="Jours/mois" value={workedDaysEquiv.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} />
+      <div
+        className={cn(
+          'pt-4 border-t border-outline-variant/15 grid gap-3',
+          showTjmSlider ? 'grid-cols-3' : 'grid-cols-2',
+        )}
+      >
+        {showTjmSlider && (
+          <Mini label="Jours/mois" value={workedDaysEquiv.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} />
+        )}
         <Mini label="CA brut" value={shortEuro(caMensuel)} />
         <Mini label="Net mensuel" value={shortEuro(netMensuel)} tone="positive" />
       </div>

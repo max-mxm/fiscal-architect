@@ -11,10 +11,13 @@ import {
   TAUX_VL_BNC,
   TVA_FRANCHISE_2026,
   calcACRE,
+  calcCAFromEntries,
   calcCAMensuel,
+  calcCAYearFromEntries,
   calcCAannuel,
   calcCFP,
   calcCaRealise,
+  calcCaRealiseFromEntries,
   calcChargesURSSAF,
   calcEquivDays,
   calcIR,
@@ -23,7 +26,9 @@ import {
   calcNetMicro,
   calcReserveVacances,
   calcSeuilDate,
+  calcSeuilDateFromEntries,
   calcTaxeConsulaire,
+  monthHasRevenue,
   calcTotalChargesFixes,
   calcTVAStatus,
   calcTVASeuilDate,
@@ -772,5 +777,275 @@ describe('generateChartData', () => {
     const data = generateChartData(profile);
     expect(data[0].brut).toBe(9_000);
     expect(data[11].brut).toBe(9_000);
+  });
+});
+
+// --- Modèles de revenu pluggables ---
+
+const baseProfile: UserProfile = {
+  name: 'Test',
+  role: 'Dev',
+  activity: 'liberalSsi',
+  tjm: 500,
+  workingDays: 18,
+  urssafRate: 22,
+  fixedCosts: [],
+  seuilMicro: SEUIL_MICRO,
+  versementLiberatoire: false,
+};
+
+describe('calcCAFromEntries', () => {
+  it('mode legacy (sans entries) reproduit le CA jours × TJM', () => {
+    const month: CalendarMonth = {
+      month: 4,
+      year: 2026,
+      workedDays: [1, 2, 3, 4, 5],
+      halfDays: [10],
+    };
+    expect(calcCAFromEntries(month, baseProfile)).toBe(5.5 * 500);
+  });
+
+  it('mode legacy retourne 0 quand le mois est vide', () => {
+    const month: CalendarMonth = { month: 0, year: 2026, workedDays: [], halfDays: [] };
+    expect(calcCAFromEntries(month, baseProfile)).toBe(0);
+  });
+
+  it('mode forfait somme les montants', () => {
+    const month: CalendarMonth = {
+      month: 4,
+      year: 2026,
+      workedDays: [],
+      halfDays: [],
+      entries: [
+        { kind: 'forfait', id: 'a', date: '2026-05-12', amount: 2_500 },
+        { kind: 'forfait', id: 'b', date: '2026-05-20', amount: 1_500, label: 'Site web' },
+      ],
+    };
+    expect(calcCAFromEntries(month, baseProfile)).toBe(4_000);
+  });
+
+  it('mode flat retourne le montant unique', () => {
+    const month: CalendarMonth = {
+      month: 4,
+      year: 2026,
+      workedDays: [],
+      halfDays: [],
+      entries: [{ kind: 'flat', id: 'f', amount: 8_000 }],
+    };
+    expect(calcCAFromEntries(month, baseProfile)).toBe(8_000);
+  });
+
+  it('mode mixed somme les 3 sources', () => {
+    const month: CalendarMonth = {
+      month: 4,
+      year: 2026,
+      workedDays: [],
+      halfDays: [],
+      entries: [
+        { kind: 'days', id: 'd', days: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }, // 10 × 500 = 5 000
+        { kind: 'forfait', id: 'f', date: '2026-05-15', amount: 1_500 },
+        { kind: 'flat', id: 'a', amount: 200 },
+      ],
+    };
+    expect(calcCAFromEntries(month, baseProfile)).toBe(6_700);
+  });
+
+  it('respecte tjmOverride sur les entries days', () => {
+    const month: CalendarMonth = {
+      month: 4,
+      year: 2026,
+      workedDays: [],
+      halfDays: [],
+      entries: [{ kind: 'days', id: 'd', days: [1, 2], tjmOverride: 800 }],
+    };
+    expect(calcCAFromEntries(month, baseProfile)).toBe(2 * 800);
+  });
+
+  it('entries présentes prennent le pas sur workedDays legacy', () => {
+    const month: CalendarMonth = {
+      month: 4,
+      year: 2026,
+      workedDays: [1, 2, 3, 4, 5], // ignoré
+      halfDays: [],
+      entries: [{ kind: 'flat', id: 'f', amount: 10_000 }],
+    };
+    expect(calcCAFromEntries(month, baseProfile)).toBe(10_000);
+  });
+});
+
+describe('calcCAYearFromEntries', () => {
+  it("somme tous les mois quel que soit leur mode", () => {
+    const months: CalendarMonth[] = [
+      { month: 0, year: 2026, workedDays: [1, 2, 3], halfDays: [] }, // 3 × 500 = 1500
+      {
+        month: 1,
+        year: 2026,
+        workedDays: [],
+        halfDays: [],
+        entries: [{ kind: 'forfait', id: 'a', date: '2026-02-10', amount: 2_500 }],
+      },
+      {
+        month: 2,
+        year: 2026,
+        workedDays: [],
+        halfDays: [],
+        entries: [{ kind: 'flat', id: 'b', amount: 8_000 }],
+      },
+    ];
+    expect(calcCAYearFromEntries(months, baseProfile)).toBe(1_500 + 2_500 + 8_000);
+  });
+});
+
+describe('calcCaRealiseFromEntries', () => {
+  it('mode days mois passés intégralement, mois courant tronqué à todayDate', () => {
+    const months: CalendarMonth[] = [
+      { month: 0, year: 2026, workedDays: [1, 2, 3, 4, 5], halfDays: [] }, // 5 × 500 = 2500
+      { month: 1, year: 2026, workedDays: [10, 15, 20, 25], halfDays: [] }, // 4 × 500 = 2000
+      { month: 2, year: 2026, workedDays: [], halfDays: [] }, // futur
+    ];
+    // Aujourd'hui = 18 février → on compte uniquement les jours ≤ 18 du mois 1
+    const r = calcCaRealiseFromEntries(months, baseProfile, 1, 18);
+    expect(r.caRealise).toBe(2_500 + 2 * 500); // janvier complet + 10 et 15 février
+  });
+
+  it('mode forfait : seuls les forfaits dont la date ≤ todayDate sont comptés', () => {
+    const months: CalendarMonth[] = [
+      {
+        month: 4,
+        year: 2026,
+        workedDays: [],
+        halfDays: [],
+        entries: [
+          { kind: 'forfait', id: 'a', date: '2026-05-08', amount: 2_500 },
+          { kind: 'forfait', id: 'b', date: '2026-05-25', amount: 4_000 },
+        ],
+      },
+    ];
+    const r = calcCaRealiseFromEntries(months, baseProfile, 4, 15);
+    expect(r.caRealise).toBe(2_500);
+  });
+
+  it('mode flat : prorate sur le mois courant (todayDate / daysInMonth)', () => {
+    const months: CalendarMonth[] = [
+      {
+        month: 4,
+        year: 2026,
+        workedDays: [],
+        halfDays: [],
+        entries: [{ kind: 'flat', id: 'f', amount: 6_200 }],
+      },
+    ];
+    // 15 mai 2026 → 15 / 31
+    const r = calcCaRealiseFromEntries(months, baseProfile, 4, 15);
+    expect(r.caRealise).toBeCloseTo(6_200 * (15 / 31), 2);
+  });
+
+  it('ignore les mois futurs', () => {
+    const months: CalendarMonth[] = [
+      { month: 0, year: 2026, workedDays: [1, 2], halfDays: [] },
+      {
+        month: 6,
+        year: 2026,
+        workedDays: [],
+        halfDays: [],
+        entries: [{ kind: 'forfait', id: 'a', date: '2026-07-15', amount: 5_000 }],
+      },
+    ];
+    const r = calcCaRealiseFromEntries(months, baseProfile, 1, 1);
+    expect(r.caRealise).toBe(2 * 500);
+  });
+});
+
+describe('calcSeuilDateFromEntries', () => {
+  it('retourne null si seuil non atteint', () => {
+    const months: CalendarMonth[] = [
+      { month: 0, year: 2026, workedDays: [1, 2], halfDays: [] },
+    ];
+    expect(calcSeuilDateFromEntries(months, baseProfile, 100_000)).toBeNull();
+  });
+
+  it('mode days : retourne la date exacte du dépassement', () => {
+    const months: CalendarMonth[] = [
+      { month: 0, year: 2026, workedDays: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], halfDays: [] },
+    ];
+    // Cumul après 8 jours = 4 000 → seuil 4 000 atteint au jour 8
+    const date = calcSeuilDateFromEntries(months, baseProfile, 4_000);
+    expect(date).not.toBeNull();
+    expect(date?.getDate()).toBe(8);
+    expect(date?.getMonth()).toBe(0);
+  });
+
+  it('mode forfait : retourne la date du forfait qui fait franchir', () => {
+    const months: CalendarMonth[] = [
+      {
+        month: 4,
+        year: 2026,
+        workedDays: [],
+        halfDays: [],
+        entries: [
+          { kind: 'forfait', id: 'a', date: '2026-05-08', amount: 3_000 },
+          { kind: 'forfait', id: 'b', date: '2026-05-22', amount: 4_000 },
+        ],
+      },
+    ];
+    const date = calcSeuilDateFromEntries(months, baseProfile, 5_000);
+    expect(date?.getDate()).toBe(22);
+    expect(date?.getMonth()).toBe(4);
+  });
+
+  it('mode flat : retourne le 15 du mois où le seuil est franchi', () => {
+    const months: CalendarMonth[] = [
+      {
+        month: 0,
+        year: 2026,
+        workedDays: [],
+        halfDays: [],
+        entries: [{ kind: 'flat', id: 'a', amount: 30_000 }],
+      },
+      {
+        month: 1,
+        year: 2026,
+        workedDays: [],
+        halfDays: [],
+        entries: [{ kind: 'flat', id: 'b', amount: 30_000 }],
+      },
+    ];
+    const date = calcSeuilDateFromEntries(months, baseProfile, 50_000);
+    expect(date?.getDate()).toBe(15);
+    expect(date?.getMonth()).toBe(1);
+  });
+});
+
+describe('monthHasRevenue', () => {
+  it('retourne false sur un mois vide', () => {
+    expect(monthHasRevenue({ month: 0, year: 2026, workedDays: [], halfDays: [] })).toBe(false);
+  });
+
+  it('retourne true en mode days legacy avec jours saisis', () => {
+    expect(monthHasRevenue({ month: 0, year: 2026, workedDays: [1, 2], halfDays: [] })).toBe(true);
+  });
+
+  it('retourne true avec un forfait > 0', () => {
+    expect(
+      monthHasRevenue({
+        month: 0,
+        year: 2026,
+        workedDays: [],
+        halfDays: [],
+        entries: [{ kind: 'forfait', id: 'a', date: '2026-01-10', amount: 100 }],
+      }),
+    ).toBe(true);
+  });
+
+  it('retourne false avec un flat à 0', () => {
+    expect(
+      monthHasRevenue({
+        month: 0,
+        year: 2026,
+        workedDays: [],
+        halfDays: [],
+        entries: [{ kind: 'flat', id: 'a', amount: 0 }],
+      }),
+    ).toBe(false);
   });
 });

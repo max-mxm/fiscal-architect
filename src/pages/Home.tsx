@@ -6,17 +6,19 @@ import { useFiscalYearCtx } from '~/context/FiscalYearContext';
 import {
   ACTIVITY_PARAMS,
   calcACRE,
-  calcCaRealise,
+  calcCAFromEntries,
+  calcCaRealiseFromEntries,
+  calcCAYearFromEntries,
   calcEquivDays,
   calcMonthlyBreakdown,
   calcNetCumule,
-  calcSeuilDate,
+  calcSeuilDateFromEntries,
   calcTotalChargesFixes,
   calcTVAStatus,
-  calcTVASeuilDate,
-  countMonthsWithActivity,
   getFiscalParams,
   getTVASeuils,
+  monthHasRevenue,
+  resolveEntries,
 } from '~/lib/fiscal';
 import {
   MONTH_NAMES,
@@ -35,7 +37,9 @@ import { EmptyHero } from '~/components/EmptyHero';
 import { LiveAnnouncer } from '~/components/LiveAnnouncer';
 import { UndoToast } from '~/components/UndoToast';
 import { ConfirmModal } from '~/components/ConfirmModal';
-import type { CalendarMonth } from '~/types';
+import { ForfaitList } from '~/components/fiscal/ForfaitList';
+import { FlatRevenueInput } from '~/components/fiscal/FlatRevenueInput';
+import type { CalendarMonth, RevenueEntry } from '~/types';
 
 type ConfirmKind = 'clear-year' | 'fill-month' | 'fill-year';
 
@@ -105,6 +109,11 @@ export const Home: React.FC = () => {
   const cfpRate = profile.cfpEnabled ? activityParams.cfpRate : 0;
   const taxeConsulaireRate = profile.taxeConsulaireEnabled ? activityParams.taxeConsulaireRate : 0;
 
+  const revenueModel = profile.revenueModel ?? 'days';
+  const showCalendar = revenueModel === 'days' || revenueModel === 'mixed';
+  const showForfaits = revenueModel === 'forfait' || revenueModel === 'mixed';
+  const showFlat = revenueModel === 'flat' || revenueModel === 'mixed';
+
   // ACRE — réduction mensuelle calculée pour le mois sélectionné.
   // On utilise le 15 du mois comme date de référence pour rester stable.
   const acreInfo = useMemo(() => {
@@ -130,16 +139,19 @@ export const Home: React.FC = () => {
     [fy.fiscalYear.months],
   );
 
-  const caCumule = totalWorkedDays * profile.tjm;
-  const isEmpty = totalWorkedDays === 0;
+  const caCumule = useMemo(
+    () => calcCAYearFromEntries(fy.fiscalYear.months, profile),
+    [fy.fiscalYear.months, profile],
+  );
+  const isEmpty = caCumule === 0;
 
   const { caRealise } = useMemo(
-    () => calcCaRealise(fy.fiscalYear.months, profile.tjm, currentMonthIndex, todayDate),
-    [fy.fiscalYear.months, profile.tjm, currentMonthIndex, todayDate],
+    () => calcCaRealiseFromEntries(fy.fiscalYear.months, profile, currentMonthIndex, todayDate),
+    [fy.fiscalYear.months, profile, currentMonthIndex, todayDate],
   );
 
   const monthsWithActivity = useMemo(
-    () => countMonthsWithActivity(fy.fiscalYear.months),
+    () => fy.fiscalYear.months.reduce((acc, m) => acc + (monthHasRevenue(m) ? 1 : 0), 0),
     [fy.fiscalYear.months],
   );
 
@@ -156,13 +168,15 @@ export const Home: React.FC = () => {
     [caCumule, profile.urssafRate, chargesFixesMensuelles, monthsWithActivity, profile.versementLiberatoire, fiscalOpts, acreInfo.reduction],
   );
 
-  // Projection : on simule les mois courant + futurs sans données
-  // avec le rythme nominal `workingDays` jours ouvrés / mois.
+  // Projection : en mode 'days' on extrapole les mois sans données via le rythme nominal.
+  // Dans les autres modes (forfait/flat/mixed), on n'extrapole pas — la projection
+  // n'a de sens que pour un freelance journalier au rythme régulier.
   const projectedMonths = useMemo(() => {
+    if (!showCalendar) return fy.fiscalYear.months;
     return fy.fiscalYear.months.map((m) => {
       const equiv = m.workedDays.length + (m.halfDays?.length ?? 0) * 0.5;
-      // Mois passés sans saisie ou mois déjà saisis → ne pas extrapoler
-      if (equiv > 0 || m.month < currentMonthIndex) return m;
+      const hasRevenue = monthHasRevenue(m);
+      if (equiv > 0 || hasRevenue || m.month < currentMonthIndex) return m;
       const total = getDaysInMonth(year, m.month);
       const businessDays: number[] = [];
       for (let d = 1; d <= total && businessDays.length < profile.workingDays; d++) {
@@ -172,24 +186,39 @@ export const Home: React.FC = () => {
       }
       return { ...m, workedDays: businessDays, halfDays: [] };
     });
-  }, [fy.fiscalYear.months, currentMonthIndex, year, fy.isJourFerie, profile.workingDays]);
+  }, [fy.fiscalYear.months, currentMonthIndex, year, fy.isJourFerie, profile.workingDays, showCalendar]);
 
   const seuilDate = useMemo(
-    () => calcSeuilDate(projectedMonths, profile.tjm, profile.seuilMicro),
-    [projectedMonths, profile.tjm, profile.seuilMicro],
+    () => calcSeuilDateFromEntries(projectedMonths, profile, profile.seuilMicro),
+    [projectedMonths, profile],
   );
 
   // --- TVA ---
   const tvaSeuils = getTVASeuils(profile.activity);
   const tvaStatus = useMemo(() => calcTVAStatus(caCumule, profile.activity), [caCumule, profile.activity]);
   const tvaSeuilDate = useMemo(
-    () => calcTVASeuilDate(projectedMonths, profile.tjm, profile.activity),
-    [projectedMonths, profile.tjm, profile.activity],
+    () => calcSeuilDateFromEntries(projectedMonths, profile, tvaSeuils.basique),
+    [projectedMonths, profile, tvaSeuils.basique],
   );
 
   const selectedMonthData = fy.fiscalYear.months[selectedMonth];
   const selectedMonthDays = selectedMonthData ? calcEquivDays(selectedMonthData) : 0;
-  const caMensuel = selectedMonthDays * profile.tjm;
+  const caMensuel = useMemo(
+    () => (selectedMonthData ? calcCAFromEntries(selectedMonthData, profile) : 0),
+    [selectedMonthData, profile],
+  );
+
+  const selectedEntries = useMemo<RevenueEntry[]>(
+    () => (selectedMonthData ? resolveEntries(selectedMonthData) : []),
+    [selectedMonthData],
+  );
+
+  const handleEntriesChange = useCallback(
+    (next: RevenueEntry[]) => {
+      fy.setMonthEntries(selectedMonth, next);
+    },
+    [fy, selectedMonth],
+  );
   const monthBreakdown = useMemo(
     () => calcMonthlyBreakdown(caMensuel, profile.urssafRate, chargesFixesMensuelles, profile.versementLiberatoire, fiscalOpts),
     [caMensuel, profile.urssafRate, chargesFixesMensuelles, profile.versementLiberatoire, fiscalOpts],
@@ -220,6 +249,23 @@ export const Home: React.FC = () => {
     return m.workedDays.length > 0 || (m.halfDays?.length ?? 0) > 0;
   };
   const yearHasData = () => fy.fiscalYear.months.some((_, i) => monthHasData(i));
+
+  const annualBarsMonths = useMemo(
+    () =>
+      fy.fiscalYear.months.map((m) => {
+        // Pour rester compatibles avec AnnualMiniBars qui consomme `workedDays`/`halfDays`,
+        // on synthétise des jours fictifs depuis le CA pour les modes non-calendrier.
+        if (showCalendar) return m;
+        const ca = calcCAFromEntries(m, profile);
+        if (ca === 0) return { ...m, workedDays: [], halfDays: [] };
+        // Échelle visuelle : 1 jour fictif tous les 250 € (~ TJM moyen),
+        // borné à 28 pour rester dans le mois.
+        const synthetic = Math.min(28, Math.max(1, Math.round(ca / 250)));
+        const days = Array.from({ length: synthetic }, (_, i) => i + 1);
+        return { ...m, workedDays: days, halfDays: [] };
+      }),
+    [fy.fiscalYear.months, showCalendar, profile],
+  );
 
   const flushUndo = useCallback(() => {
     setUndo(null);
@@ -337,39 +383,62 @@ export const Home: React.FC = () => {
       )}
 
       <div className="grid grid-cols-12 gap-4 lg:gap-5">
-        {/* Colonne calendrier */}
-        <section aria-labelledby="calendar-section" className="col-span-12 lg:col-span-7 space-y-4">
-          <h2 id="calendar-section" className="sr-only">Calendrier</h2>
-          <div className="bg-surface-lowest rounded-3xl shadow-sm p-5">
-            <MonthGrid
+        {/* Colonne saisie revenus */}
+        <section aria-labelledby="revenue-section" className="col-span-12 lg:col-span-7 space-y-4">
+          <h2 id="revenue-section" className="sr-only">Saisie des revenus</h2>
+          {showCalendar && (
+            <>
+              <div className="bg-surface-lowest rounded-3xl shadow-sm p-5">
+                <MonthGrid
+                  year={year}
+                  monthIndex={selectedMonth}
+                  monthName={MONTH_NAMES[selectedMonth]}
+                  workedDays={fy.fiscalYear.months[selectedMonth].workedDays}
+                  halfDays={fy.fiscalYear.months[selectedMonth].halfDays ?? []}
+                  workedDaysEquiv={selectedMonthDays}
+                  todayInMonth={selectedMonth === currentMonthIndex ? todayDate : null}
+                  navDirection={navDirection}
+                  isJourFerie={fy.isJourFerie}
+                  getJourFerieName={fy.getJourFerieName}
+                  onPrev={prevMonth}
+                  onNext={nextMonth}
+                  dragHandlers={dragHandlers}
+                />
+              </div>
+              <CalendarToolbar
+                monthShort={MONTH_SHORT[selectedMonth]}
+                monthLong={MONTH_NAMES[selectedMonth]}
+                year={year}
+                monthHasData={monthHasData(selectedMonth)}
+                yearHasData={yearHasData()}
+                onFill={(scope) => (scope === 'month' ? handleFillMonth() : handleFillYear())}
+                onClear={(scope) => (scope === 'month' ? handleClearMonth() : handleClearYear())}
+                onExport={() => fy.exportCSV(profile.tjm)}
+                onReset={() => navigate({ to: '/', search: { confirm: 'reset-all' } })}
+              />
+            </>
+          )}
+
+          {showForfaits && selectedMonthData && (
+            <ForfaitList
+              entries={selectedEntries}
               year={year}
               monthIndex={selectedMonth}
               monthName={MONTH_NAMES[selectedMonth]}
-              workedDays={fy.fiscalYear.months[selectedMonth].workedDays}
-              halfDays={fy.fiscalYear.months[selectedMonth].halfDays ?? []}
-              workedDaysEquiv={selectedMonthDays}
-              todayInMonth={selectedMonth === currentMonthIndex ? todayDate : null}
-              navDirection={navDirection}
-              isJourFerie={fy.isJourFerie}
-              getJourFerieName={fy.getJourFerieName}
-              onPrev={prevMonth}
-              onNext={nextMonth}
-              dragHandlers={dragHandlers}
+              onChange={handleEntriesChange}
             />
-          </div>
-          <CalendarToolbar
-            monthShort={MONTH_SHORT[selectedMonth]}
-            monthLong={MONTH_NAMES[selectedMonth]}
-            year={year}
-            monthHasData={monthHasData(selectedMonth)}
-            yearHasData={yearHasData()}
-            onFill={(scope) => (scope === 'month' ? handleFillMonth() : handleFillYear())}
-            onClear={(scope) => (scope === 'month' ? handleClearMonth() : handleClearYear())}
-            onExport={() => fy.exportCSV(profile.tjm)}
-            onReset={() => navigate({ to: '/', search: { confirm: 'reset-all' } })}
-          />
+          )}
+
+          {showFlat && selectedMonthData && (
+            <FlatRevenueInput
+              entries={selectedEntries}
+              monthName={MONTH_NAMES[selectedMonth]}
+              onChange={handleEntriesChange}
+            />
+          )}
+
           <AnnualMiniBars
-            months={fy.fiscalYear.months}
+            months={annualBarsMonths}
             selectedMonth={selectedMonth}
             onSelect={goToMonth}
           />
@@ -387,6 +456,7 @@ export const Home: React.FC = () => {
             onTjmChange={(v) => setProfile((p) => ({ ...p, tjm: v }))}
             onUrssafChange={(v) => setProfile((p) => ({ ...p, urssafRate: v }))}
             onOpenAdvanced={openFiscalSettings}
+            showTjmSlider={showCalendar}
           />
           <MonthSummary
             monthName={MONTH_NAMES[selectedMonth]}

@@ -26,6 +26,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       if (next.tvaAssujetti === undefined) { next.tvaAssujetti = DEFAULT_PROFILE.tvaAssujetti; dirty = true; }
       if (next.cfpEnabled === undefined) { next.cfpEnabled = DEFAULT_PROFILE.cfpEnabled; dirty = true; }
       if (next.taxeConsulaireEnabled === undefined) { next.taxeConsulaireEnabled = DEFAULT_PROFILE.taxeConsulaireEnabled; dirty = true; }
+      if (next.revenueModel === undefined) { next.revenueModel = DEFAULT_PROFILE.revenueModel; dirty = true; }
       return dirty ? next : p;
     });
   }, [setProfile]);

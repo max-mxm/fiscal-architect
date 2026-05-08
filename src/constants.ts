@@ -19,6 +19,7 @@ export const DEFAULT_PROFILE: UserProfile = {
   tvaAssujetti: false,
   cfpEnabled: true,
   taxeConsulaireEnabled: false,
+  revenueModel: 'days',
 };
 
 export const MONTHS = [

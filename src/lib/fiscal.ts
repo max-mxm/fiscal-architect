@@ -1,4 +1,4 @@
-import type { Activity, UserProfile, FiscalResult, MonthlyBreakdown, MonthlyChartData, CalendarMonth, TVAStatus } from '~/types';
+import type { Activity, UserProfile, FiscalResult, MonthlyBreakdown, MonthlyChartData, CalendarMonth, RevenueEntry, TVAStatus } from '~/types';
 
 // --- Paramètres fiscaux par activité (2026) ---
 
@@ -76,6 +76,171 @@ export function calcCAMensuel(tjm: number, jours: number): number {
 
 export function calcCAannuel(tjm: number, joursMensuels: number, mois: number = 12): number {
   return tjm * joursMensuels * mois;
+}
+
+// --- Modèles de revenu pluggables (jours / forfait / flat) ---
+
+/**
+ * Retourne les `entries` effectives d'un mois. Si le mois est legacy (pas d'`entries`),
+ * dérive virtuellement une ligne `days` depuis `workedDays`/`halfDays` — sans muter
+ * le localStorage. Tant que l'utilisateur ne saisit rien dans le nouveau modèle, on
+ * reste 100 % rétro-compatible.
+ */
+export function resolveEntries(month: CalendarMonth): RevenueEntry[] {
+  if (month.entries && month.entries.length > 0) return month.entries;
+  return [
+    {
+      kind: 'days',
+      id: `legacy-${month.year}-${month.month}`,
+      days: month.workedDays,
+      halfDays: month.halfDays,
+    },
+  ];
+}
+
+function entryAmount(entry: RevenueEntry, profile: UserProfile): number {
+  switch (entry.kind) {
+    case 'days': {
+      const equiv = entry.days.length + (entry.halfDays?.length ?? 0) * 0.5;
+      return equiv * (entry.tjmOverride ?? profile.tjm);
+    }
+    case 'forfait':
+      return entry.amount;
+    case 'flat':
+      return entry.amount;
+  }
+}
+
+/**
+ * CA mensuel d'un mois, calculé selon ses entries (mode pluggable).
+ * Mode `days` : `(jours pleins + demi × 0.5) × TJM`
+ * Mode `forfait` : somme des montants
+ * Mode `flat` : somme des montants
+ * Mode `mixed` : somme de toutes les entries (toutes catégories confondues)
+ */
+export function calcCAFromEntries(month: CalendarMonth, profile: UserProfile): number {
+  return resolveEntries(month).reduce((sum, e) => sum + entryAmount(e, profile), 0);
+}
+
+/** CA annuel = somme des `calcCAFromEntries` sur les 12 mois. */
+export function calcCAYearFromEntries(months: CalendarMonth[], profile: UserProfile): number {
+  return months.reduce((sum, m) => sum + calcCAFromEntries(m, profile), 0);
+}
+
+/**
+ * CA réalisé à date : agrège les revenus jusqu'au jour `todayDate` du mois courant.
+ *
+ * Détail par type d'entry dans le mois courant :
+ * - `days` : seuls les jours ≤ todayDate sont comptés
+ * - `forfait` : seuls les forfaits dont la date (jour) est ≤ todayDate
+ * - `flat` : prorata `todayDate / daysInMonth` (le mois agrégé est étalé linéairement)
+ *
+ * Les mois passés sont comptés intégralement, les mois futurs ignorés.
+ */
+export function calcCaRealiseFromEntries(
+  months: CalendarMonth[],
+  profile: UserProfile,
+  currentMonthIndex: number,
+  todayDate: number,
+): { caRealise: number; joursRealises: number } {
+  let total = 0;
+  let jours = 0;
+  for (const m of months) {
+    if (m.month > currentMonthIndex) continue;
+    const isCurrent = m.month === currentMonthIndex;
+    for (const e of resolveEntries(m)) {
+      switch (e.kind) {
+        case 'days': {
+          const tjm = e.tjmOverride ?? profile.tjm;
+          if (!isCurrent) {
+            const equiv = e.days.length + (e.halfDays?.length ?? 0) * 0.5;
+            jours += equiv;
+            total += equiv * tjm;
+          } else {
+            const fullCount = e.days.filter((d) => d <= todayDate).length;
+            const halfCount = (e.halfDays ?? []).filter((d) => d <= todayDate).length;
+            const equiv = fullCount + halfCount * 0.5;
+            jours += equiv;
+            total += equiv * tjm;
+          }
+          break;
+        }
+        case 'forfait': {
+          if (!isCurrent) {
+            total += e.amount;
+          } else {
+            const day = parseInt(e.date.slice(8, 10), 10);
+            if (!isNaN(day) && day <= todayDate) total += e.amount;
+          }
+          break;
+        }
+        case 'flat': {
+          if (!isCurrent) {
+            total += e.amount;
+          } else {
+            const daysInMonth = new Date(m.year, m.month + 1, 0).getDate();
+            total += e.amount * (todayDate / daysInMonth);
+          }
+          break;
+        }
+      }
+    }
+  }
+  return { caRealise: total, joursRealises: jours };
+}
+
+/**
+ * Date projetée de franchissement d'un seuil (micro, TVA basique...) en cumulant les
+ * entries mois par mois. Pour `days`, précise au jour. Pour `forfait`, précise à la
+ * date du forfait. Pour `flat`, on retourne le 15 du mois où le seuil est franchi.
+ * Retourne null si le seuil n'est pas atteint sur l'année.
+ */
+export function calcSeuilDateFromEntries(
+  months: CalendarMonth[],
+  profile: UserProfile,
+  seuil: number,
+): Date | null {
+  let cumul = 0;
+  for (const m of months) {
+    type Event = { day: number; amount: number };
+    const events: Event[] = [];
+    let flatTotal = 0;
+
+    for (const e of resolveEntries(m)) {
+      if (e.kind === 'days') {
+        const tjm = e.tjmOverride ?? profile.tjm;
+        const halfSet = new Set(e.halfDays ?? []);
+        const allDays = [...new Set([...e.days, ...(e.halfDays ?? [])])].sort((a, b) => a - b);
+        for (const day of allDays) {
+          events.push({ day, amount: tjm * (halfSet.has(day) ? 0.5 : 1) });
+        }
+      } else if (e.kind === 'forfait') {
+        const day = parseInt(e.date.slice(8, 10), 10);
+        if (!isNaN(day)) events.push({ day, amount: e.amount });
+      } else {
+        flatTotal += e.amount;
+      }
+    }
+
+    events.sort((a, b) => a.day - b.day);
+    for (const ev of events) {
+      cumul += ev.amount;
+      if (cumul >= seuil) return new Date(m.year, m.month, ev.day);
+    }
+    if (flatTotal > 0) {
+      cumul += flatTotal;
+      if (cumul >= seuil) return new Date(m.year, m.month, 15);
+    }
+  }
+  return null;
+}
+
+/** Indique si un mois contient au moins une entry productrice de revenu. */
+export function monthHasRevenue(month: CalendarMonth): boolean {
+  return resolveEntries(month).some((e) => {
+    if (e.kind === 'days') return e.days.length > 0 || (e.halfDays?.length ?? 0) > 0;
+    return e.amount > 0;
+  });
 }
 
 export function calcChargesURSSAF(ca: number, taux: number): number {
