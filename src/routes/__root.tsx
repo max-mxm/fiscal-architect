@@ -75,11 +75,24 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <Scripts />
         <script
           dangerouslySetInnerHTML={{
-            __html: `
+            __html: import.meta.env.PROD
+              ? `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
                   navigator.serviceWorker.register('/sw.js');
                 });
+              }
+            `
+              : `
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                  regs.forEach(function(r) { r.unregister(); });
+                });
+                if (window.caches) {
+                  caches.keys().then(function(keys) {
+                    keys.forEach(function(k) { caches.delete(k); });
+                  });
+                }
               }
             `,
           }}
