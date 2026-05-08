@@ -1,7 +1,7 @@
 {
   "name": "fiscal-architect",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "description": "Simulateur fiscal et de revenus pour micro-entrepreneurs francais. 100% client-side, pas de backend, pas de tracking.",
   "keywords": [
