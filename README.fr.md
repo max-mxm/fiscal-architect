@@ -69,6 +69,8 @@ Après la première visite, l'app est aussi totalement utilisable **hors ligne**
 
 - **4 modes de saisie** — calendrier journalier, prestations au forfait, CA mensuel agrégé, ou mixte (mélange libre).
 - **Multi-activité** — jusqu'à 4 activités cumulables avec ventilation correcte de l'URSSAF, CFP, taxe consulaire et IR par branche, et seuils mixtes.
+- **Multi-années** — stepper `‹ 2026 ›` pour naviguer, popup de transition explicite au passage à une nouvelle année (reprendre les paramètres de l'année précédente ou repartir des valeurs par défaut), patch automatique des paramètres légaux (URSSAF, seuil micro).
+- **Mode sombre** — thème clair / sombre / système avec tokens unifiés (`@theme`), respecte `prefers-color-scheme`, persisté par appareil.
 - **Onboarding par persona** — au premier lancement, une modale propose 5 profils types qui pré-remplissent toute la configuration.
 - **Centre de notifications dismissable** — cloche en header, badge de comptage, alertes compte pro / seuil micro masquables sans les perdre.
 - **Édition rapide** — clic direct sur les valeurs affichées (charges fixes, identité…) pour les modifier sans ouvrir le drawer.
@@ -167,7 +169,7 @@ Pour un freelance journalier mono-activité, `CA_a = TJM × jours_travaillés`. 
 ## Roadmap
 
 - [x] Persistance localStorage du profil et du calendrier
-- [x] Moteur fiscal centralisé (`src/lib/fiscal.ts`) avec **212 tests Vitest**
+- [x] Moteur fiscal centralisé (`src/lib/fiscal.ts`) avec **227 tests Vitest**
 - [x] Calendrier de facturation 12 mois interactif
 - [x] PWA installable (manifest + service worker)
 - [x] **Modes de saisie pluggables** (jours / forfait / mensuel agrégé / mixte)
@@ -178,11 +180,8 @@ Pour un freelance journalier mono-activité, `CA_a = TJM × jours_travaillés`. 
 - [x] **Édition rapide via popup** (charges fixes, identité)
 - [x] **Éligibilité VL via RFR N-2**
 - [x] **Indemnités journalières optionnelles** pour libéraux
-- [ ] Notifications push PWA (Service Worker)
-- [ ] Export PDF / CSV global
-- [ ] Multi-années avec comparaison N / N-1
-- [ ] Mode clair / sombre
-- [ ] Comparateur micro-entreprise vs régime réel simplifié
+- [x] **Mode clair / sombre** avec tokens unifiés et respect du `prefers-color-scheme`
+- [x] **Multi-années** — stepper de navigation et popup de transition (héritage de N-1 ou valeurs par défaut)
 
 ## Disclaimer
 

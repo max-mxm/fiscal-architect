@@ -71,6 +71,8 @@ After the first visit, the app is also fully usable **offline** — your calenda
 
 - **4 input modes** — daily calendar, fixed-price quotes, aggregated monthly revenue, or mixed (free combination).
 - **Multi-activity** — up to 4 cumulative activities with correct ventilation of URSSAF, CFP, chamber tax and income tax per branch, plus mixed thresholds.
+- **Multi-year** — `‹ 2026 ›` stepper for navigation, explicit transition popup when entering a new year (carry over the previous year's settings or start from default values), automatic patch of legal parameters (URSSAF, micro threshold).
+- **Dark mode** — light / dark / system theme with unified tokens (`@theme`), respects `prefers-color-scheme`, persisted per device.
 - **Persona onboarding** — first-launch modal offers 5 preset profiles that pre-fill the entire configuration.
 - **Dismissable notification center** — header bell, count badge, hide *compte pro* / micro threshold alerts without losing them.
 - **Quick edit** — click directly on displayed values (fixed expenses, identity…) to edit them without opening the settings drawer.
@@ -169,7 +171,7 @@ For a single-activity day-rate freelancer, `CA_a = daily rate × days worked`. F
 ## Roadmap
 
 - [x] localStorage persistence for profile and calendar
-- [x] Centralized tax engine (`src/lib/fiscal.ts`) with **212 Vitest tests**
+- [x] Centralized tax engine (`src/lib/fiscal.ts`) with **227 Vitest tests**
 - [x] Interactive 12-month billing calendar
 - [x] Installable PWA (manifest + service worker)
 - [x] **Pluggable input modes** (days / fixed-price / monthly aggregated / mixed)
@@ -180,11 +182,8 @@ For a single-activity day-rate freelancer, `CA_a = daily rate × days worked`. F
 - [x] **Quick edit via popup** (fixed expenses, identity)
 - [x] **VL eligibility via N-2 RFR**
 - [x] **Optional liberal daily benefits**
-- [ ] Push notifications via Service Worker
-- [ ] Global PDF / CSV export
-- [ ] Multi-year view with N / N-1 comparison
-- [ ] Light / dark mode
-- [ ] Micro-entreprise vs *réel simplifié* comparison
+- [x] **Light / dark mode** with unified tokens and `prefers-color-scheme` support
+- [x] **Multi-year** — navigation stepper and transition popup (carry over from N-1 or default values)
 
 ## Disclaimer
 
