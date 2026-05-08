@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useId, type ReactNode } from 'react';
+import React, { useEffect, useRef, useState, useId, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
 import { cn } from '~/utils';
@@ -37,6 +38,12 @@ export const QuickEditModal: React.FC<QuickEditModalProps> = ({
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
+  // Portal côté client uniquement — TanStack Start fait du SSR, document n'existe pas au server.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     previousFocusRef.current = document.activeElement as HTMLElement | null;
@@ -71,7 +78,9 @@ export const QuickEditModal: React.FC<QuickEditModalProps> = ({
     };
   }, [open]);
 
-  return (
+  if (!mounted) return null;
+
+  const overlay = (
     <AnimatePresence>
       {open && (
         <motion.div
@@ -164,4 +173,6 @@ export const QuickEditModal: React.FC<QuickEditModalProps> = ({
       )}
     </AnimatePresence>
   );
+
+  return createPortal(overlay, document.body);
 };
