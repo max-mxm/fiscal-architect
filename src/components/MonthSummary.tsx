@@ -4,6 +4,10 @@ import { cn } from '~/utils';
 import { formatEuro, formatPercent } from '~/lib/format';
 import { formatDaysFR } from '~/lib/calendar';
 import { VLToggle } from '~/components/fiscal/VLToggle';
+import { EditableField } from '~/components/ui/EditableField';
+import { QuickEditModal } from '~/components/ui/QuickEditModal';
+import { FixedCostsList } from '~/components/fiscal/FixedCostsList';
+import type { UserProfile } from '~/types';
 
 interface MonthSummaryProps {
   monthName: string;
@@ -30,6 +34,9 @@ interface MonthSummaryProps {
   acreReductionMensuelle: number;
   /** Taux ACRE appliqué (0, 0.25 ou 0.5). */
   acreRate: number;
+  /** Charges fixes du profil — éditables via popup au clic sur la ligne. */
+  costs: UserProfile['fixedCosts'];
+  onCostsChange: (next: UserProfile['fixedCosts']) => void;
 }
 
 export const MonthSummary: React.FC<MonthSummaryProps> = ({
@@ -50,9 +57,12 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
   taxeConsulaireRate,
   acreReductionMensuelle,
   acreRate,
+  costs,
+  onCostsChange,
 }) => {
   const [showIrInfo, setShowIrInfo] = useState(false);
   const [showAcreInfo, setShowAcreInfo] = useState(false);
+  const [editingCosts, setEditingCosts] = useState(false);
   const tauxNet = caMensuel > 0 ? (netMensuel / caMensuel) * 100 : 0;
   const irLabel = versementLiberatoire
     ? `IR (VL ${tauxVL !== undefined ? (tauxVL * 100).toFixed(1).replace('.', ',') : '2,2'} %)`
@@ -130,11 +140,19 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
             </span>
           </li>
         )}
-        <li className="flex justify-between items-center">
-          <span className="text-on-surface-variant">Charges fixes</span>
-          <span className="font-mono font-bold text-red-500 tabular-nums">
-            −{formatEuro(chargesFixesMensuelles)}€
-          </span>
+        <li>
+          <EditableField
+            ariaLabel="Modifier les charges fixes mensuelles"
+            onClick={() => setEditingCosts(true)}
+            className="flex justify-between items-center px-1 py-0.5 -mx-1"
+          >
+            <span className="flex justify-between items-center w-full">
+              <span className="text-on-surface-variant">Charges fixes</span>
+              <span className="font-mono font-bold text-red-500 tabular-nums">
+                −{formatEuro(chargesFixesMensuelles)}€
+              </span>
+            </span>
+          </EditableField>
         </li>
         <li className="flex justify-between items-center">
           <span className="text-on-surface-variant inline-flex items-center gap-1">
@@ -159,6 +177,15 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
           </li>
         )}
       </ul>
+
+      <QuickEditModal
+        open={editingCosts}
+        onClose={() => setEditingCosts(false)}
+        title="Charges fixes mensuelles"
+        description="Vos abonnements et frais récurrents — déduits du net pour estimer votre revenu réel."
+      >
+        <FixedCostsList costs={costs} onChange={onCostsChange} />
+      </QuickEditModal>
 
       <div className="pt-3 border-t border-outline-variant/15 flex justify-between items-baseline">
         <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">

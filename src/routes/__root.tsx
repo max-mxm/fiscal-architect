@@ -138,6 +138,7 @@ function AppShell() {
         caCumule={caCumule}
         onExport={handleExportGlobal}
         onOpenSettings={() => openSettings('profile')}
+        onProfileChange={(patch) => setProfile((p) => ({ ...p, ...patch }))}
       />
       <FiscalContextBar
         profile={profile}

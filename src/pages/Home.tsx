@@ -504,6 +504,8 @@ export const Home: React.FC = () => {
             taxeConsulaireRate={taxeConsulaireRate}
             acreReductionMensuelle={Math.round(monthBreakdown.acreReduction)}
             acreRate={acreInfo.rate}
+            costs={profile.fixedCosts}
+            onCostsChange={(next) => setProfile((p) => ({ ...p, fixedCosts: next }))}
           />
         </aside>
       </div>

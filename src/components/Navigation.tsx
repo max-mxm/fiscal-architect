@@ -1,21 +1,40 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Download, Settings as SettingsIcon } from 'lucide-react';
 import { cn } from '~/utils';
 import type { UserProfile } from '~/types';
 import { formatEuro } from '~/lib/format';
 import { NotificationBell } from '~/components/notifications/NotificationBell';
+import { EditableField } from '~/components/ui/EditableField';
+import { QuickEditModal } from '~/components/ui/QuickEditModal';
 
 interface TopBarProps {
   profile: UserProfile;
   caCumule: number;
   onExport: () => void;
   onOpenSettings: () => void;
+  onProfileChange: (patch: Partial<UserProfile>) => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ profile, caCumule, onExport, onOpenSettings }) => {
+export const TopBar: React.FC<TopBarProps> = ({ profile, caCumule, onExport, onOpenSettings, onProfileChange }) => {
   const seuil = profile.seuilMicro;
   const pctReal = Math.min(100, (caCumule / seuil) * 100);
   const isOver = caCumule >= seuil;
+  const [editingIdentity, setEditingIdentity] = useState(false);
+  const [draftName, setDraftName] = useState(profile.name);
+  const [draftRole, setDraftRole] = useState(profile.role);
+
+  // Resynchronise le draft à l'ouverture (au cas où le profile a changé entre-temps)
+  useEffect(() => {
+    if (editingIdentity) {
+      setDraftName(profile.name);
+      setDraftRole(profile.role);
+    }
+  }, [editingIdentity, profile.name, profile.role]);
+
+  const saveIdentity = () => {
+    onProfileChange({ name: draftName.trim() || profile.name, role: draftRole.trim() });
+    setEditingIdentity(false);
+  };
 
   return (
     <header className="sticky top-0 z-40 bg-surface/85 backdrop-blur-xl border-b border-outline-variant/10">
@@ -32,10 +51,16 @@ export const TopBar: React.FC<TopBarProps> = ({ profile, caCumule, onExport, onO
             <h1 className="font-headline font-black text-sm sm:text-base text-slate-900 leading-tight truncate">
               Fiscal Architect
             </h1>
-            <p className="text-[11px] text-on-surface-variant leading-tight truncate max-w-[180px] sm:max-w-[280px] md:max-w-none">
-              <span className="font-semibold">{profile.name}</span>
-              <span className="hidden sm:inline"> · {profile.role}</span>
-            </p>
+            <EditableField
+              ariaLabel="Modifier le nom et le rôle"
+              onClick={() => setEditingIdentity(true)}
+              className="px-1 py-0.5 -mx-1"
+            >
+              <p className="text-[11px] text-on-surface-variant leading-tight truncate max-w-[180px] sm:max-w-[280px] md:max-w-none">
+                <span className="font-semibold">{profile.name}</span>
+                <span className="hidden sm:inline"> · {profile.role}</span>
+              </p>
+            </EditableField>
           </div>
         </div>
 
@@ -81,6 +106,55 @@ export const TopBar: React.FC<TopBarProps> = ({ profile, caCumule, onExport, onO
           </button>
         </div>
       </div>
+
+      <QuickEditModal
+        open={editingIdentity}
+        onClose={() => setEditingIdentity(false)}
+        title="Identité"
+        description="Affiché dans l'en-tête et utilisé dans les exports."
+        primaryAction={{ label: 'Enregistrer', onClick: saveIdentity, disabled: !draftName.trim() }}
+      >
+        <div className="space-y-4">
+          <div>
+            <label
+              htmlFor="navbar-name"
+              className="block text-xs font-bold uppercase tracking-wider text-secondary mb-2"
+            >
+              Nom
+            </label>
+            <input
+              id="navbar-name"
+              type="text"
+              value={draftName}
+              onChange={(e) => setDraftName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && draftName.trim()) saveIdentity();
+              }}
+              autoComplete="name"
+              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all min-h-[44px]"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="navbar-role"
+              className="block text-xs font-bold uppercase tracking-wider text-secondary mb-2"
+            >
+              Rôle
+            </label>
+            <input
+              id="navbar-role"
+              type="text"
+              value={draftRole}
+              onChange={(e) => setDraftRole(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && draftName.trim()) saveIdentity();
+              }}
+              autoComplete="organization-title"
+              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-medium focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all min-h-[44px]"
+            />
+          </div>
+        </div>
+      </QuickEditModal>
     </header>
   );
 };
