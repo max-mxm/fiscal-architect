@@ -64,8 +64,42 @@ const monthsOf = (year: number, fill: Partial<CalendarMonth>[] = []): CalendarMo
     year,
     workedDays: [],
     halfDays: [],
+    entries: [],
     ...fill[i],
   }));
+
+/**
+ * Factory de `UserProfile` complet pour les tests : valeurs sensées par défaut,
+ * surcharger via `overrides`. Évite de répéter ~20 champs obligatoires dans
+ * chaque test après le split identity / yearConfig.
+ */
+const makeProfile = (overrides: Partial<UserProfile> = {}): UserProfile => ({
+  // Identity
+  name: 'T',
+  role: 'T',
+  creationDate: '2024-01-01',
+  partsFiscales: 1,
+  declarationPeriod: 'monthly',
+  onboardingDone: true,
+  // Year config
+  year: 2026,
+  tjm: 500,
+  workingDays: 19,
+  urssafRate: 26.1,
+  fixedCosts: [],
+  seuilMicro: 83_600,
+  versementLiberatoire: false,
+  acreEnabled: false,
+  tvaAssujetti: false,
+  cfpEnabled: false,
+  taxeConsulaireEnabled: false,
+  revenueModel: 'days',
+  activities: [{ id: 'act-default', type: 'liberalSsi', isPrimary: true }],
+  ijOption: false,
+  rfrN2: null,
+  missionStart: '2026-01-01',
+  ...overrides,
+});
 
 describe('calcCAMensuel', () => {
   it('multiplie TJM par jours', () => {
@@ -249,8 +283,8 @@ describe('calcCaRealise', () => {
 
   it('compte tous les jours des mois passés', () => {
     const months = monthsOf(2025, [
-      { workedDays: [1, 2, 3], halfDays: [4] }, // jan : 3.5
-      { workedDays: [1, 2], halfDays: [] }, // fev : 2
+      { workedDays: [1, 2, 3], halfDays: [4], entries: [] }, // jan : 3.5
+      { workedDays: [1, 2], halfDays: [], entries: [] }, // fev : 2
     ]);
     // currentMonth = mars (2), todayDate = 1 → jan + fev complets, mars filtré
     const r = calcCaRealise(months, 500, 2, 1);
@@ -261,7 +295,7 @@ describe('calcCaRealise', () => {
   it('filtre le mois courant par jour', () => {
     const months = monthsOf(2025, [
       {}, {}, // jan, fev vides
-      { workedDays: [5, 10, 15, 20], halfDays: [3, 25] }, // mars
+      { workedDays: [5, 10, 15, 20], halfDays: [3, 25], entries: [] }, // mars
     ]);
     // currentMonth = mars (2), todayDate = 12 → jours 5, 10 pleins (3 demi compte) -> 2 + 0.5 = 2.5
     const r = calcCaRealise(months, 500, 2, 12);
@@ -300,7 +334,7 @@ describe('calcSeuilDate', () => {
 
   it('compte les demi-jours à 0.5 dans le cumul', () => {
     // TJM 1000, seuil 2500 → 1+1+1 (jours 1,2,3 pleins = 3000) → atteint le 3
-    const months = monthsOf(2025, [{ workedDays: [1, 2, 3], halfDays: [4, 5] }]);
+    const months = monthsOf(2025, [{ workedDays: [1, 2, 3], halfDays: [4, 5], entries: [] }]);
     const date = calcSeuilDate(months, 1000, 2500);
     expect(date!.getDate()).toBe(3);
   });
@@ -335,9 +369,9 @@ describe('countMonthsWithActivity', () => {
 
   it('compte aussi les mois avec uniquement halfDays', () => {
     const months = monthsOf(2026, [
-      { halfDays: [3] },
+      { halfDays: [3], entries: [] },
       {},
-      { workedDays: [1], halfDays: [2] },
+      { workedDays: [1], halfDays: [2], entries: [] },
     ]);
     expect(countMonthsWithActivity(months)).toBe(2);
   });
@@ -422,20 +456,15 @@ describe('ACTIVITY_PARAMS (chiffres 2026)', () => {
 });
 
 describe('getFiscalParams', () => {
-  const baseProfile: UserProfile = {
-    name: 'T',
-    role: 'T',
-    activity: 'liberalSsi',
-    tjm: 500,
-    workingDays: 19,
-    urssafRate: 26.1,
-    fixedCosts: [],
-    seuilMicro: 83_600,
-    versementLiberatoire: false,
-  };
+  const withActivity = (type: 'vente' | 'serviceBic' | 'liberalSsi' | 'liberalCipav') =>
+    [{ id: 'a', type, isPrimary: true }];
 
   it('retourne les params de l\'activité du profil', () => {
-    const params = getFiscalParams({ ...baseProfile, activity: 'vente', urssafRate: 12.3, seuilMicro: 203_100 });
+    const params = getFiscalParams(makeProfile({
+      activities: withActivity('vente'),
+      urssafRate: 12.3,
+      seuilMicro: 203_100,
+    }));
     expect(params.urssafRate).toBe(12.3);
     expect(params.abattement).toBeCloseTo(0.71);
     expect(params.plafond).toBe(203_100);
@@ -443,13 +472,19 @@ describe('getFiscalParams', () => {
   });
 
   it('le profil prime sur la valeur par défaut (slider URSSAF custom)', () => {
-    const params = getFiscalParams({ ...baseProfile, activity: 'liberalSsi', urssafRate: 20 });
+    const params = getFiscalParams(makeProfile({
+      activities: withActivity('liberalSsi'),
+      urssafRate: 20,
+    }));
     expect(params.urssafRate).toBe(20); // override profil
     expect(params.abattement).toBeCloseTo(0.34); // pas d'override → valeur de l'activité
   });
 
   it('le seuilMicro custom du profil prime sur le plafond de l\'activité', () => {
-    const params = getFiscalParams({ ...baseProfile, activity: 'vente', seuilMicro: 150_000 });
+    const params = getFiscalParams(makeProfile({
+      activities: withActivity('vente'),
+      seuilMicro: 150_000,
+    }));
     expect(params.plafond).toBe(150_000);
   });
 });
@@ -656,6 +691,7 @@ describe('calcTVASeuilDate', () => {
       year,
       workedDays: [],
       halfDays: [],
+      entries: [],
       ...fill[i],
     }));
 
@@ -756,17 +792,7 @@ describe('calcMonthlyBreakdown avec CFP, taxe consulaire, ACRE', () => {
 
 describe('generateChartData', () => {
   it('retourne 12 entrées', () => {
-    const profile: UserProfile = {
-      name: 'Test',
-      role: 'Dev',
-      activity: 'liberalSsi',
-      tjm: 500,
-      workingDays: 18,
-      urssafRate: 22,
-      fixedCosts: [],
-      seuilMicro: SEUIL_MICRO,
-      versementLiberatoire: false,
-    };
+    const profile = makeProfile({ tjm: 500, workingDays: 18, urssafRate: 22, seuilMicro: SEUIL_MICRO });
     const data = generateChartData(profile);
     expect(data).toHaveLength(12);
     expect(data[0].month).toBe('Jan');
@@ -774,17 +800,7 @@ describe('generateChartData', () => {
   });
 
   it('brut = TJM × workingDays sur chaque mois', () => {
-    const profile: UserProfile = {
-      name: 'Test',
-      role: 'Dev',
-      activity: 'liberalSsi',
-      tjm: 500,
-      workingDays: 18,
-      urssafRate: 22,
-      fixedCosts: [],
-      seuilMicro: SEUIL_MICRO,
-      versementLiberatoire: false,
-    };
+    const profile = makeProfile({ tjm: 500, workingDays: 18, urssafRate: 22, seuilMicro: SEUIL_MICRO });
     const data = generateChartData(profile);
     expect(data[0].brut).toBe(9_000);
     expect(data[11].brut).toBe(9_000);
@@ -793,17 +809,7 @@ describe('generateChartData', () => {
 
 // --- Modèles de revenu pluggables ---
 
-const baseProfile: UserProfile = {
-  name: 'Test',
-  role: 'Dev',
-  activity: 'liberalSsi',
-  tjm: 500,
-  workingDays: 18,
-  urssafRate: 22,
-  fixedCosts: [],
-  seuilMicro: SEUIL_MICRO,
-  versementLiberatoire: false,
-};
+const baseProfile: UserProfile = makeProfile({ tjm: 500, workingDays: 18, urssafRate: 22, seuilMicro: SEUIL_MICRO });
 
 describe('calcCAFromEntries', () => {
   it('mode legacy (sans entries) reproduit le CA jours × TJM', () => {
@@ -812,12 +818,13 @@ describe('calcCAFromEntries', () => {
       year: 2026,
       workedDays: [1, 2, 3, 4, 5],
       halfDays: [10],
+      entries: [],
     };
     expect(calcCAFromEntries(month, baseProfile)).toBe(5.5 * 500);
   });
 
   it('mode legacy retourne 0 quand le mois est vide', () => {
-    const month: CalendarMonth = { month: 0, year: 2026, workedDays: [], halfDays: [] };
+    const month: CalendarMonth = { month: 0, year: 2026, workedDays: [], halfDays: [], entries: [] };
     expect(calcCAFromEntries(month, baseProfile)).toBe(0);
   });
 
@@ -853,7 +860,7 @@ describe('calcCAFromEntries', () => {
       workedDays: [],
       halfDays: [],
       entries: [
-        { kind: 'days', id: 'd', days: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }, // 10 × 500 = 5 000
+        { kind: 'days', id: 'd', days: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], halfDays: [] }, // 10 × 500 = 5 000
         { kind: 'forfait', id: 'f', date: '2026-05-15', amount: 1_500 },
         { kind: 'flat', id: 'a', amount: 200 },
       ],
@@ -867,7 +874,7 @@ describe('calcCAFromEntries', () => {
       year: 2026,
       workedDays: [],
       halfDays: [],
-      entries: [{ kind: 'days', id: 'd', days: [1, 2], tjmOverride: 800 }],
+      entries: [{ kind: 'days', id: 'd', days: [1, 2], halfDays: [], tjmOverride: 800 }],
     };
     expect(calcCAFromEntries(month, baseProfile)).toBe(2 * 800);
   });
@@ -887,7 +894,7 @@ describe('calcCAFromEntries', () => {
 describe('calcCAYearFromEntries', () => {
   it("somme tous les mois quel que soit leur mode", () => {
     const months: CalendarMonth[] = [
-      { month: 0, year: 2026, workedDays: [1, 2, 3], halfDays: [] }, // 3 × 500 = 1500
+      { month: 0, year: 2026, workedDays: [1, 2, 3], halfDays: [], entries: [] }, // 3 × 500 = 1500
       {
         month: 1,
         year: 2026,
@@ -910,9 +917,9 @@ describe('calcCAYearFromEntries', () => {
 describe('calcCaRealiseFromEntries', () => {
   it('mode days mois passés intégralement, mois courant tronqué à todayDate', () => {
     const months: CalendarMonth[] = [
-      { month: 0, year: 2026, workedDays: [1, 2, 3, 4, 5], halfDays: [] }, // 5 × 500 = 2500
-      { month: 1, year: 2026, workedDays: [10, 15, 20, 25], halfDays: [] }, // 4 × 500 = 2000
-      { month: 2, year: 2026, workedDays: [], halfDays: [] }, // futur
+      { month: 0, year: 2026, workedDays: [1, 2, 3, 4, 5], halfDays: [], entries: [] }, // 5 × 500 = 2500
+      { month: 1, year: 2026, workedDays: [10, 15, 20, 25], halfDays: [], entries: [] }, // 4 × 500 = 2000
+      { month: 2, year: 2026, workedDays: [], halfDays: [], entries: [] }, // futur
     ];
     // Aujourd'hui = 18 février → on compte uniquement les jours ≤ 18 du mois 1
     const r = calcCaRealiseFromEntries(months, baseProfile, 1, 18);
@@ -953,7 +960,7 @@ describe('calcCaRealiseFromEntries', () => {
 
   it('ignore les mois futurs', () => {
     const months: CalendarMonth[] = [
-      { month: 0, year: 2026, workedDays: [1, 2], halfDays: [] },
+      { month: 0, year: 2026, workedDays: [1, 2], halfDays: [], entries: [] },
       {
         month: 6,
         year: 2026,
@@ -970,14 +977,14 @@ describe('calcCaRealiseFromEntries', () => {
 describe('calcSeuilDateFromEntries', () => {
   it('retourne null si seuil non atteint', () => {
     const months: CalendarMonth[] = [
-      { month: 0, year: 2026, workedDays: [1, 2], halfDays: [] },
+      { month: 0, year: 2026, workedDays: [1, 2], halfDays: [], entries: [] },
     ];
     expect(calcSeuilDateFromEntries(months, baseProfile, 100_000)).toBeNull();
   });
 
   it('mode days : retourne la date exacte du dépassement', () => {
     const months: CalendarMonth[] = [
-      { month: 0, year: 2026, workedDays: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], halfDays: [] },
+      { month: 0, year: 2026, workedDays: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], halfDays: [], entries: [] },
     ];
     // Cumul après 8 jours = 4 000 → seuil 4 000 atteint au jour 8
     const date = calcSeuilDateFromEntries(months, baseProfile, 4_000);
@@ -1029,11 +1036,11 @@ describe('calcSeuilDateFromEntries', () => {
 
 describe('monthHasRevenue', () => {
   it('retourne false sur un mois vide', () => {
-    expect(monthHasRevenue({ month: 0, year: 2026, workedDays: [], halfDays: [] })).toBe(false);
+    expect(monthHasRevenue({ month: 0, year: 2026, workedDays: [], halfDays: [], entries: [] })).toBe(false);
   });
 
   it('retourne true en mode days legacy avec jours saisis', () => {
-    expect(monthHasRevenue({ month: 0, year: 2026, workedDays: [1, 2], halfDays: [] })).toBe(true);
+    expect(monthHasRevenue({ month: 0, year: 2026, workedDays: [1, 2], halfDays: [], entries: [] })).toBe(true);
   });
 
   it('retourne true avec un forfait > 0', () => {
@@ -1065,7 +1072,6 @@ describe('monthHasRevenue', () => {
 
 const multiProfile: UserProfile = {
   ...baseProfile,
-  activity: 'liberalSsi',
   activities: [
     { id: 'svc', type: 'liberalSsi', isPrimary: true, label: 'Conseil dev' },
     { id: 'shop', type: 'vente', isPrimary: false, label: 'Vente templates' },
@@ -1129,7 +1135,7 @@ describe('calcCAByActivity', () => {
 
   it('mode legacy (sans entries) impute tout à la primaire', () => {
     const months: CalendarMonth[] = [
-      { month: 0, year: 2026, workedDays: [1, 2, 3, 4, 5], halfDays: [] },
+      { month: 0, year: 2026, workedDays: [1, 2, 3, 4, 5], halfDays: [], entries: [] },
     ];
     const result = calcCAByActivity(months, multiProfile);
     expect(result.liberalSsi).toBe(5 * 500);
@@ -1260,7 +1266,7 @@ describe('calcNetMicroMulti', () => {
 
 describe('calcVLEligibility', () => {
   it('rfrN2 absent → unknown (non éligible par défaut)', () => {
-    const r = calcVLEligibility(undefined, 1);
+    const r = calcVLEligibility(null, 1);
     expect(r.eligible).toBe(false);
     expect(r.motif).toBe('unknown');
   });

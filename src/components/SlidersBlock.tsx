@@ -9,7 +9,7 @@ interface SlidersBlockProps {
   tjm: number;
   urssafRate: number;
   /** Taux URSSAF par défaut pour le bouton reset (issu de l'activité courante). */
-  urssafDefault?: number;
+  urssafDefault: number;
   workedDaysEquiv: number;
   caMensuel: number;
   netMensuel: number;

@@ -18,8 +18,9 @@ export function createEmptyFiscalYear(year: number): FiscalYear {
     year,
     workedDays: [],
     halfDays: [],
+    entries: [],
   }));
-  return { year, months };
+  return { schemaVersion: 1, year, months };
 }
 
 export function getDaysInMonth(year: number, month: number): number {

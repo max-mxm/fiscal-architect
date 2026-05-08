@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type { FiscalYear, RevenueEntry } from '~/types';
-import { useLocalStorage } from '~/hooks/useLocalStorage';
+import { useVersionedStorage } from '~/hooks/useLocalStorage';
 import {
   MONTH_NAMES,
   createEmptyFiscalYear,
@@ -17,13 +17,9 @@ import {
 } from '~/lib/calendarMutations';
 
 export function useFiscalYear(year: number) {
-  const [fiscalYear, setFiscalYear] = useLocalStorage<FiscalYear>(
+  const [fiscalYear, setFiscalYear] = useVersionedStorage<FiscalYear>(
     `fiscal-calendar-${year}`,
     createEmptyFiscalYear(year),
-  );
-  const [missionStart, setMissionStart] = useLocalStorage<string>(
-    `fiscal-mission-start-${year}`,
-    `${year}-01-01`,
   );
 
   const { set: joursFeriesSet, names: joursFeriesNames } = getJoursFeries(year);
@@ -88,19 +84,29 @@ export function useFiscalYear(year: number) {
     }));
   }, [setFiscalYear]);
 
-  /** Vide tout + purge toutes les clés localStorage commençant par `fiscal-`. */
+  /**
+   * Purge toutes les clés `fiscal-*` du localStorage et recharge la page sur la
+   * racine. On utilise `location.replace(pathname)` (et non `reload()`) pour
+   * supprimer toute query string — sinon `?confirm=reset-all` survivrait au
+   * reload et rouvrirait la modal de confirmation.
+   */
   const resetEverything = useCallback(() => {
-    const keys = Object.keys(localStorage).filter((k) => k.startsWith('fiscal-'));
-    for (const k of keys) localStorage.removeItem(k);
-    setFiscalYear(createEmptyFiscalYear(year));
-    setMissionStart(`${year}-01-01`);
-  }, [year, setFiscalYear, setMissionStart]);
+    try {
+      const keys = Object.keys(localStorage).filter((k) => k.startsWith('fiscal-'));
+      for (const k of keys) localStorage.removeItem(k);
+    } catch {
+      // localStorage indisponible — on tente le reload quand même
+    }
+    if (typeof window !== 'undefined') {
+      window.location.replace(window.location.pathname);
+    }
+  }, []);
 
   const exportCSV = useCallback((tjm: number) => {
     const header = 'Mois,Jours pleins,Demi-journées,Jours équivalents,CA (€)\n';
     const rows = fiscalYear.months
       .map((m) => {
-        const halfCount = (m.halfDays ?? []).length;
+        const halfCount = m.halfDays.length;
         const equiv = calcEquivDays(m);
         const ca = equiv * tjm;
         return `${MONTH_NAMES[m.month]},${m.workedDays.length},${halfCount},${formatDaysFR(equiv)},${ca}`;
@@ -118,8 +124,6 @@ export function useFiscalYear(year: number) {
 
   return {
     fiscalYear,
-    missionStart,
-    setMissionStart,
     isJourFerie,
     getJourFerieName,
     cycleDay,

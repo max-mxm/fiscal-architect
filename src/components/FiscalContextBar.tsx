@@ -1,27 +1,18 @@
 import React from 'react';
-import { Receipt, CalendarDays, Briefcase } from 'lucide-react';
-import type { Activity, UserProfile } from '~/types';
+import { Receipt } from 'lucide-react';
+import type { UserProfile } from '~/types';
 import type { SettingsTabId } from '~/components/settings/SettingsTabs';
 import { formatEuro } from '~/lib/format';
+import { YearSwitcher } from '~/components/YearSwitcher';
 import { cn } from '~/utils';
 
 interface FiscalContextBarProps {
   profile: UserProfile;
-  missionStart: string;
+  years: number[];
+  activeYear: number;
+  onSelectYear: (year: number) => void;
+  onAddYear: (year: number) => void;
   onOpenTab: (tab: SettingsTabId) => void;
-}
-
-const ACTIVITY_SHORT: Record<Activity, string> = {
-  vente: 'Vente',
-  serviceBic: 'Service BIC',
-  liberalSsi: 'Libéral SSI',
-  liberalCipav: 'CIPAV',
-};
-
-function formatMissionDate(iso: string): string {
-  const [y, m] = iso.split('-');
-  if (!y || !m) return iso;
-  return `${m}/${y}`;
 }
 
 interface ChipProps {
@@ -55,7 +46,10 @@ const Chip: React.FC<ChipProps> = ({ Icon, label, value, ariaLabel, onClick }) =
 
 export const FiscalContextBar: React.FC<FiscalContextBarProps> = ({
   profile,
-  missionStart,
+  years,
+  activeYear,
+  onSelectYear,
+  onAddYear,
   onOpenTab,
 }) => {
   return (
@@ -65,27 +59,17 @@ export const FiscalContextBar: React.FC<FiscalContextBarProps> = ({
         role="group"
         aria-label="Contexte fiscal"
       >
-        {profile.activity && (
-          <Chip
-            Icon={Briefcase}
-            label="Activité"
-            value={ACTIVITY_SHORT[profile.activity]}
-            ariaLabel={`Activité : ${ACTIVITY_SHORT[profile.activity]}. Cliquer pour modifier.`}
-            onClick={() => onOpenTab('fiscal')}
-          />
-        )}
+        <YearSwitcher
+          years={years}
+          activeYear={activeYear}
+          onSelect={onSelectYear}
+          onAdd={onAddYear}
+        />
         <Chip
           Icon={Receipt}
           label="Seuil"
           value={`${formatEuro(profile.seuilMicro)} €`}
           ariaLabel={`Seuil micro-entreprise : ${formatEuro(profile.seuilMicro)} euros. Cliquer pour modifier.`}
-          onClick={() => onOpenTab('fiscal')}
-        />
-        <Chip
-          Icon={CalendarDays}
-          label="Mission"
-          value={formatMissionDate(missionStart)}
-          ariaLabel={`Début de mission : ${formatMissionDate(missionStart)}. Cliquer pour modifier.`}
           onClick={() => onOpenTab('fiscal')}
         />
       </div>

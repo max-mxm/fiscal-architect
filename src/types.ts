@@ -1,11 +1,11 @@
 export type Activity = 'vente' | 'serviceBic' | 'liberalSsi' | 'liberalCipav';
 
-/** Mode de saisie du chiffre d'affaires par défaut au niveau du profil. */
+/** Mode de saisie du chiffre d'affaires par défaut au niveau de l'année. */
 export type RevenueModel = 'days' | 'forfait' | 'flat' | 'mixed';
 
 /**
- * Une déclaration d'activité au sein du profil. Le micro-entrepreneur peut en
- * cumuler plusieurs (ex. dev BNC + vente de templates) — chaque entry de revenu
+ * Une déclaration d'activité dans la config annuelle. Le micro-entrepreneur peut
+ * en cumuler plusieurs (ex. dev BNC + vente de templates) — chaque entry de revenu
  * pointe alors vers son `activityId`.
  */
 export interface ActivityEntry {
@@ -13,60 +13,100 @@ export interface ActivityEntry {
   type: Activity;
   /** Libellé libre (ex. "Conseil dev", "Vente templates"). */
   label?: string;
-  /** L'activité par défaut pour les revenue entries sans activityId. Une seule par profil. */
+  /** L'activité par défaut pour les revenue entries sans activityId. Une seule par année. */
   isPrimary: boolean;
 }
 
-export interface UserProfile {
+export interface FixedCost {
+  id: string;
   name: string;
-  role: string;
-  activity: Activity;
-  tjm: number;
-  workingDays: number;
-  urssafRate: number;
-  fixedCosts: { id: string; name: string; description: string; amount: number; icon: string; color: string }[];
-  seuilMicro: number;
-  versementLiberatoire: boolean;
-  // Champs optionnels — peuvent être absents sur les profils localStorage antérieurs.
-  /** Date de création de l'activité (ISO 'YYYY-MM-DD'). Utilisée pour ACRE et exonérations. */
-  creationDate?: string;
-  /** ACRE activée : réduction d'URSSAF pendant 12 mois après création. */
-  acreEnabled?: boolean;
-  /** TVA assujettie : l'utilisateur facture la TVA (sortie du régime franchise en base). */
-  tvaAssujetti?: boolean;
-  /** CFP (Contribution Formation Pro) prise en compte dans les charges. Activé par défaut. */
-  cfpEnabled?: boolean;
-  /** Taxe pour frais de chambre consulaire (CCI/CMA). Activée par défaut selon activité. */
-  taxeConsulaireEnabled?: boolean;
-  /** Mode de saisie du CA. Défaut: 'days' (TJM × jours travaillés). */
-  revenueModel?: RevenueModel;
-  /**
-   * Liste d'activités déclarées. Optionnel pour rétro-compat — si absent,
-   * dérivé au montage à partir de `activity` (1 seule activité primaire).
-   */
-  activities?: ActivityEntry[];
-  /**
-   * Revenu Fiscal de Référence N-2 du foyer (€). Sert à vérifier l'éligibilité
-   * au versement libératoire. Plafond ≈ 27 478 € / part fiscale (2026).
-   */
-  rfrN2?: number;
-  /**
-   * Nombre de parts fiscales du foyer (défaut 1). Utilisé pour le calcul
-   * d'éligibilité VL (RFR / parts < seuil).
-   */
-  partsFiscales?: number;
-  /** Périodicité de déclaration URSSAF (info uniquement, ne change pas les calculs). */
-  declarationPeriod?: 'monthly' | 'quarterly';
-  /** Option indemnités journalières (libéraux non réglementés / CIPAV). +0,85 % du CA. */
-  ijOption?: boolean;
-  /**
-   * Marque que l'utilisateur a vu/dépassé l'onboarding. Si false ou absent au
-   * premier mount, on affiche le PersonaPicker.
-   */
-  onboardingDone?: boolean;
+  description: string;
+  amount: number;
+  icon: string;
+  color: string;
 }
 
-// --- Types enrichis (FOUND-03) ---
+/**
+ * Profil d'identité — stable, ne change quasiment jamais. Stocké dans la clé
+ * `fiscal-profile` (un seul, global). Tout ce qui est temporel (TJM, taux URSSAF,
+ * options déclaratives, charges fixes…) vit dans `YearConfig`.
+ */
+export interface IdentityProfile {
+  schemaVersion: 1;
+  name: string;
+  role: string;
+  /** Date de création de l'activité (ISO 'YYYY-MM-DD'). Utilisée pour ACRE. */
+  creationDate: string;
+  /** Nombre de parts fiscales du foyer. Évolue rarement. */
+  partsFiscales: number;
+  /** Périodicité de déclaration URSSAF (info uniquement). */
+  declarationPeriod: 'monthly' | 'quarterly';
+  /** Marque que l'utilisateur a passé l'onboarding. */
+  onboardingDone: boolean;
+}
+
+/**
+ * Configuration fiscale applicable à UNE année. Tout ce qui peut varier d'une
+ * année à l'autre vit ici : paramètres légaux (loi), paramètres perso (TJM,
+ * jours, charges fixes), options déclaratives (ACRE, VL, IJ, TVA).
+ *
+ * Stocké dans la clé `fiscal-year-config-${year}`.
+ */
+export interface YearConfig {
+  schemaVersion: 1;
+  year: number;
+
+  // Paramètres légaux (fixés par la loi pour cette année)
+  urssafRate: number;
+  seuilMicro: number;
+
+  // Paramètres perso fiscaux
+  tjm: number;
+  workingDays: number;
+  revenueModel: RevenueModel;
+  activities: ActivityEntry[];
+  fixedCosts: FixedCost[];
+
+  // Options déclaratives (potentiellement annuelles)
+  versementLiberatoire: boolean;
+  acreEnabled: boolean;
+  tvaAssujetti: boolean;
+  cfpEnabled: boolean;
+  taxeConsulaireEnabled: boolean;
+  ijOption: boolean;
+  /** Revenu Fiscal Référence N-2 du foyer (€) — éligibilité VL. null si non saisi. */
+  rfrN2: number | null;
+  /** Date de démarrage effective de l'activité dans l'année (ISO). */
+  missionStart: string;
+}
+
+/** Index des années connues + année active dans l'UI. */
+export interface YearsIndex {
+  schemaVersion: 1;
+  years: number[];
+  activeYear: number;
+}
+
+/**
+ * Vue unifiée pour les composants : projection à plat de `IdentityProfile` +
+ * `YearConfig` de l'année active. Stocké en deux clés séparées (cf. types
+ * ci-dessus), mais exposé fusionné aux composants via `useProfile()`.
+ *
+ * Les setters savent router vers la bonne clé selon les champs modifiés.
+ */
+export type UserProfile = Omit<IdentityProfile, 'schemaVersion'> & Omit<YearConfig, 'schemaVersion'>;
+
+/** Liste des clés du `UserProfile` qui appartiennent à l'identité (stables). */
+export const IDENTITY_KEYS: ReadonlyArray<keyof UserProfile> = [
+  'name',
+  'role',
+  'creationDate',
+  'partsFiscales',
+  'declarationPeriod',
+  'onboardingDone',
+] as const;
+
+// --- Calendrier ---
 
 /**
  * Ligne de revenu d'un mois, polymorphe selon le mode de saisie.
@@ -75,7 +115,7 @@ export interface UserProfile {
  * - `flat` : montant unique « CA du mois » saisi directement
  */
 export type RevenueEntry =
-  | { kind: 'days'; id: string; days: number[]; halfDays?: number[]; tjmOverride?: number; activityId?: string }
+  | { kind: 'days'; id: string; days: number[]; halfDays: number[]; tjmOverride?: number; activityId?: string }
   | { kind: 'forfait'; id: string; date: string; amount: number; label?: string; activityId?: string }
   | { kind: 'flat'; id: string; amount: number; label?: string; activityId?: string };
 
@@ -83,18 +123,17 @@ export interface CalendarMonth {
   month: number; // 0-11
   year: number;
   workedDays: number[]; // jours pleins (1-31)
-  halfDays?: number[]; // demi-journées (1-31), optionnel pour rétro-compat localStorage
-  /**
-   * Lignes de revenu du mois (mode mixte). Optionnel pour rétro-compat — si absent,
-   * on dérive virtuellement une ligne `days` depuis workedDays/halfDays.
-   */
-  entries?: RevenueEntry[];
+  halfDays: number[]; // demi-journées (1-31)
+  entries: RevenueEntry[];
 }
 
 export interface FiscalYear {
+  schemaVersion: 1;
   year: number;
   months: CalendarMonth[];
 }
+
+// --- Résultats fiscaux ---
 
 export type TVAStatus = 'safe' | 'warning' | 'breach';
 

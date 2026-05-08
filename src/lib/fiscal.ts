@@ -50,13 +50,13 @@ export interface VLEligibility {
 
 /**
  * Vérifie l'éligibilité au versement libératoire selon le RFR N-2 et le nombre
- * de parts fiscales. Si rfrN2 n'est pas saisi, retourne `unknown` — l'utilisateur
- * doit le renseigner pour valider.
+ * de parts fiscales. Si rfrN2 n'est pas saisi (null), retourne `unknown` —
+ * l'utilisateur doit le renseigner pour valider.
  */
-export function calcVLEligibility(rfrN2: number | undefined, partsFiscales: number = 1): VLEligibility {
+export function calcVLEligibility(rfrN2: number | null, partsFiscales: number = 1): VLEligibility {
   const parts = partsFiscales > 0 ? partsFiscales : 1;
   const threshold = VL_RFR_PLAFOND_PER_PART * parts;
-  if (rfrN2 === undefined || rfrN2 < 0) {
+  if (rfrN2 === null || rfrN2 < 0) {
     return { eligible: false, threshold, motif: 'unknown' };
   }
   if (rfrN2 > threshold) {
@@ -109,15 +109,16 @@ export const ABATTEMENT_BNC = ACTIVITY_PARAMS.liberalSsi.abattement;
 export const TAUX_VL_BNC = ACTIVITY_PARAMS.liberalSsi.tauxVL;
 
 /**
- * Combine les paramètres par défaut de l'activité avec les overrides du profil
- * (slider URSSAF, seuil custom). Le profil a toujours la priorité.
+ * Combine les paramètres par défaut de l'activité primaire avec les overrides
+ * du profil (urssafRate annuel, seuil custom). Le profil a toujours la priorité.
  */
 export function getFiscalParams(profile: UserProfile): ActivityParams {
-  const base = ACTIVITY_PARAMS[profile.activity] ?? ACTIVITY_PARAMS.liberalSsi;
+  const primary = getPrimaryActivity(profile);
+  const base = ACTIVITY_PARAMS[primary.type] ?? ACTIVITY_PARAMS.liberalSsi;
   return {
     ...base,
-    urssafRate: profile.urssafRate ?? base.urssafRate,
-    plafond: profile.seuilMicro ?? base.plafond,
+    urssafRate: profile.urssafRate,
+    plafond: profile.seuilMicro,
   };
 }
 
@@ -144,17 +145,20 @@ export function calcCAannuel(tjm: number, joursMensuels: number, mois: number = 
 // --- Modèles de revenu pluggables (jours / forfait / flat) ---
 
 /**
- * Retourne les `entries` effectives d'un mois. Si le mois est legacy (pas d'`entries`),
- * dérive virtuellement une ligne `days` depuis `workedDays`/`halfDays` — sans muter
- * le localStorage. Tant que l'utilisateur ne saisit rien dans le nouveau modèle, on
- * reste 100 % rétro-compatible.
+ * Retourne les entries effectives d'un mois.
+ *
+ * - Si `entries` est non-vide → c'est la source de vérité (mode forfait/flat/mixed
+ *   ou days explicite). Les `workedDays`/`halfDays` du calendrier sont ignorés.
+ * - Sinon → dérive virtuellement une ligne `days` depuis `workedDays`/`halfDays`.
+ *   Permet le mode rapide « clic dans le calendrier » sans manipuler entries.
  */
-export function resolveEntries(month: CalendarMonth): RevenueEntry[] {
-  if (month.entries && month.entries.length > 0) return month.entries;
+export function effectiveEntries(month: CalendarMonth): RevenueEntry[] {
+  if (month.entries.length > 0) return month.entries;
+  if (month.workedDays.length === 0 && month.halfDays.length === 0) return [];
   return [
     {
       kind: 'days',
-      id: `legacy-${month.year}-${month.month}`,
+      id: `calendar-${month.year}-${month.month}`,
       days: month.workedDays,
       halfDays: month.halfDays,
     },
@@ -164,7 +168,7 @@ export function resolveEntries(month: CalendarMonth): RevenueEntry[] {
 export function entryAmount(entry: RevenueEntry, profile: UserProfile): number {
   switch (entry.kind) {
     case 'days': {
-      const equiv = entry.days.length + (entry.halfDays?.length ?? 0) * 0.5;
+      const equiv = entry.days.length + entry.halfDays.length * 0.5;
       return equiv * (entry.tjmOverride ?? profile.tjm);
     }
     case 'forfait':
@@ -182,7 +186,7 @@ export function entryAmount(entry: RevenueEntry, profile: UserProfile): number {
  * Mode `mixed` : somme de toutes les entries (toutes catégories confondues)
  */
 export function calcCAFromEntries(month: CalendarMonth, profile: UserProfile): number {
-  return resolveEntries(month).reduce((sum, e) => sum + entryAmount(e, profile), 0);
+  return effectiveEntries(month).reduce((sum, e) => sum + entryAmount(e, profile), 0);
 }
 
 /** CA annuel = somme des `calcCAFromEntries` sur les 12 mois. */
@@ -211,7 +215,7 @@ export function calcCaRealiseFromEntries(
   for (const m of months) {
     if (m.month > currentMonthIndex) continue;
     const isCurrent = m.month === currentMonthIndex;
-    for (const e of resolveEntries(m)) {
+    for (const e of effectiveEntries(m)) {
       switch (e.kind) {
         case 'days': {
           const tjm = e.tjmOverride ?? profile.tjm;
@@ -269,7 +273,7 @@ export function calcSeuilDateFromEntries(
     const events: Event[] = [];
     let flatTotal = 0;
 
-    for (const e of resolveEntries(m)) {
+    for (const e of effectiveEntries(m)) {
       if (e.kind === 'days') {
         const tjm = e.tjmOverride ?? profile.tjm;
         const halfSet = new Set(e.halfDays ?? []);
@@ -300,7 +304,7 @@ export function calcSeuilDateFromEntries(
 
 /** Indique si un mois contient au moins une entry productrice de revenu. */
 export function monthHasRevenue(month: CalendarMonth): boolean {
-  return resolveEntries(month).some((e) => {
+  return effectiveEntries(month).some((e) => {
     if (e.kind === 'days') return e.days.length > 0 || (e.halfDays?.length ?? 0) > 0;
     return e.amount > 0;
   });
@@ -308,15 +312,14 @@ export function monthHasRevenue(month: CalendarMonth): boolean {
 
 // --- Multi-activité ---
 
-/** Liste effective des activités du profil (fallback : dérivée de profile.activity). */
+/** Liste effective des activités du profil. */
 export function getActivities(profile: UserProfile): ActivityEntry[] {
-  if (profile.activities && profile.activities.length > 0) return profile.activities;
-  return [{ id: 'fallback-primary', type: profile.activity, isPrimary: true }];
+  return profile.activities;
 }
 
 /** L'activité primaire du profil — défaut pour les revenue entries sans activityId. */
 export function getPrimaryActivity(profile: UserProfile): ActivityEntry {
-  const acts = getActivities(profile);
+  const acts = profile.activities;
   return acts.find((a) => a.isPrimary) ?? acts[0];
 }
 
@@ -337,7 +340,7 @@ export function calcCAByActivity(
 ): Record<Activity, number> {
   const result: Record<Activity, number> = { vente: 0, serviceBic: 0, liberalSsi: 0, liberalCipav: 0 };
   for (const m of months) {
-    for (const e of resolveEntries(m)) {
+    for (const e of effectiveEntries(m)) {
       const type = resolveActivityType(e, profile);
       result[type] += entryAmount(e, profile);
     }
@@ -385,8 +388,8 @@ export function calcNetMicroMulti(
   versementLiberatoire: boolean = false,
   opts: FiscalCalcOptions = {},
 ): FiscalResult {
-  const cfpEnabled = profile.cfpEnabled ?? true;
-  const taxeConsulaireEnabled = profile.taxeConsulaireEnabled ?? false;
+  const cfpEnabled = profile.cfpEnabled;
+  const taxeConsulaireEnabled = profile.taxeConsulaireEnabled;
   const acreTotal = Math.max(0, opts.acreReduction ?? 0);
 
   let chargesURSSAFBrutTotal = 0;

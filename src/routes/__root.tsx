@@ -125,14 +125,14 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 function AppShell() {
-  const { profile, setProfile, handleExportGlobal } = useProfile()
+  const { profile, setProfile, handleExportGlobal, years, activeYear, setActiveYear, addYear } = useProfile()
   const fy = useFiscalYearCtx()
   const navigate = useNavigate()
   const search = useRouterState({ select: (s) => s.location.search }) as Record<string, unknown>
   const settingsParam = search?.settings as SettingsTabId | undefined
   const isValidTab = settingsParam === 'profile' || settingsParam === 'fiscal' || settingsParam === 'costs'
   const settingsOpen = isValidTab
-  const activeTab: SettingsTabId = isValidTab ? settingsParam : 'profile'
+  const activeTab: SettingsTabId = isValidTab ? settingsParam : 'fiscal'
   const resetConfirmOpen = search?.confirm === 'reset-all'
 
   const caCumule = useMemo(
@@ -156,12 +156,15 @@ function AppShell() {
         profile={profile}
         caCumule={caCumule}
         onExport={handleExportGlobal}
-        onOpenSettings={() => openSettings('profile')}
+        onOpenSettings={() => openSettings('fiscal')}
         onProfileChange={(patch) => setProfile((p) => ({ ...p, ...patch }))}
       />
       <FiscalContextBar
         profile={profile}
-        missionStart={fy.missionStart}
+        years={years}
+        activeYear={activeYear}
+        onSelectYear={setActiveYear}
+        onAddYear={addYear}
         onOpenTab={openSettings}
       />
       <main className="flex-1 px-4 sm:px-6 lg:px-10 py-6 lg:py-10">
@@ -177,8 +180,6 @@ function AppShell() {
         year={fy.year}
         profile={profile}
         setProfile={setProfile}
-        missionStart={fy.missionStart}
-        onMissionStartChange={fy.setMissionStart}
         onResetAll={askResetAll}
       />
       <ConfirmModal

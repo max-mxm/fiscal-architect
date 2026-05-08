@@ -1,15 +1,14 @@
 import React from 'react';
 import { RotateCcw } from 'lucide-react';
-import { DEFAULT_PROFILE } from '~/constants';
 
 interface SeuilInputProps {
   value: number;
   onChange: (next: number) => void;
   /** Seuil "par défaut" (typiquement le plafond de l'activité courante). */
-  defaultValue?: number;
+  defaultValue: number;
 }
 
-export const SeuilInput: React.FC<SeuilInputProps> = ({ value, onChange, defaultValue = DEFAULT_PROFILE.seuilMicro }) => {
+export const SeuilInput: React.FC<SeuilInputProps> = ({ value, onChange, defaultValue }) => {
   const isCustom = value !== defaultValue;
 
   return (

@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { RotateCcw } from 'lucide-react';
-import { DEFAULT_PROFILE } from '~/constants';
 import { formatPercent } from '~/lib/format';
 
 interface UrssafSliderProps {
   value: number;
   onChange: (next: number) => void;
   /** Taux "par défaut" pour le bouton reset (typiquement le taux de l'activité courante). */
-  defaultRate?: number;
+  defaultRate: number;
 }
 
-export const UrssafSlider: React.FC<UrssafSliderProps> = ({ value, onChange, defaultRate = DEFAULT_PROFILE.urssafRate }) => {
+export const UrssafSlider: React.FC<UrssafSliderProps> = ({ value, onChange, defaultRate }) => {
   const [expanded, setExpanded] = useState(false);
   const isCustom = value !== defaultRate;
 

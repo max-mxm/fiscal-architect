@@ -31,7 +31,6 @@ const PERSONAS: Persona[] = [
     patch: {
       revenueModel: 'days',
       activities: activityFor('liberalSsi', 'Conseil indépendant'),
-      activity: 'liberalSsi',
       cfpEnabled: true,
       taxeConsulaireEnabled: false,
     },
@@ -44,7 +43,6 @@ const PERSONAS: Persona[] = [
     patch: {
       revenueModel: 'forfait',
       activities: activityFor('serviceBic', 'Prestations'),
-      activity: 'serviceBic',
       cfpEnabled: true,
       taxeConsulaireEnabled: true,
     },
@@ -57,7 +55,6 @@ const PERSONAS: Persona[] = [
     patch: {
       revenueModel: 'flat',
       activities: activityFor('vente', 'Vente en ligne'),
-      activity: 'vente',
       cfpEnabled: true,
       taxeConsulaireEnabled: true,
     },
@@ -70,7 +67,6 @@ const PERSONAS: Persona[] = [
     patch: {
       revenueModel: 'flat',
       activities: activityFor('serviceBic', 'Transport / livraison'),
-      activity: 'serviceBic',
       cfpEnabled: true,
       taxeConsulaireEnabled: false,
     },
@@ -83,7 +79,6 @@ const PERSONAS: Persona[] = [
     patch: {
       revenueModel: 'flat',
       activities: activityFor('vente', 'Location meublée'),
-      activity: 'vente',
       cfpEnabled: false,
       taxeConsulaireEnabled: false,
     },

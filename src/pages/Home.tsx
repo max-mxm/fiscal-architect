@@ -21,7 +21,8 @@ import {
   getFiscalParams,
   getTVASeuils,
   monthHasRevenue,
-  resolveEntries,
+  effectiveEntries,
+  getPrimaryActivity,
 } from '~/lib/fiscal';
 import {
   MONTH_NAMES,
@@ -112,11 +113,12 @@ export const Home: React.FC = () => {
   );
 
   const fiscalParams = useMemo(() => getFiscalParams(profile), [profile]);
-  const activityParams = ACTIVITY_PARAMS[profile.activity];
+  const primaryActivity = useMemo(() => getPrimaryActivity(profile).type, [profile]);
+  const activityParams = ACTIVITY_PARAMS[primaryActivity];
   const cfpRate = profile.cfpEnabled ? activityParams.cfpRate : 0;
   const taxeConsulaireRate = profile.taxeConsulaireEnabled ? activityParams.taxeConsulaireRate : 0;
 
-  const revenueModel = profile.revenueModel ?? 'days';
+  const revenueModel = profile.revenueModel;
   const showCalendar = revenueModel === 'days' || revenueModel === 'mixed';
   const showForfaits = revenueModel === 'forfait' || revenueModel === 'mixed';
   const showFlat = revenueModel === 'flat' || revenueModel === 'mixed';
@@ -127,7 +129,7 @@ export const Home: React.FC = () => {
     const creationDate = profile.creationDate ? new Date(profile.creationDate) : null;
     const periodDate = new Date(year, selectedMonth, 15);
     const urssafBrutMensuel = profile.tjm * profile.workingDays * (profile.urssafRate / 100);
-    return calcACRE(urssafBrutMensuel, creationDate, periodDate, profile.acreEnabled ?? false);
+    return calcACRE(urssafBrutMensuel, creationDate, periodDate, profile.acreEnabled);
   }, [profile.creationDate, profile.acreEnabled, profile.tjm, profile.workingDays, profile.urssafRate, year, selectedMonth]);
 
   const fiscalOpts = useMemo(
@@ -208,8 +210,8 @@ export const Home: React.FC = () => {
   );
 
   // --- TVA ---
-  const tvaSeuils = getTVASeuils(profile.activity);
-  const tvaStatus = useMemo(() => calcTVAStatus(caCumule, profile.activity), [caCumule, profile.activity]);
+  const tvaSeuils = getTVASeuils(primaryActivity);
+  const tvaStatus = useMemo(() => calcTVAStatus(caCumule, primaryActivity), [caCumule, primaryActivity]);
   const tvaSeuilDate = useMemo(
     () => calcSeuilDateFromEntries(projectedMonths, profile, tvaSeuils.basique),
     [projectedMonths, profile, tvaSeuils.basique],
@@ -223,7 +225,7 @@ export const Home: React.FC = () => {
   );
 
   const selectedEntries = useMemo<RevenueEntry[]>(
-    () => (selectedMonthData ? resolveEntries(selectedMonthData) : []),
+    () => (selectedMonthData ? effectiveEntries(selectedMonthData) : []),
     [selectedMonthData],
   );
 
@@ -396,13 +398,13 @@ export const Home: React.FC = () => {
           caMensuel={caMensuel}
           netMensuel={Math.round(monthBreakdown.net)}
           joursTravailes={selectedMonthDays}
-          missionStart={fy.missionStart}
+          missionStart={profile.missionStart}
           seuilDate={seuilDate}
           onEditMissionStart={openFiscalSettings}
           seuilTVA={tvaSeuils.basique}
           tvaStatus={tvaStatus}
           tvaSeuilDate={tvaSeuilDate}
-          tvaAssujetti={profile.tvaAssujetti ?? false}
+          tvaAssujetti={profile.tvaAssujetti}
           activities={getActivities(profile)}
           caByActivity={caByActivity}
         />

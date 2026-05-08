@@ -5,15 +5,15 @@ import { formatEuro } from '~/lib/format';
 import { cn } from '~/utils';
 
 interface RFRInputProps {
-  rfrN2: number | undefined;
+  rfrN2: number | null;
   partsFiscales: number;
-  onRFRChange: (next: number | undefined) => void;
+  onRFRChange: (next: number | null) => void;
   onPartsChange: (next: number) => void;
 }
 
 export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRChange, onPartsChange }) => {
   const eligibility = calcVLEligibility(rfrN2, partsFiscales);
-  const showStatus = rfrN2 !== undefined && rfrN2 >= 0;
+  const showStatus = rfrN2 !== null && rfrN2 >= 0;
 
   return (
     <div className="space-y-3">
@@ -37,7 +37,7 @@ export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRC
               onChange={(e) => {
                 const v = e.target.value.trim();
                 if (v === '') {
-                  onRFRChange(undefined);
+                  onRFRChange(null);
                   return;
                 }
                 const n = parseInt(v, 10);

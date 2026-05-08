@@ -15,7 +15,7 @@ const isFerie = (monthIndex: number, day: number) => feriesSet.has(monthIndex * 
 const noFerie = () => false;
 
 const emptyMonths = (year: number = YEAR): CalendarMonth[] =>
-  Array.from({ length: 12 }, (_, i) => ({ month: i, year, workedDays: [], halfDays: [] }));
+  Array.from({ length: 12 }, (_, i) => ({ month: i, year, workedDays: [], halfDays: [], entries: [] }));
 
 describe('cycleDayInMonths', () => {
   it('vide → plein', () => {

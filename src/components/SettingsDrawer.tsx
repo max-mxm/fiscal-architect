@@ -17,9 +17,8 @@ import { RFRInput } from '~/components/fiscal/RFRInput';
 import { SeuilInput } from '~/components/fiscal/SeuilInput';
 import { FixedCostsList } from '~/components/fiscal/FixedCostsList';
 import { SettingsTabs, type SettingsTabId, type TabDef } from '~/components/settings/SettingsTabs';
-import { ACTIVITY_PARAMS, calcVLEligibility, getActivities } from '~/lib/fiscal';
+import { ACTIVITY_PARAMS, calcVLEligibility, getActivities, getPrimaryActivity } from '~/lib/fiscal';
 import { formatEuro } from '~/lib/format';
-import type { Activity } from '~/types';
 
 interface SettingsDrawerProps {
   open: boolean;
@@ -29,16 +28,14 @@ interface SettingsDrawerProps {
   year: number;
   profile: UserProfile;
   setProfile: React.Dispatch<React.SetStateAction<UserProfile>>;
-  missionStart: string;
-  onMissionStartChange: (next: string) => void;
   onResetAll: () => void;
 }
 
 const FOCUSABLE = 'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 const TABS: TabDef[] = [
-  { id: 'profile', label: 'Profil', Icon: User },
   { id: 'fiscal', label: 'Fiscal', Icon: Calculator },
+  { id: 'profile', label: 'Profil', Icon: User },
   { id: 'costs', label: 'Charges', Icon: Receipt },
 ];
 
@@ -50,8 +47,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   year,
   profile,
   setProfile,
-  missionStart,
-  onMissionStartChange,
   onResetAll,
 }) => {
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -280,11 +275,11 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     </h3>
                     <CreationDateInput
                       value={profile.creationDate}
-                      onChange={(v) => updateProfile({ creationDate: v || undefined })}
+                      onChange={(v) => updateProfile({ creationDate: v })}
                     />
                     <MissionStartInput
-                      value={missionStart}
-                      onChange={onMissionStartChange}
+                      value={profile.missionStart}
+                      onChange={(v) => updateProfile({ missionStart: v })}
                       year={year}
                     />
                   </div>
@@ -297,7 +292,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       Comment vous facturez votre activité — choisissez ce qui correspond à votre quotidien.
                     </p>
                     <RevenueModeSelector
-                      value={profile.revenueModel ?? 'days'}
+                      value={profile.revenueModel}
                       onChange={(next) => updateProfile({ revenueModel: next })}
                     />
                   </div>
@@ -310,37 +305,20 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       Vous pouvez en cumuler plusieurs (ex. dev + vente de templates).
                       L'activité primaire pilote URSSAF, abattement et seuil.
                     </p>
-                    {(profile.activities && profile.activities.length > 0) ? (
-                      <ActivityManager
-                        activities={profile.activities}
-                        onChange={(next) => {
-                          const primary = next.find((a) => a.isPrimary) ?? next[0];
-                          const params = ACTIVITY_PARAMS[primary.type];
-                          updateProfile({
-                            activities: next,
-                            // Sync legacy `activity` avec la primaire pour rétro-compat
-                            activity: primary.type,
-                            urssafRate: params.urssafRate,
-                            seuilMicro: params.plafond,
-                            taxeConsulaireEnabled: params.taxeConsulaireRate > 0,
-                          });
-                        }}
-                      />
-                    ) : (
-                      <ActivitySelector
-                        value={profile.activity}
-                        onChange={(next: Activity) => {
-                          const params = ACTIVITY_PARAMS[next];
-                          updateProfile({
-                            activity: next,
-                            urssafRate: params.urssafRate,
-                            seuilMicro: params.plafond,
-                            taxeConsulaireEnabled: params.taxeConsulaireRate > 0,
-                          });
-                        }}
-                      />
-                    )}
-                    <AutoChargesInfo activity={profile.activity} />
+                    <ActivityManager
+                      activities={profile.activities}
+                      onChange={(next) => {
+                        const primary = next.find((a) => a.isPrimary) ?? next[0];
+                        const params = ACTIVITY_PARAMS[primary.type];
+                        updateProfile({
+                          activities: next,
+                          urssafRate: params.urssafRate,
+                          seuilMicro: params.plafond,
+                          taxeConsulaireEnabled: params.taxeConsulaireRate > 0,
+                        });
+                      }}
+                    />
+                    <AutoChargesInfo activity={getPrimaryActivity(profile).type} />
                   </div>
 
                   <div className="space-y-5">
@@ -348,18 +326,18 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       Régime fiscal
                     </h3>
                     <ACREToggle
-                      value={profile.acreEnabled ?? false}
+                      value={profile.acreEnabled}
                       onChange={(v) => updateProfile({ acreEnabled: v })}
                       creationDate={profile.creationDate}
                     />
                     <RFRInput
                       rfrN2={profile.rfrN2}
-                      partsFiscales={profile.partsFiscales ?? 1}
+                      partsFiscales={profile.partsFiscales}
                       onRFRChange={(v) => updateProfile({ rfrN2: v })}
                       onPartsChange={(v) => updateProfile({ partsFiscales: v })}
                     />
                     {(() => {
-                      const elig = calcVLEligibility(profile.rfrN2, profile.partsFiscales ?? 1);
+                      const elig = calcVLEligibility(profile.rfrN2, profile.partsFiscales);
                       const reason = elig.motif === 'rfr-too-high'
                         ? `RFR N-2 supérieur au plafond ${formatEuro(elig.threshold)}€ — VL non disponible.`
                         : null;
@@ -367,17 +345,17 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                         <VLToggle
                           value={profile.versementLiberatoire}
                           onChange={(v) => updateProfile({ versementLiberatoire: v })}
-                          tauxVL={ACTIVITY_PARAMS[profile.activity].tauxVL}
+                          tauxVL={ACTIVITY_PARAMS[getPrimaryActivity(profile).type].tauxVL}
                           ineligibleReason={reason}
                         />
                       );
                     })()}
                     <TVAToggle
-                      value={profile.tvaAssujetti ?? false}
+                      value={profile.tvaAssujetti}
                       onChange={(v) => updateProfile({ tvaAssujetti: v })}
                     />
                     <IJToggle
-                      value={profile.ijOption ?? false}
+                      value={profile.ijOption}
                       onChange={(v) => updateProfile({ ijOption: v })}
                       activities={getActivities(profile)}
                     />
@@ -393,7 +371,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       className="grid grid-cols-2 gap-2 p-0 m-0 border-0"
                     >
                       {(['monthly', 'quarterly'] as const).map((period) => {
-                        const active = (profile.declarationPeriod ?? 'monthly') === period;
+                        const active = profile.declarationPeriod === period;
                         return (
                           <button
                             key={period}
@@ -425,7 +403,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     <SeuilInput
                       value={profile.seuilMicro}
                       onChange={(v) => updateProfile({ seuilMicro: v })}
-                      defaultValue={ACTIVITY_PARAMS[profile.activity].plafond}
+                      defaultValue={ACTIVITY_PARAMS[getPrimaryActivity(profile).type].plafond}
                     />
                   </div>
                 </section>
