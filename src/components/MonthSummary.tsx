@@ -15,6 +15,8 @@ interface MonthSummaryProps {
   irMensuel: number;
   netMensuel: number;
   versementLiberatoire: boolean;
+  /** Taux VL effectif (0..1) à afficher sur le chip — issu de l'activité courante. */
+  tauxVL?: number;
   onToggleVL: (next: boolean) => void;
 }
 
@@ -28,10 +30,14 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
   irMensuel,
   netMensuel,
   versementLiberatoire,
+  tauxVL,
   onToggleVL,
 }) => {
   const [showIrInfo, setShowIrInfo] = useState(false);
   const tauxNet = caMensuel > 0 ? (netMensuel / caMensuel) * 100 : 0;
+  const irLabel = versementLiberatoire
+    ? `IR (VL ${tauxVL !== undefined ? (tauxVL * 100).toFixed(1).replace('.', ',') : '2,2'} %)`
+    : 'IR estimé';
 
   return (
     <section
@@ -49,7 +55,7 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
               : 'Aucun jour sélectionné'}
           </p>
         </div>
-        <VLToggle value={versementLiberatoire} onChange={onToggleVL} variant="chip" />
+        <VLToggle value={versementLiberatoire} onChange={onToggleVL} tauxVL={tauxVL} variant="chip" />
       </div>
 
       <ul className="space-y-2 text-sm">
@@ -73,7 +79,7 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
         </li>
         <li className="flex justify-between items-center">
           <span className="text-on-surface-variant inline-flex items-center gap-1">
-            {versementLiberatoire ? 'IR (VL 2,2 %)' : 'IR estimé'}
+            {irLabel}
             <button
               type="button"
               onClick={() => setShowIrInfo((v) => !v)}

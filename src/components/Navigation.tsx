@@ -21,7 +21,7 @@ export const TopBar: React.FC<TopBarProps> = ({ profile, caCumule, onExport, onO
 
   const pctReal = Math.min(100, (caCumule / seuil) * 100);
   const pctProj = Math.min(100, (caProjete / seuil) * 100);
-  const showAlert = profile.status === 'micro' && pctProj >= 80;
+  const showAlert = pctProj >= 80;
   const isOver = caCumule >= seuil;
 
   return (

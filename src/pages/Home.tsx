@@ -11,6 +11,7 @@ import {
   calcSeuilDate,
   calcTotalChargesFixes,
   countMonthsWithActivity,
+  getFiscalParams,
 } from '~/lib/fiscal';
 import {
   MONTH_NAMES,
@@ -94,6 +95,12 @@ export const Home: React.FC = () => {
     [profile.fixedCosts],
   );
 
+  const fiscalParams = useMemo(() => getFiscalParams(profile), [profile]);
+  const fiscalOpts = useMemo(
+    () => ({ abattement: fiscalParams.abattement, tauxVL: fiscalParams.tauxVL }),
+    [fiscalParams.abattement, fiscalParams.tauxVL],
+  );
+
   const totalWorkedDays = useMemo(
     () => fy.fiscalYear.months.reduce((sum, m) => sum + calcEquivDays(m), 0),
     [fy.fiscalYear.months],
@@ -119,8 +126,9 @@ export const Home: React.FC = () => {
       chargesFixesMensuelles,
       monthsWithActivity,
       profile.versementLiberatoire,
+      fiscalOpts,
     ),
-    [caCumule, profile.urssafRate, chargesFixesMensuelles, monthsWithActivity, profile.versementLiberatoire],
+    [caCumule, profile.urssafRate, chargesFixesMensuelles, monthsWithActivity, profile.versementLiberatoire, fiscalOpts],
   );
 
   // Projection : on simule les mois courant + futurs sans données
@@ -150,8 +158,8 @@ export const Home: React.FC = () => {
   const selectedMonthDays = selectedMonthData ? calcEquivDays(selectedMonthData) : 0;
   const caMensuel = selectedMonthDays * profile.tjm;
   const monthBreakdown = useMemo(
-    () => calcMonthlyBreakdown(caMensuel, profile.urssafRate, chargesFixesMensuelles, profile.versementLiberatoire),
-    [caMensuel, profile.urssafRate, chargesFixesMensuelles, profile.versementLiberatoire],
+    () => calcMonthlyBreakdown(caMensuel, profile.urssafRate, chargesFixesMensuelles, profile.versementLiberatoire, fiscalOpts),
+    [caMensuel, profile.urssafRate, chargesFixesMensuelles, profile.versementLiberatoire, fiscalOpts],
   );
 
   // --- Navigation calendrier ---
@@ -335,6 +343,7 @@ export const Home: React.FC = () => {
           <SlidersBlock
             tjm={profile.tjm}
             urssafRate={profile.urssafRate}
+            urssafDefault={fiscalParams.urssafRate}
             workedDaysEquiv={selectedMonthDays}
             caMensuel={caMensuel}
             netMensuel={Math.round(monthBreakdown.net)}
@@ -352,6 +361,7 @@ export const Home: React.FC = () => {
             irMensuel={Math.round(monthBreakdown.ir)}
             netMensuel={Math.round(monthBreakdown.net)}
             versementLiberatoire={profile.versementLiberatoire}
+            tauxVL={fiscalParams.tauxVL}
             onToggleVL={(v) => setProfile((p) => ({ ...p, versementLiberatoire: v }))}
           />
         </aside>

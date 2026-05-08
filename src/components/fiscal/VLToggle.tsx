@@ -5,11 +5,15 @@ import { TAUX_VL_BNC } from '~/lib/fiscal';
 interface VLToggleProps {
   value: boolean;
   onChange: (next: boolean) => void;
+  /** Taux VL effectif (0..1). Défaut : TAUX_VL_BNC (libéral SSI). */
+  tauxVL?: number;
   /** Variant inline (chip cliquable dans MonthSummary). */
   variant?: 'default' | 'chip';
 }
 
-export const VLToggle: React.FC<VLToggleProps> = ({ value, onChange, variant = 'default' }) => {
+export const VLToggle: React.FC<VLToggleProps> = ({ value, onChange, tauxVL = TAUX_VL_BNC, variant = 'default' }) => {
+  const tauxLabel = (tauxVL * 100).toFixed(1).replace('.', ',');
+
   if (variant === 'chip') {
     return (
       <button
@@ -30,7 +34,7 @@ export const VLToggle: React.FC<VLToggleProps> = ({ value, onChange, variant = '
             value ? 'bg-secondary' : 'bg-slate-400',
           )}
         />
-        VL {(TAUX_VL_BNC * 100).toFixed(1)}%
+        VL {tauxLabel}%
       </button>
     );
   }
@@ -43,7 +47,7 @@ export const VLToggle: React.FC<VLToggleProps> = ({ value, onChange, variant = '
             Versement libératoire
           </label>
           <p className="text-[11px] text-slate-500 mt-0.5">
-            Taux forfaitaire {(TAUX_VL_BNC * 100).toFixed(1)}% en remplacement de l'IR au barème.
+            Taux forfaitaire {tauxLabel}% en remplacement de l'IR au barème.
           </p>
         </div>
         <button

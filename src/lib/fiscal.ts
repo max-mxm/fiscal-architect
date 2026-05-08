@@ -1,10 +1,41 @@
-import type { UserProfile, FiscalResult, MonthlyBreakdown, MonthlyChartData, CalendarMonth } from '~/types';
+import type { Activity, UserProfile, FiscalResult, MonthlyBreakdown, MonthlyChartData, CalendarMonth } from '~/types';
 
-// --- Constantes fiscales ---
+// --- Paramètres fiscaux par activité (2026) ---
 
-export const SEUIL_MICRO = 83_600;
-export const ABATTEMENT_BNC = 0.34;
-export const TAUX_VL_BNC = 0.022; // Versement libératoire BNC (prestations de services)
+export interface ActivityParams {
+  label: string;
+  hint: string;
+  urssafRate: number; // %
+  abattement: number; // 0..1, abattement IR au barème
+  plafond: number;    // €, plafond annuel CA pour rester en micro
+  tauxVL: number;     // 0..1, taux versement libératoire
+}
+
+export const ACTIVITY_PARAMS: Record<Activity, ActivityParams> = {
+  vente:        { label: 'Vente / hébergement (BIC)',      hint: 'Marchandises, e-commerce, gîte',     urssafRate: 12.3, abattement: 0.71, plafond: 203_100, tauxVL: 0.010 },
+  serviceBic:   { label: 'Services commerciaux / artisan', hint: 'Artisan, prestation BIC',            urssafRate: 21.2, abattement: 0.50, plafond:  83_600, tauxVL: 0.017 },
+  liberalSsi:   { label: 'Libéral non réglementé (SSI)',   hint: 'BNC SSI : conseil, dev, design',     urssafRate: 26.1, abattement: 0.34, plafond:  83_600, tauxVL: 0.022 },
+  liberalCipav: { label: 'Libéral réglementé (CIPAV)',     hint: 'Architecte, ostéo, psy, etc.',       urssafRate: 23.2, abattement: 0.34, plafond:  83_600, tauxVL: 0.022 },
+};
+
+// Alias rétro-compat (avant introduction de l'activité, l'app était figée sur BNC libéral SSI).
+// Conservés pour ne pas casser les imports tiers et les tests historiques.
+export const SEUIL_MICRO = ACTIVITY_PARAMS.liberalSsi.plafond;
+export const ABATTEMENT_BNC = ACTIVITY_PARAMS.liberalSsi.abattement;
+export const TAUX_VL_BNC = ACTIVITY_PARAMS.liberalSsi.tauxVL;
+
+/**
+ * Combine les paramètres par défaut de l'activité avec les overrides du profil
+ * (slider URSSAF, seuil custom). Le profil a toujours la priorité.
+ */
+export function getFiscalParams(profile: UserProfile): ActivityParams {
+  const base = ACTIVITY_PARAMS[profile.activity] ?? ACTIVITY_PARAMS.liberalSsi;
+  return {
+    ...base,
+    urssafRate: profile.urssafRate ?? base.urssafRate,
+    plafond: profile.seuilMicro ?? base.plafond,
+  };
+}
 
 export const TRANCHES_IR = [
   { min: 0, max: 11_600, taux: 0 },
@@ -51,12 +82,24 @@ export function calcIR(revenuImposable: number, parts: number = 1): number {
 
 // --- Net par statut ---
 
-export function calcNetMicro(ca: number, tauxURSSAF: number, chargesFixes: number, versementLiberatoire: boolean = false): FiscalResult {
+export interface FiscalCalcOptions {
+  abattement?: number; // défaut : ABATTEMENT_BNC (libéral SSI)
+  tauxVL?: number;     // défaut : TAUX_VL_BNC (libéral SSI)
+}
+
+export function calcNetMicro(
+  ca: number,
+  tauxURSSAF: number,
+  chargesFixes: number,
+  versementLiberatoire: boolean = false,
+  opts: FiscalCalcOptions = {},
+): FiscalResult {
+  const abattement = opts.abattement ?? ABATTEMENT_BNC;
+  const tauxVL = opts.tauxVL ?? TAUX_VL_BNC;
   const chargesURSSAF = calcChargesURSSAF(ca, tauxURSSAF);
 
   if (versementLiberatoire) {
-    // VL : 2.2% du CA remplace l'IR au barème progressif
-    const ir = ca * TAUX_VL_BNC;
+    const ir = ca * tauxVL;
     const netApresIR = ca - chargesURSSAF - chargesFixes - ir;
     return {
       caAnnuel: ca,
@@ -68,7 +111,7 @@ export function calcNetMicro(ca: number, tauxURSSAF: number, chargesFixes: numbe
     };
   }
 
-  const revenuImposable = ca * (1 - ABATTEMENT_BNC);
+  const revenuImposable = ca * (1 - abattement);
   const ir = calcIR(revenuImposable);
   const netApresIR = ca - chargesURSSAF - chargesFixes - ir;
 
@@ -89,12 +132,13 @@ export function calcMonthlyBreakdown(
   tauxURSSAF: number,
   chargesFixesMensuelles: number,
   versementLiberatoire: boolean = false,
+  opts: FiscalCalcOptions = {},
 ): MonthlyBreakdown {
   const urssaf = calcChargesURSSAF(caMensuel, tauxURSSAF);
 
   // Projection annualisée (×12) pour estimer l'IR au barème progressif
   const caAnnuelProjection = caMensuel * 12;
-  const annualResult = calcNetMicro(caAnnuelProjection, tauxURSSAF, chargesFixesMensuelles * 12, versementLiberatoire);
+  const annualResult = calcNetMicro(caAnnuelProjection, tauxURSSAF, chargesFixesMensuelles * 12, versementLiberatoire, opts);
   const ir = annualResult.ir / 12;
 
   const net = caMensuel - urssaf - chargesFixesMensuelles - ir;
@@ -125,10 +169,11 @@ export function calcNetCumule(
   chargesFixesMensuelles: number,
   monthsWithActivity: number,
   versementLiberatoire: boolean = false,
+  opts: FiscalCalcOptions = {},
 ): number {
   if (caCumule <= 0) return 0;
   const chargesFixesTotal = chargesFixesMensuelles * Math.max(0, monthsWithActivity);
-  const result = calcNetMicro(caCumule, tauxURSSAF, chargesFixesTotal, versementLiberatoire);
+  const result = calcNetMicro(caCumule, tauxURSSAF, chargesFixesTotal, versementLiberatoire, opts);
   return Math.round(result.netApresIR);
 }
 
@@ -189,8 +234,15 @@ export function calcSeuilDate(
 
 export function generateChartData(profile: UserProfile): MonthlyChartData[] {
   const chargesFixesMensuelles = calcTotalChargesFixes(profile.fixedCosts);
+  const params = getFiscalParams(profile);
   const brut = calcCAMensuel(profile.tjm, profile.workingDays);
-  const breakdown = calcMonthlyBreakdown(brut, profile.urssafRate, chargesFixesMensuelles, profile.versementLiberatoire);
+  const breakdown = calcMonthlyBreakdown(
+    brut,
+    params.urssafRate,
+    chargesFixesMensuelles,
+    profile.versementLiberatoire,
+    { abattement: params.abattement, tauxVL: params.tauxVL },
+  );
 
   return MONTHS.map((month) => ({
     month, brut: Math.round(brut), net: Math.round(breakdown.net),

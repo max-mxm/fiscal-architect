@@ -1,6 +1,6 @@
 import React from 'react';
-import { Calculator, Receipt, CalendarDays } from 'lucide-react';
-import type { UserProfile } from '~/types';
+import { Receipt, CalendarDays, Briefcase } from 'lucide-react';
+import type { Activity, UserProfile } from '~/types';
 import type { SettingsTabId } from '~/components/settings/SettingsTabs';
 import { formatEuro } from '~/lib/format';
 import { cn } from '~/utils';
@@ -11,10 +11,11 @@ interface FiscalContextBarProps {
   onOpenTab: (tab: SettingsTabId) => void;
 }
 
-const STATUS_LABEL: Record<UserProfile['status'], string> = {
-  micro: 'Micro',
-  sasu: 'SASU',
-  eurl: 'EURL',
+const ACTIVITY_SHORT: Record<Activity, string> = {
+  vente: 'Vente',
+  serviceBic: 'Service BIC',
+  liberalSsi: 'Libéral SSI',
+  liberalCipav: 'CIPAV',
 };
 
 function formatMissionDate(iso: string): string {
@@ -57,11 +58,6 @@ export const FiscalContextBar: React.FC<FiscalContextBarProps> = ({
   missionStart,
   onOpenTab,
 }) => {
-  const statusValue =
-    profile.status === 'micro' && profile.versementLiberatoire
-      ? `${STATUS_LABEL.micro} · VL`
-      : STATUS_LABEL[profile.status];
-
   return (
     <div className="bg-surface border-b border-outline-variant/10">
       <div
@@ -69,13 +65,15 @@ export const FiscalContextBar: React.FC<FiscalContextBarProps> = ({
         role="group"
         aria-label="Contexte fiscal"
       >
-        <Chip
-          Icon={Calculator}
-          label="Statut"
-          value={statusValue}
-          ariaLabel={`Statut juridique : ${statusValue}. Cliquer pour modifier.`}
-          onClick={() => onOpenTab('fiscal')}
-        />
+        {profile.activity && (
+          <Chip
+            Icon={Briefcase}
+            label="Activité"
+            value={ACTIVITY_SHORT[profile.activity]}
+            ariaLabel={`Activité : ${ACTIVITY_SHORT[profile.activity]}. Cliquer pour modifier.`}
+            onClick={() => onOpenTab('fiscal')}
+          />
+        )}
         <Chip
           Icon={Receipt}
           label="Seuil"

@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, type ReactNode, type Dispatch, type SetStateAction } from 'react';
+import { createContext, useContext, useCallback, useEffect, type ReactNode, type Dispatch, type SetStateAction } from 'react';
 import { useLocalStorage } from '~/hooks/useLocalStorage';
 import { DEFAULT_PROFILE } from '~/constants';
 import { generateChartData } from '~/lib/fiscal';
@@ -15,6 +15,13 @@ const ProfileContext = createContext<ProfileContextType | null>(null);
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useLocalStorage('fiscal-profile', DEFAULT_PROFILE);
 
+  // Migration silencieuse pour les profils localStorage antérieurs à l'introduction du champ `activity`.
+  useEffect(() => {
+    if (!profile.activity) {
+      setProfile((p) => ({ ...p, activity: 'liberalSsi' }));
+    }
+  }, [profile.activity, setProfile]);
+
   const handleExportGlobal = useCallback(() => {
     const chartData = generateChartData(profile);
     const header = 'Mois,CA Brut (€),Bénéfice Net (€)\n';
@@ -22,7 +29,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     const summary = [
       '',
       `Profil,${profile.name}`,
-      `Statut,${profile.status}`,
       `TJM,${profile.tjm}€`,
       `Jours/mois,${profile.workingDays}`,
       `Taux URSSAF,${profile.urssafRate}%`,

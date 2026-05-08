@@ -3,11 +3,13 @@ import { motion, AnimatePresence, type PanInfo } from 'motion/react';
 import { X, RotateCcw, User, Calculator, Receipt } from 'lucide-react';
 import type { UserProfile } from '~/types';
 import { MissionStartInput } from '~/components/fiscal/MissionStartInput';
-import { StatusPills } from '~/components/fiscal/StatusPills';
+import { ActivitySelector } from '~/components/fiscal/ActivitySelector';
 import { VLToggle } from '~/components/fiscal/VLToggle';
 import { SeuilInput } from '~/components/fiscal/SeuilInput';
 import { FixedCostsList } from '~/components/fiscal/FixedCostsList';
 import { SettingsTabs, type SettingsTabId, type TabDef } from '~/components/settings/SettingsTabs';
+import { ACTIVITY_PARAMS } from '~/lib/fiscal';
+import type { Activity } from '~/types';
 
 interface SettingsDrawerProps {
   open: boolean;
@@ -230,20 +232,26 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     />
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-                      Statut juridique
+                      Activité
                     </h3>
-                    <StatusPills
-                      value={profile.status}
-                      onChange={(s) => updateProfile({ status: s })}
+                    <ActivitySelector
+                      value={profile.activity}
+                      onChange={(next: Activity) => {
+                        const params = ACTIVITY_PARAMS[next];
+                        updateProfile({
+                          activity: next,
+                          urssafRate: params.urssafRate,
+                          seuilMicro: params.plafond,
+                        });
+                      }}
                     />
-                    {profile.status === 'micro' && (
-                      <VLToggle
-                        value={profile.versementLiberatoire}
-                        onChange={(v) => updateProfile({ versementLiberatoire: v })}
-                      />
-                    )}
+                    <VLToggle
+                      value={profile.versementLiberatoire}
+                      onChange={(v) => updateProfile({ versementLiberatoire: v })}
+                      tauxVL={ACTIVITY_PARAMS[profile.activity].tauxVL}
+                    />
                   </div>
 
                   <div>
@@ -253,6 +261,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     <SeuilInput
                       value={profile.seuilMicro}
                       onChange={(v) => updateProfile({ seuilMicro: v })}
+                      defaultValue={ACTIVITY_PARAMS[profile.activity].plafond}
                     />
                   </div>
                 </section>

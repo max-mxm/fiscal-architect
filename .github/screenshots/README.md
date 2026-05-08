@@ -5,7 +5,6 @@
 - `hero.png` — vue par défaut (1280×720), données réalistes (TJM 600 €, ~15 j/mois)
 - `hero.gif` (≤ 5 s, ≤ 5 Mo) — interaction sliders → recalcul live
 - `calendar.png` — calendrier 12 mois rempli
-- `comparison.png` — comparaison statuts micro / SASU / EURL
 
 Outils suggérés :
 

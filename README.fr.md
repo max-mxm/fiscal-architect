@@ -56,7 +56,6 @@ Après la première visite, l'app est aussi totalement utilisable **hors ligne**
 - **Suivi CA cumulé vs seuil** — projection automatique du dépassement micro-entreprise.
 - **Simulation temps réel** — sliders TJM / taux URSSAF / option versement libératoire ; tout se recalcule en live.
 - **Charges fixes récurrentes** — gérables individuellement, intégrées au net mensuel.
-- **Comparaison de statuts** — micro-entreprise vs SASU vs EURL avec calcul d'IS, dividendes, flat tax.
 - **Réserve vacances + IR projeté** — anticipez ce que vous garderez vraiment.
 
 ## Stack
@@ -121,8 +120,6 @@ Net après IR      = CA − URSSAF − charges fixes − IR
 ```
 
 Avec **versement libératoire** activé, l'IR est remplacé par `CA × 2,2 %` prélevé en même temps que les cotisations URSSAF.
-
-Les statuts **SASU** (70 % salaire / 30 % dividendes) et **EURL** (TNS) utilisent l'IS réduit à **15 %** jusqu'à 42 500 € de bénéfice puis **25 %** au-delà.
 
 ## Roadmap
 

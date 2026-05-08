@@ -1,7 +1,9 @@
+export type Activity = 'vente' | 'serviceBic' | 'liberalSsi' | 'liberalCipav';
+
 export interface UserProfile {
   name: string;
   role: string;
-  status: 'micro' | 'sasu' | 'eurl';
+  activity: Activity;
   tjm: number;
   workingDays: number;
   urssafRate: number;

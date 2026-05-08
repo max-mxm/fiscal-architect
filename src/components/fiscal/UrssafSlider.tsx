@@ -7,11 +7,13 @@ import { formatPercent } from '~/lib/format';
 interface UrssafSliderProps {
   value: number;
   onChange: (next: number) => void;
+  /** Taux "par défaut" pour le bouton reset (typiquement le taux de l'activité courante). */
+  defaultRate?: number;
 }
 
-export const UrssafSlider: React.FC<UrssafSliderProps> = ({ value, onChange }) => {
+export const UrssafSlider: React.FC<UrssafSliderProps> = ({ value, onChange, defaultRate = DEFAULT_PROFILE.urssafRate }) => {
   const [expanded, setExpanded] = useState(false);
-  const isCustom = value !== DEFAULT_PROFILE.urssafRate;
+  const isCustom = value !== defaultRate;
 
   return (
     <div>
@@ -21,8 +23,8 @@ export const UrssafSlider: React.FC<UrssafSliderProps> = ({ value, onChange }) =
           {isCustom && (
             <button
               type="button"
-              title={`Réinitialiser (${DEFAULT_PROFILE.urssafRate}%)`}
-              onClick={() => onChange(DEFAULT_PROFILE.urssafRate)}
+              title={`Réinitialiser (${defaultRate}%)`}
+              onClick={() => onChange(defaultRate)}
               aria-label="Réinitialiser le taux URSSAF par défaut"
               className="text-on-surface-variant hover:text-secondary transition-colors"
             >

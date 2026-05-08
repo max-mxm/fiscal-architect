@@ -8,6 +8,8 @@ import { cn } from '~/utils';
 interface SlidersBlockProps {
   tjm: number;
   urssafRate: number;
+  /** Taux URSSAF par défaut pour le bouton reset (issu de l'activité courante). */
+  urssafDefault?: number;
   workedDaysEquiv: number;
   caMensuel: number;
   netMensuel: number;
@@ -45,6 +47,7 @@ function shortEuro(value: number): string {
 export const SlidersBlock: React.FC<SlidersBlockProps> = ({
   tjm,
   urssafRate,
+  urssafDefault,
   workedDaysEquiv,
   caMensuel,
   netMensuel,
@@ -75,7 +78,7 @@ export const SlidersBlock: React.FC<SlidersBlockProps> = ({
       </div>
 
       <TjmSlider value={tjm} onChange={onTjmChange} />
-      <UrssafSlider value={urssafRate} onChange={onUrssafChange} />
+      <UrssafSlider value={urssafRate} onChange={onUrssafChange} defaultRate={urssafDefault} />
 
       <div className="pt-4 border-t border-outline-variant/15 grid grid-cols-3 gap-3">
         <Mini label="Jours/mois" value={workedDaysEquiv.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} />

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CalendarMonth, UserProfile } from '~/types';
 import {
   ABATTEMENT_BNC,
+  ACTIVITY_PARAMS,
   SEUIL_MICRO,
   TAUX_VL_BNC,
   calcCAMensuel,
@@ -18,6 +19,7 @@ import {
   calcTotalChargesFixes,
   countMonthsWithActivity,
   generateChartData,
+  getFiscalParams,
 } from '~/lib/fiscal';
 
 const fixedCost = (id: string, amount: number): UserProfile['fixedCosts'][number] => ({
@@ -356,12 +358,140 @@ describe('calcNetCumule', () => {
   });
 });
 
+describe('ACTIVITY_PARAMS (chiffres 2026)', () => {
+  it('vente : URSSAF 12,3 %, abattement 71 %, plafond 203 100 €, VL 1 %', () => {
+    expect(ACTIVITY_PARAMS.vente.urssafRate).toBe(12.3);
+    expect(ACTIVITY_PARAMS.vente.abattement).toBeCloseTo(0.71);
+    expect(ACTIVITY_PARAMS.vente.plafond).toBe(203_100);
+    expect(ACTIVITY_PARAMS.vente.tauxVL).toBeCloseTo(0.010);
+  });
+
+  it('serviceBic : URSSAF 21,2 %, abattement 50 %, plafond 83 600 €, VL 1,7 %', () => {
+    expect(ACTIVITY_PARAMS.serviceBic.urssafRate).toBe(21.2);
+    expect(ACTIVITY_PARAMS.serviceBic.abattement).toBeCloseTo(0.50);
+    expect(ACTIVITY_PARAMS.serviceBic.plafond).toBe(83_600);
+    expect(ACTIVITY_PARAMS.serviceBic.tauxVL).toBeCloseTo(0.017);
+  });
+
+  it('liberalSsi : URSSAF 26,1 %, abattement 34 %, plafond 83 600 €, VL 2,2 %', () => {
+    expect(ACTIVITY_PARAMS.liberalSsi.urssafRate).toBe(26.1);
+    expect(ACTIVITY_PARAMS.liberalSsi.abattement).toBeCloseTo(0.34);
+    expect(ACTIVITY_PARAMS.liberalSsi.plafond).toBe(83_600);
+    expect(ACTIVITY_PARAMS.liberalSsi.tauxVL).toBeCloseTo(0.022);
+  });
+
+  it('liberalCipav : URSSAF 23,2 %, abattement 34 %, plafond 83 600 €, VL 2,2 %', () => {
+    expect(ACTIVITY_PARAMS.liberalCipav.urssafRate).toBe(23.2);
+    expect(ACTIVITY_PARAMS.liberalCipav.abattement).toBeCloseTo(0.34);
+    expect(ACTIVITY_PARAMS.liberalCipav.plafond).toBe(83_600);
+    expect(ACTIVITY_PARAMS.liberalCipav.tauxVL).toBeCloseTo(0.022);
+  });
+
+  it('alias rétro-compat alignés sur liberalSsi', () => {
+    expect(SEUIL_MICRO).toBe(ACTIVITY_PARAMS.liberalSsi.plafond);
+    expect(ABATTEMENT_BNC).toBe(ACTIVITY_PARAMS.liberalSsi.abattement);
+    expect(TAUX_VL_BNC).toBe(ACTIVITY_PARAMS.liberalSsi.tauxVL);
+  });
+});
+
+describe('getFiscalParams', () => {
+  const baseProfile: UserProfile = {
+    name: 'T',
+    role: 'T',
+    activity: 'liberalSsi',
+    tjm: 500,
+    workingDays: 19,
+    urssafRate: 26.1,
+    fixedCosts: [],
+    seuilMicro: 83_600,
+    versementLiberatoire: false,
+  };
+
+  it('retourne les params de l\'activité du profil', () => {
+    const params = getFiscalParams({ ...baseProfile, activity: 'vente', urssafRate: 12.3, seuilMicro: 203_100 });
+    expect(params.urssafRate).toBe(12.3);
+    expect(params.abattement).toBeCloseTo(0.71);
+    expect(params.plafond).toBe(203_100);
+    expect(params.tauxVL).toBeCloseTo(0.010);
+  });
+
+  it('le profil prime sur la valeur par défaut (slider URSSAF custom)', () => {
+    const params = getFiscalParams({ ...baseProfile, activity: 'liberalSsi', urssafRate: 20 });
+    expect(params.urssafRate).toBe(20); // override profil
+    expect(params.abattement).toBeCloseTo(0.34); // pas d'override → valeur de l'activité
+  });
+
+  it('le seuilMicro custom du profil prime sur le plafond de l\'activité', () => {
+    const params = getFiscalParams({ ...baseProfile, activity: 'vente', seuilMicro: 150_000 });
+    expect(params.plafond).toBe(150_000);
+  });
+});
+
+describe('calcNetMicro avec opts (par activité)', () => {
+  it('vente : 100 000 € → URSSAF 12,3 %, IR sur 29 % du CA', () => {
+    const p = ACTIVITY_PARAMS.vente;
+    const r = calcNetMicro(100_000, p.urssafRate, 0, false, { abattement: p.abattement, tauxVL: p.tauxVL });
+    expect(r.chargesURSSAF).toBeCloseTo(12_300);
+    expect(r.revenuImposable).toBeCloseTo(29_000); // 100k × (1-0.71)
+    // IR sur 29 000 → tr2: (29000-11600)*0.11 = 1914 → arrondi 1914
+    expect(r.ir).toBe(1914);
+    // Net = 100 000 - 12 300 - 0 - 1914 = 85 786
+    expect(r.netApresIR).toBeCloseTo(85_786);
+  });
+
+  it('serviceBic : 60 000 € → URSSAF 21,2 %, IR sur 30 000 € imposable', () => {
+    const p = ACTIVITY_PARAMS.serviceBic;
+    const r = calcNetMicro(60_000, p.urssafRate, 0, false, { abattement: p.abattement, tauxVL: p.tauxVL });
+    expect(r.chargesURSSAF).toBeCloseTo(12_720);
+    expect(r.revenuImposable).toBeCloseTo(30_000);
+    // IR sur 30 000 → ≈ 2104 (cf test calcIR existant)
+    expect(r.ir).toBe(2104);
+    expect(r.netApresIR).toBeCloseTo(60_000 - 12_720 - 2104);
+  });
+
+  it('liberalSsi : 60 000 € → URSSAF 26,1 %, IR sur 39 600 € imposable', () => {
+    const p = ACTIVITY_PARAMS.liberalSsi;
+    const r = calcNetMicro(60_000, p.urssafRate, 0, false, { abattement: p.abattement, tauxVL: p.tauxVL });
+    expect(r.chargesURSSAF).toBeCloseTo(15_660);
+    expect(r.revenuImposable).toBeCloseTo(39_600);
+    expect(r.ir).toBeGreaterThan(4_900); // sanity check tranche 30 %
+    expect(r.ir).toBeLessThan(5_100);
+  });
+
+  it('liberalCipav : 60 000 € → URSSAF 23,2 % (moindre que SSI), même abattement', () => {
+    const ssi = ACTIVITY_PARAMS.liberalSsi;
+    const cipav = ACTIVITY_PARAMS.liberalCipav;
+    const rSsi = calcNetMicro(60_000, ssi.urssafRate, 0, false, { abattement: ssi.abattement, tauxVL: ssi.tauxVL });
+    const rCipav = calcNetMicro(60_000, cipav.urssafRate, 0, false, { abattement: cipav.abattement, tauxVL: cipav.tauxVL });
+    // CIPAV moins de charges URSSAF que SSI
+    expect(rCipav.chargesURSSAF).toBeLessThan(rSsi.chargesURSSAF);
+    // Donc net plus élevé
+    expect(rCipav.netApresIR).toBeGreaterThan(rSsi.netApresIR);
+    // Mais IR identique (même abattement 34 %)
+    expect(rCipav.ir).toBe(rSsi.ir);
+  });
+
+  it('VL : taux différent par activité (vente 1 % vs SSI 2,2 %)', () => {
+    const ca = 50_000;
+    const venteVL = calcNetMicro(ca, 12.3, 0, true, {
+      abattement: ACTIVITY_PARAMS.vente.abattement,
+      tauxVL: ACTIVITY_PARAMS.vente.tauxVL,
+    });
+    const ssiVL = calcNetMicro(ca, 26.1, 0, true, {
+      abattement: ACTIVITY_PARAMS.liberalSsi.abattement,
+      tauxVL: ACTIVITY_PARAMS.liberalSsi.tauxVL,
+    });
+    expect(venteVL.ir).toBeCloseTo(500); // 50k × 1 %
+    expect(ssiVL.ir).toBeCloseTo(1_100); // 50k × 2,2 %
+  });
+});
+
 describe('generateChartData', () => {
   it('retourne 12 entrées', () => {
     const profile: UserProfile = {
       name: 'Test',
       role: 'Dev',
-      status: 'micro',
+      activity: 'liberalSsi',
       tjm: 500,
       workingDays: 18,
       urssafRate: 22,
@@ -379,7 +509,7 @@ describe('generateChartData', () => {
     const profile: UserProfile = {
       name: 'Test',
       role: 'Dev',
-      status: 'micro',
+      activity: 'liberalSsi',
       tjm: 500,
       workingDays: 18,
       urssafRate: 22,

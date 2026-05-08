@@ -58,7 +58,6 @@ After the first visit, the app is also fully usable **offline** — your calenda
 - **Cumulative revenue tracking vs threshold** — automatic projection of micro-entreprise threshold breach.
 - **Real-time simulation** — sliders for daily rate / URSSAF rate / *versement libératoire* (flat-rate option); everything recomputes live.
 - **Recurring fixed expenses** — managed individually, factored into the monthly net.
-- **Status comparison** — micro-entreprise vs SASU vs EURL with corporate tax (IS), dividends, flat tax.
 - **Vacation reserve + projected income tax** — anticipate what you'll actually keep.
 
 ## Stack
@@ -123,8 +122,6 @@ Net after income tax  = revenue − URSSAF − fixed expenses − income tax
 ```
 
 With **versement libératoire** enabled, income tax is replaced by `revenue × 2.2%`, withheld together with URSSAF contributions.
-
-The **SASU** (70% salary / 30% dividends) and **EURL** (TNS) statuses use the reduced 15% corporate-tax rate up to €42,500 of profit, then 25% above.
 
 ## Roadmap
 

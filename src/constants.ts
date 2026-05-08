@@ -3,10 +3,10 @@ import { UserProfile } from '~/types';
 export const DEFAULT_PROFILE: UserProfile = {
   name: 'Alex Durand',
   role: 'Freelance Senior UX',
-  status: 'micro',
+  activity: 'liberalSsi',
   tjm: 650,
   workingDays: 19,
-  urssafRate: 25.8,
+  urssafRate: 26.1,
   fixedCosts: [
     { id: '1', name: 'Outils & SaaS', description: 'Adobe, Slack, Notion', amount: 85, icon: 'laptop', color: 'bg-blue-100 text-blue-600' },
     { id: '2', name: 'Espace coworking', description: 'Location bureau mensuel', amount: 350, icon: 'users', color: 'bg-emerald-100 text-emerald-600' },

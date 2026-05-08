@@ -5,10 +5,12 @@ import { DEFAULT_PROFILE } from '~/constants';
 interface SeuilInputProps {
   value: number;
   onChange: (next: number) => void;
+  /** Seuil "par défaut" (typiquement le plafond de l'activité courante). */
+  defaultValue?: number;
 }
 
-export const SeuilInput: React.FC<SeuilInputProps> = ({ value, onChange }) => {
-  const isCustom = value !== DEFAULT_PROFILE.seuilMicro;
+export const SeuilInput: React.FC<SeuilInputProps> = ({ value, onChange, defaultValue = DEFAULT_PROFILE.seuilMicro }) => {
+  const isCustom = value !== defaultValue;
 
   return (
     <div>
@@ -20,9 +22,9 @@ export const SeuilInput: React.FC<SeuilInputProps> = ({ value, onChange }) => {
           {isCustom && (
             <button
               type="button"
-              onClick={() => onChange(DEFAULT_PROFILE.seuilMicro)}
+              onClick={() => onChange(defaultValue)}
               aria-label="Réinitialiser le seuil par défaut"
-              title={`Réinitialiser (${DEFAULT_PROFILE.seuilMicro.toLocaleString('fr-FR')} €)`}
+              title={`Réinitialiser (${defaultValue.toLocaleString('fr-FR')} €)`}
               className="text-on-surface-variant hover:text-secondary transition-colors"
             >
               <RotateCcw className="w-3 h-3" />
