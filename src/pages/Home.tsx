@@ -46,6 +46,7 @@ import { FlatRevenueInput } from '~/components/fiscal/FlatRevenueInput';
 import { DismissableBanner } from '~/components/CompteProAlerte';
 import { PersonaPicker } from '~/components/onboarding/PersonaPicker';
 import { useNotificationsCtx } from '~/context/NotificationsContext';
+import { usePrefersReducedMotion } from '~/hooks/usePrefersReducedMotion';
 import type { CalendarMonth, RevenueEntry } from '~/types';
 
 type ConfirmKind = 'clear-year' | 'fill-month' | 'fill-year';
@@ -53,19 +54,6 @@ type ConfirmKind = 'clear-year' | 'fill-month' | 'fill-year';
 interface UndoState {
   message: string;
   snapshot: CalendarMonth[];
-}
-
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReduced(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
-    mq.addEventListener?.('change', handler);
-    return () => mq.removeEventListener?.('change', handler);
-  }, []);
-  return reduced;
 }
 
 export const Home: React.FC = () => {

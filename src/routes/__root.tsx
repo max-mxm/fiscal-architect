@@ -19,6 +19,7 @@ import { ConfirmModal } from '~/components/ConfirmModal'
 import { PwaInstallController } from '~/components/PwaInstallController'
 import { YearTransitionModal } from '~/components/YearTransitionModal'
 import { BreakingUpdateGate } from '~/components/BreakingUpdateGate'
+import { ErrorPage } from '~/components/ErrorPage'
 import { useYearAutoTransition } from '~/hooks/useYearAutoTransition'
 import { calcCAYearFromEntries } from '~/lib/fiscal'
 import type { SettingsTabId } from '~/components/settings/SettingsTabs'
@@ -55,6 +56,16 @@ export const Route = createRootRoute({
     ],
   }),
   component: RootComponent,
+  errorComponent: ({ error, reset }) => (
+    <ErrorPage
+      kind="error"
+      error={error}
+      onReload={reset ?? (() => {
+        if (typeof window !== 'undefined') window.location.reload()
+      })}
+    />
+  ),
+  notFoundComponent: () => <ErrorPage kind="not-found" />,
 })
 
 function RootComponent() {
