@@ -4,8 +4,8 @@
 
 # Fiscal Architect
 
-**Tax and revenue simulator for French micro-entrepreneurs (auto-entrepreneurs).**
-Track your revenue, anticipate URSSAF contributions, compare legal statuses — all in your browser, with no backend and no tracking.
+**Tax and revenue simulator for every French micro-entrepreneur (auto-entrepreneur).**
+Day-rate freelancers, fixed-price craftspeople, e-commerce sellers, ride-share drivers, short-term rental hosts, multi-activity profiles — track your revenue, split your contributions per activity, watch your thresholds, all in your browser with no backend and no tracking.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![CI](https://github.com/max-mxm/fiscal-architect/actions/workflows/ci.yml/badge.svg)](https://github.com/max-mxm/fiscal-architect/actions/workflows/ci.yml)
@@ -30,12 +30,27 @@ Track your revenue, anticipate URSSAF contributions, compare legal statuses — 
 
 ## Why this project?
 
-Online tax calculators are either ad-ridden, send your numbers to third-party servers, or rely on outdated constants. **Fiscal Architect** is the opposite:
+Online tax calculators are either ad-ridden, send your numbers to third-party servers, or rely on outdated constants — and most only cover one type of micro-entreprise. **Fiscal Architect** is the opposite:
 
 - **100% client-side** — your data never leaves your browser (`localStorage`).
-- **2026 constants up to date** — €83,600 threshold, 26.1% URSSAF rate, 34% BNC allowance, post-July 2026 ACRE.
+- **All micro-entreprise activities** — sales (BIC), commercial services / artisans, unregulated liberal (SSI), regulated liberal (CIPAV), with multi-activity ventilation per branch.
+- **Multiple input modes** — daily calendar (rate × days), fixed-price quotes, aggregated monthly revenue, or mixed.
+- **2026 constants up to date** — URSSAF, allowances, micro and VAT thresholds, ACRE 50/25%, RFR for the *versement libératoire*.
 - **Open source, MIT** — auditable, modifiable, deployable on your own infrastructure.
 - **Installable PWA** — one-tap install on any device, works fully offline once loaded.
+
+## Profiles covered
+
+On first launch, pick your profile — input mode, activity and tax options are pre-filled for you. Everything stays adjustable later.
+
+| Profile | Input mode | Default activity |
+|---|---|---|
+| **Freelancer / consultant** | Days worked × daily rate | Unregulated liberal (SSI) |
+| **Craftsperson / fixed-price provider** | Dated one-off quotes | Commercial services / artisan |
+| **E-commerce / marketplace** | Aggregated monthly revenue | Sales / accommodation (BIC) |
+| **Ride-share / delivery driver** | Aggregated monthly revenue | Commercial services |
+| **Short-term rental host** | Aggregated monthly revenue | Sales / accommodation |
+| **Free configuration** | Mixed (up to 4 cumulative activities) | Your call |
 
 ## Install on any device
 
@@ -54,11 +69,18 @@ After the first visit, the app is also fully usable **offline** — your calenda
 
 ## Features
 
-- **Interactive billing calendar** — toggle individual days, drag to fill a range, prefill business days.
-- **Cumulative revenue tracking vs threshold** — automatic projection of micro-entreprise threshold breach.
-- **Real-time simulation** — sliders for daily rate / URSSAF rate / *versement libératoire* (flat-rate option); everything recomputes live.
+- **4 input modes** — daily calendar, fixed-price quotes, aggregated monthly revenue, or mixed (free combination).
+- **Multi-activity** — up to 4 cumulative activities with correct ventilation of URSSAF, CFP, chamber tax and income tax per branch, plus mixed thresholds.
+- **Persona onboarding** — first-launch modal offers 5 preset profiles that pre-fill the entire configuration.
+- **Dismissable notification center** — header bell, count badge, hide *compte pro* / micro threshold alerts without losing them.
+- **Quick edit** — click directly on displayed values (fixed expenses, identity…) to edit them without opening the settings drawer.
+- **Interactive calendar** — full days, half-days, French public holidays, drag to fill a range, prefill business days.
+- **Triple threshold gauge** — realised / projected / target for both the micro threshold **and** the VAT *franchise en base* threshold, with projected breach date.
+- **Complete tax charges** — URSSAF, income tax (progressive bracket or flat-rate option), CFP, CCI/CMA chamber tax, optional daily benefits (liberals), ACRE 50%/25% with automatic 12-month window.
+- **VL eligibility check** — enter your N-2 *RFR* and tax shares, the toggle is automatically disabled if the cap is exceeded.
+- **Mandatory pro account alert** — banner and notification once cumulative revenue passes €10,000 (article L.123-24 of the French Commercial Code).
+- **Real-time simulation** — sliders for daily rate / URSSAF / VL; everything recomputes live.
 - **Recurring fixed expenses** — managed individually, factored into the monthly net.
-- **Vacation reserve + projected income tax** — anticipate what you'll actually keep.
 
 ## Stack
 
@@ -94,45 +116,75 @@ pnpm dev          # http://localhost:4000
 
 ## 2026 tax constants
 
-Scope covered: freelancers providing services as **BNC libéral non réglementé** (unregulated liberal professions). Source of truth in code: `src/lib/fiscal.ts`.
+Source of truth in code: `src/lib/fiscal.ts` (`ACTIVITY_PARAMS`).
 
-| Concept | 2026 value | Symbol |
-|---|---|---|
-| Micro-entreprise threshold (BIC/BNC services, 2026-2028) | **€83,600** | `SEUIL_MICRO` |
-| URSSAF contribution rate (BNC libéral non réglementé) | **≈ 26.1%** *(+1pt vs 2025)* | `urssafRate` |
-| Flat BNC allowance (income-tax base) | **34%** | `ABATTEMENT_BNC` |
-| BNC *versement libératoire* (optional flat-tax payment) | **2.2%** of revenue | `TAUX_VL_BNC` |
-| 2026 income-tax brackets | 0 / 11 / 30 / 41 / 45% | `TRANCHES_IR` |
-| ACRE (from 2026-07-01) | **25%** exemption *(down from 50%)* | — |
+| Activity | URSSAF | Income-tax allowance | Micro threshold | VL | CFP | Chamber tax |
+|---|---|---|---|---|---|---|
+| Sales / accommodation (BIC) | **12.3%** | 71% | €203,100 | 1.0% | 0.1% | 0.015% |
+| Commercial services / artisan | **21.2%** | 50% | €83,600 | 1.7% | 0.3% | 0.044% |
+| Unregulated liberal (SSI) | **26.1%** | 34% | €83,600 | 2.2% | 0.2% | 0 |
+| Regulated liberal (CIPAV) | **23.2%** | 34% | €83,600 | 2.2% | 0.2% | 0 |
+
+| Cross-cutting concept | 2026 value |
+|---|---|
+| VAT *franchise en base* threshold — services / BNC | **€36,800** (basic) · €39,100 (boosted) |
+| VAT *franchise en base* threshold — sales | **€91,900** (basic) · €101,000 (boosted) |
+| 2026 income-tax brackets | 0 / 11 / 30 / 41 / 45% |
+| ACRE (before 2024-05-01) | **50%** URSSAF reduction for 12 months |
+| ACRE (from 2024-05-01) | **25%** URSSAF reduction for 12 months |
+| RFR N-2 cap for VL eligibility | ≈ **€27,478** per fiscal share |
+| Mandatory dedicated bank account | from **€10,000** revenue / 2 consecutive years |
+| Liberal daily-benefits rate (option) | 0.85% of liberal revenue |
 
 ### 2026 changes
 
 1. **Service threshold raised**: €77,700 → €83,600 (applies to fiscal years 2026, 2027, 2028).
 2. **+1 percentage point** on social contributions for BNC libéral non réglementé starting 2026-01-01.
-3. **ACRE**: the reduced rate moves to 75% of normal contributions from 2026-07-01.
+3. **ACRE**: 25% rate since 2024-05-01 (50% before).
+4. **Versement libératoire**: eligibility now subject to the household's N-2 RFR (≈ €27,478 × fiscal shares).
+5. **Pro bank account**: L.123-24 obligation kicks in from €10,000 of revenue across 2 consecutive years.
 
-### Key formulas (micro regime, no flat-tax option)
+### Key formulas (multi-activity)
 
 ```text
-Monthly revenue       = daily rate × billed days
-URSSAF                = revenue × URSSAF rate
-Taxable income        = revenue × (1 − 34% allowance)
-Income tax            = progressive bracket applied to taxable income
-Net after income tax  = revenue − URSSAF − fixed expenses − income tax
+For each activity a (with its CA_a):
+  URSSAF_a            = CA_a × URSSAF_rate_a
+  CFP_a               = CA_a × CFP_rate_a
+  Chamber_a           = CA_a × chamber_rate_a   (sales + BIC services only)
+  Taxable income_a    = CA_a × (1 − allowance_a)
+
+ACRE         = Σ URSSAF_gross × (50% or 25%)  for 12 months post-creation
+Liberal IJ   = (CA_liberalSsi + CA_liberalCipav) × 0.85%   (option)
+
+Total CA            = Σ CA_a
+URSSAF_net          = Σ URSSAF_a − ACRE
+Social charges      = URSSAF_net + Σ CFP_a + Σ Chamber_a + IJ
+Income tax (bracket)= progressive bracket applied to Σ Taxable income_a
+Income tax (VL)     = Σ CA_a × VL_rate_a
+Net after income tax= Total CA − Social charges − Fixed expenses − Income tax
 ```
 
-With **versement libératoire** enabled, income tax is replaced by `revenue × 2.2%`, withheld together with URSSAF contributions.
+For a single-activity day-rate freelancer, `CA_a = daily rate × days worked`. For a fixed-price craftsperson, `CA_a = Σ quote amounts`. For a ride-share driver or e-commerce seller, `CA_a = monthly aggregated amount`.
 
 ## Roadmap
 
 - [x] localStorage persistence for profile and calendar
-- [x] Centralized tax engine (`src/lib/fiscal.ts`) with Vitest coverage
+- [x] Centralized tax engine (`src/lib/fiscal.ts`) with **212 Vitest tests**
 - [x] Interactive 12-month billing calendar
 - [x] Installable PWA (manifest + service worker)
-- [ ] Push notifications on threshold breach
+- [x] **Pluggable input modes** (days / fixed-price / monthly aggregated / mixed)
+- [x] **Multi-activity** with URSSAF / CFP / chamber tax / income tax ventilation per branch
+- [x] **VAT franchise tracking** + projected breach alert
+- [x] **Dismissable notification center** (pro account, micro threshold)
+- [x] **Persona onboarding** (5 preset profile types)
+- [x] **Quick edit via popup** (fixed expenses, identity)
+- [x] **VL eligibility via N-2 RFR**
+- [x] **Optional liberal daily benefits**
+- [ ] Push notifications via Service Worker
 - [ ] Global PDF / CSV export
 - [ ] Multi-year view with N / N-1 comparison
 - [ ] Light / dark mode
+- [ ] Micro-entreprise vs *réel simplifié* comparison
 
 ## Disclaimer
 
