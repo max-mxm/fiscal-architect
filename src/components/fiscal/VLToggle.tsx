@@ -43,7 +43,7 @@ export const VLToggle: React.FC<VLToggleProps> = ({ value, onChange, tauxVL = TA
     <div>
       <div className="flex items-center justify-between min-h-[44px]">
         <div>
-          <label htmlFor="vl-toggle" className="text-xs font-bold text-on-surface-variant uppercase tracking-[0.12em] block">
+          <label htmlFor="vl-toggle" className="text-xs font-bold uppercase tracking-wider text-secondary block">
             Versement libératoire
           </label>
           <p className="text-[11px] text-slate-500 mt-0.5">

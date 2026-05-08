@@ -120,7 +120,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
             dragMomentum={false}
             onDragEnd={handleDragEnd}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-full md:max-w-[440px] xl:max-w-[480px] bg-white rounded-t-3xl md:rounded-t-none md:rounded-l-3xl shadow-2xl max-h-[92vh] md:max-h-screen md:h-screen overflow-hidden flex flex-col"
+            className="relative w-full max-w-full md:max-w-[440px] xl:max-w-[480px] bg-white rounded-t-3xl md:rounded-t-none md:rounded-l-3xl shadow-2xl h-[92dvh] md:h-screen md:max-h-screen overflow-hidden flex flex-col"
           >
             {/* Drag handle (mobile only) */}
             <div className="md:hidden pt-2 pb-1 flex justify-center cursor-grab active:cursor-grabbing">
@@ -163,12 +163,12 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   role="tabpanel"
                   id={panelId('profile')}
                   aria-labelledby={tabId('profile')}
-                  className="space-y-5"
+                  className="space-y-6"
                 >
                   <div>
                     <label
                       htmlFor="settings-name"
-                      className="block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant mb-2"
+                      className="block text-xs font-bold uppercase tracking-wider text-secondary mb-3"
                     >
                       Nom
                     </label>
@@ -185,7 +185,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   <div>
                     <label
                       htmlFor="settings-role"
-                      className="block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant mb-2"
+                      className="block text-xs font-bold uppercase tracking-wider text-secondary mb-3"
                     >
                       Rôle
                     </label>
@@ -219,10 +219,10 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   role="tabpanel"
                   id={panelId('fiscal')}
                   aria-labelledby={tabId('fiscal')}
-                  className="space-y-7"
+                  className="space-y-8"
                 >
                   <div>
-                    <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant mb-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-secondary mb-3">
                       Période
                     </h3>
                     <MissionStartInput
@@ -232,8 +232,8 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     />
                   </div>
 
-                  <div className="space-y-3">
-                    <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-secondary">
                       Activité
                     </h3>
                     <ActivitySelector
@@ -247,6 +247,9 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                         });
                       }}
                     />
+                  </div>
+
+                  <div>
                     <VLToggle
                       value={profile.versementLiberatoire}
                       onChange={(v) => updateProfile({ versementLiberatoire: v })}
@@ -255,7 +258,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   </div>
 
                   <div>
-                    <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant mb-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-secondary mb-3">
                       Seuil micro-entreprise
                     </h3>
                     <SeuilInput
@@ -272,7 +275,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   role="tabpanel"
                   id={panelId('costs')}
                   aria-labelledby={tabId('costs')}
-                  className="space-y-3"
+                  className="space-y-4"
                 >
                   <p className="text-[11px] text-on-surface-variant leading-relaxed">
                     Vos charges fixes mensuelles sont déduites du net pour estimer votre revenu réel.
