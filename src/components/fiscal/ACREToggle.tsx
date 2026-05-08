@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '~/utils';
 import { ACRE_DURATION_MONTHS, ACRE_RATE_AFTER, ACRE_RATE_BEFORE, ACRE_TRANSITION_DATE } from '~/lib/fiscal';
+import { HelpTooltip } from '~/components/ui/HelpTooltip';
 
 interface ACREToggleProps {
   value: boolean;
@@ -37,9 +38,12 @@ export const ACREToggle: React.FC<ACREToggleProps> = ({ value, onChange, creatio
     <div>
       <div className="flex items-center justify-between min-h-[44px] gap-4">
         <div className="min-w-0">
-          <label htmlFor="acre-toggle" className="text-xs font-bold uppercase tracking-wider text-secondary block">
-            ACRE
-          </label>
+          <div className="flex items-center gap-1.5">
+            <label htmlFor="acre-toggle" className="text-xs font-bold uppercase tracking-wider text-secondary">
+              ACRE
+            </label>
+            <HelpTooltip termId="acre" />
+          </div>
           <p className="text-[11px] text-on-surface-variant mt-0.5 leading-relaxed">{description}</p>
         </div>
         <button

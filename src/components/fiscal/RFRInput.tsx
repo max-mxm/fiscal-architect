@@ -3,6 +3,7 @@ import { Info } from 'lucide-react';
 import { VL_RFR_PLAFOND_PER_PART, calcVLEligibility } from '~/lib/fiscal';
 import { formatEuro } from '~/lib/format';
 import { cn } from '~/utils';
+import { HelpTooltip } from '~/components/ui/HelpTooltip';
 
 interface RFRInputProps {
   rfrN2: number | null;
@@ -19,12 +20,17 @@ export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRC
     <div className="space-y-3">
       <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
         <div>
-          <label
-            htmlFor="rfr-input"
-            className="block text-[11px] font-bold uppercase tracking-wider text-on-surface-variant mb-1.5"
-          >
-            Revenu fiscal de référence N-2
-          </label>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <label
+              htmlFor="rfr-input"
+              className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant"
+            >
+              Revenu fiscal de référence
+            </label>
+            <HelpTooltip termId="rfr" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">N-2</span>
+            <HelpTooltip termId="nMinus2" />
+          </div>
           <div className="flex items-baseline gap-1">
             <input
               id="rfr-input"
@@ -49,12 +55,15 @@ export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRC
           </div>
         </div>
         <div>
-          <label
-            htmlFor="parts-input"
-            className="block text-[11px] font-bold uppercase tracking-wider text-on-surface-variant mb-1.5"
-          >
-            Parts
-          </label>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <label
+              htmlFor="parts-input"
+              className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant"
+            >
+              Parts
+            </label>
+            <HelpTooltip termId="parts" />
+          </div>
           <input
             id="parts-input"
             type="number"

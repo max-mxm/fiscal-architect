@@ -4,6 +4,15 @@ import { Package, Wrench, Briefcase, Scale, Plus, Trash2, Star } from 'lucide-re
 import type { Activity, ActivityEntry } from '~/types';
 import { ACTIVITY_PARAMS } from '~/lib/fiscal';
 import { cn } from '~/utils';
+import { HelpTooltip } from '~/components/ui/HelpTooltip';
+import type { FiscalTermId } from '~/lib/fiscalGlossary';
+
+const HELP_TERM_BY_TYPE: Record<Activity, FiscalTermId> = {
+  vente: 'bicBnc',
+  serviceBic: 'bicBnc',
+  liberalSsi: 'ssi',
+  liberalCipav: 'cipav',
+};
 
 interface ActivityManagerProps {
   activities: ActivityEntry[];
@@ -119,8 +128,9 @@ export const ActivityManager: React.FC<ActivityManagerProps> = ({ activities, on
                       className="w-full bg-surface-lowest border border-outline-variant rounded-lg py-2 px-2 text-sm text-on-surface focus:ring-2 focus:ring-secondary/20 focus:border-secondary min-h-[40px]"
                     />
                     <div className="flex items-center justify-between gap-2 pt-1">
-                      <span className="text-[11px] text-on-surface-variant tabular-nums font-mono">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] text-on-surface-variant tabular-nums font-mono">
                         URSSAF {params.urssafRate.toFixed(1).replace('.', ',')} % · plafond {(params.plafond / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })}k€
+                        <HelpTooltip termId={HELP_TERM_BY_TYPE[activity.type]} />
                       </span>
                       <div className="flex items-center gap-1">
                         <button

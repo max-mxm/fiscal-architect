@@ -2,6 +2,8 @@ import React from 'react';
 import { CalendarDays, FileText, Coins, Layers, Check } from 'lucide-react';
 import type { RevenueModel } from '~/types';
 import { cn } from '~/utils';
+import { HelpTooltip } from '~/components/ui/HelpTooltip';
+import type { FiscalTermId } from '~/lib/fiscalGlossary';
 
 interface RevenueModeSelectorProps {
   value: RevenueModel;
@@ -17,11 +19,12 @@ const ICONS: Record<RevenueModel, React.ComponentType<{ className?: string }>> =
   mixed: Layers,
 };
 
-const META: Record<RevenueModel, { label: string; hint: string; tag: string }> = {
+const META: Record<RevenueModel, { label: string; hint: string; tag: string; helpTermId?: FiscalTermId }> = {
   days: {
     label: 'Jours travaillés',
     hint: 'Freelance / consultant — TJM × jours via calendrier',
     tag: 'TJM',
+    helpTermId: 'tjm',
   },
   forfait: {
     label: 'Prestations au forfait',
@@ -76,7 +79,10 @@ export const RevenueModeSelector: React.FC<RevenueModeSelectorProps> = ({ value,
               <Icon className="w-5 h-5" />
             </span>
             <span className="flex flex-col flex-1 min-w-0">
-              <span className="text-sm font-bold text-on-surface truncate">{meta.label}</span>
+              <span className="flex items-center gap-1.5">
+                <span className="text-sm font-bold text-on-surface truncate">{meta.label}</span>
+                {meta.helpTermId && <HelpTooltip termId={meta.helpTermId} />}
+              </span>
               <span className="text-[11px] text-on-surface-variant truncate">{meta.hint}</span>
             </span>
             <span

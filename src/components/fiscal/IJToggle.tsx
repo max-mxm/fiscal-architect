@@ -2,6 +2,7 @@ import React from 'react';
 import { cn } from '~/utils';
 import { IJ_RATE_LIBERAL } from '~/lib/fiscal';
 import type { ActivityEntry } from '~/types';
+import { HelpTooltip } from '~/components/ui/HelpTooltip';
 
 interface IJToggleProps {
   value: boolean;
@@ -18,9 +19,12 @@ export const IJToggle: React.FC<IJToggleProps> = ({ value, onChange, activities 
     <div className={cn(disabled && 'opacity-50')}>
       <div className="flex items-center justify-between min-h-[44px]">
         <div>
-          <label htmlFor="ij-toggle" className="text-xs font-bold uppercase tracking-wider text-secondary block">
-            Indemnités journalières
-          </label>
+          <div className="flex items-center gap-1.5">
+            <label htmlFor="ij-toggle" className="text-xs font-bold uppercase tracking-wider text-secondary">
+              Indemnités journalières
+            </label>
+            <HelpTooltip termId="ij" />
+          </div>
           <p className="text-[11px] text-on-surface-variant mt-0.5">
             {disabled
               ? 'Disponible uniquement pour les activités libérales (SSI/CIPAV).'

@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '~/utils';
+import { HelpTooltip } from '~/components/ui/HelpTooltip';
 
 interface TVAToggleProps {
   value: boolean;
@@ -11,9 +12,12 @@ export const TVAToggle: React.FC<TVAToggleProps> = ({ value, onChange }) => {
     <div>
       <div className="flex items-center justify-between min-h-[44px] gap-4">
         <div className="min-w-0">
-          <label htmlFor="tva-toggle" className="text-xs font-bold uppercase tracking-wider text-secondary block">
-            TVA assujettie
-          </label>
+          <div className="flex items-center gap-1.5">
+            <label htmlFor="tva-toggle" className="text-xs font-bold uppercase tracking-wider text-secondary">
+              TVA assujettie
+            </label>
+            <HelpTooltip termId="franchiseEnBase" />
+          </div>
           <p className="text-[11px] text-on-surface-variant mt-0.5 leading-relaxed">
             Désactivé = franchise en base. À activer si vous facturez la TVA à vos clients.
           </p>

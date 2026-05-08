@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { cn } from '~/utils';
 import { TAUX_VL_BNC } from '~/lib/fiscal';
+import { HelpTooltip } from '~/components/ui/HelpTooltip';
 
 interface VLToggleProps {
   value: boolean;
@@ -47,9 +48,12 @@ export const VLToggle: React.FC<VLToggleProps> = ({ value, onChange, tauxVL = TA
     <div className={cn(blocked && 'opacity-60')}>
       <div className="flex items-center justify-between min-h-[44px]">
         <div>
-          <label htmlFor="vl-toggle" className="text-xs font-bold uppercase tracking-wider text-secondary block">
-            Versement libératoire
-          </label>
+          <div className="flex items-center gap-1.5">
+            <label htmlFor="vl-toggle" className="text-xs font-bold uppercase tracking-wider text-secondary">
+              Versement libératoire
+            </label>
+            <HelpTooltip termId="vl" />
+          </div>
           <p className="text-[11px] text-on-surface-variant mt-0.5">
             Taux forfaitaire {tauxLabel}% en remplacement de l'IR au barème.
           </p>
