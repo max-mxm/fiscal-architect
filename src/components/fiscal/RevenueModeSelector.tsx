@@ -79,7 +79,7 @@ export const RevenueModeSelector: React.FC<RevenueModeSelectorProps> = ({ value,
               <Icon className="w-5 h-5" />
             </span>
             <span className="flex flex-col flex-1 min-w-0">
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-1.5 min-w-0">
                 <span className="text-sm font-bold text-on-surface truncate">{meta.label}</span>
                 {meta.helpTermId && <HelpTooltip termId={meta.helpTermId} />}
               </span>
