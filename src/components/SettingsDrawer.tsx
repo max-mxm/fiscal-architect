@@ -11,10 +11,13 @@ import { AutoChargesInfo } from '~/components/fiscal/AutoChargesInfo';
 import { VLToggle } from '~/components/fiscal/VLToggle';
 import { ACREToggle } from '~/components/fiscal/ACREToggle';
 import { TVAToggle } from '~/components/fiscal/TVAToggle';
+import { IJToggle } from '~/components/fiscal/IJToggle';
+import { RFRInput } from '~/components/fiscal/RFRInput';
 import { SeuilInput } from '~/components/fiscal/SeuilInput';
 import { FixedCostsList } from '~/components/fiscal/FixedCostsList';
 import { SettingsTabs, type SettingsTabId, type TabDef } from '~/components/settings/SettingsTabs';
-import { ACTIVITY_PARAMS } from '~/lib/fiscal';
+import { ACTIVITY_PARAMS, calcVLEligibility, getActivities } from '~/lib/fiscal';
+import { formatEuro } from '~/lib/format';
 import type { Activity } from '~/types';
 
 interface SettingsDrawerProps {
@@ -305,15 +308,70 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       onChange={(v) => updateProfile({ acreEnabled: v })}
                       creationDate={profile.creationDate}
                     />
-                    <VLToggle
-                      value={profile.versementLiberatoire}
-                      onChange={(v) => updateProfile({ versementLiberatoire: v })}
-                      tauxVL={ACTIVITY_PARAMS[profile.activity].tauxVL}
+                    <RFRInput
+                      rfrN2={profile.rfrN2}
+                      partsFiscales={profile.partsFiscales ?? 1}
+                      onRFRChange={(v) => updateProfile({ rfrN2: v })}
+                      onPartsChange={(v) => updateProfile({ partsFiscales: v })}
                     />
+                    {(() => {
+                      const elig = calcVLEligibility(profile.rfrN2, profile.partsFiscales ?? 1);
+                      const reason = elig.motif === 'rfr-too-high'
+                        ? `RFR N-2 supérieur au plafond ${formatEuro(elig.threshold)}€ — VL non disponible.`
+                        : null;
+                      return (
+                        <VLToggle
+                          value={profile.versementLiberatoire}
+                          onChange={(v) => updateProfile({ versementLiberatoire: v })}
+                          tauxVL={ACTIVITY_PARAMS[profile.activity].tauxVL}
+                          ineligibleReason={reason}
+                        />
+                      );
+                    })()}
                     <TVAToggle
                       value={profile.tvaAssujetti ?? false}
                       onChange={(v) => updateProfile({ tvaAssujetti: v })}
                     />
+                    <IJToggle
+                      value={profile.ijOption ?? false}
+                      onChange={(v) => updateProfile({ ijOption: v })}
+                      activities={getActivities(profile)}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-secondary">
+                      Déclaration URSSAF
+                    </h3>
+                    <fieldset
+                      role="radiogroup"
+                      aria-label="Périodicité de déclaration"
+                      className="grid grid-cols-2 gap-2 p-0 m-0 border-0"
+                    >
+                      {(['monthly', 'quarterly'] as const).map((period) => {
+                        const active = (profile.declarationPeriod ?? 'monthly') === period;
+                        return (
+                          <button
+                            key={period}
+                            type="button"
+                            role="radio"
+                            aria-checked={active}
+                            onClick={() => updateProfile({ declarationPeriod: period })}
+                            className={
+                              'min-h-[44px] rounded-2xl border px-3 py-2 text-sm font-bold text-left transition-colors ' +
+                              (active
+                                ? 'border-secondary bg-secondary/5 ring-2 ring-secondary/20 text-secondary'
+                                : 'border-outline-variant/30 bg-white text-slate-900 hover:bg-surface-highest/30')
+                            }
+                          >
+                            {period === 'monthly' ? 'Mensuelle' : 'Trimestrielle'}
+                          </button>
+                        );
+                      })}
+                    </fieldset>
+                    <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                      Information uniquement — n'affecte pas les calculs affichés.
+                    </p>
                   </div>
 
                   <div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { cn } from '~/utils';
 import { TAUX_VL_BNC } from '~/lib/fiscal';
 
@@ -9,10 +10,13 @@ interface VLToggleProps {
   tauxVL?: number;
   /** Variant inline (chip cliquable dans MonthSummary). */
   variant?: 'default' | 'chip';
+  /** Si true, l'utilisateur n'est pas éligible (RFR N-2 trop élevé) — bloque le toggle. */
+  ineligibleReason?: string | null;
 }
 
-export const VLToggle: React.FC<VLToggleProps> = ({ value, onChange, tauxVL = TAUX_VL_BNC, variant = 'default' }) => {
+export const VLToggle: React.FC<VLToggleProps> = ({ value, onChange, tauxVL = TAUX_VL_BNC, variant = 'default', ineligibleReason = null }) => {
   const tauxLabel = (tauxVL * 100).toFixed(1).replace('.', ',');
+  const blocked = !!ineligibleReason && !value;
 
   if (variant === 'chip') {
     return (
@@ -40,7 +44,7 @@ export const VLToggle: React.FC<VLToggleProps> = ({ value, onChange, tauxVL = TA
   }
 
   return (
-    <div>
+    <div className={cn(blocked && 'opacity-60')}>
       <div className="flex items-center justify-between min-h-[44px]">
         <div>
           <label htmlFor="vl-toggle" className="text-xs font-bold uppercase tracking-wider text-secondary block">
@@ -55,10 +59,13 @@ export const VLToggle: React.FC<VLToggleProps> = ({ value, onChange, tauxVL = TA
           type="button"
           role="switch"
           aria-checked={value}
-          onClick={() => onChange(!value)}
+          aria-disabled={blocked}
+          disabled={blocked}
+          onClick={() => !blocked && onChange(!value)}
           className={cn(
-            'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200',
-            value ? 'bg-secondary' : 'bg-slate-300',
+            'relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors duration-200',
+            blocked ? 'cursor-not-allowed bg-slate-200' : 'cursor-pointer',
+            !blocked && (value ? 'bg-secondary' : 'bg-slate-300'),
           )}
         >
           <span
@@ -69,6 +76,12 @@ export const VLToggle: React.FC<VLToggleProps> = ({ value, onChange, tauxVL = TA
           />
         </button>
       </div>
+      {ineligibleReason && (
+        <div className="mt-2 flex items-start gap-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 px-3 py-2 text-[11px] leading-relaxed">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          <span>{ineligibleReason}</span>
+        </div>
+      )}
     </div>
   );
 };

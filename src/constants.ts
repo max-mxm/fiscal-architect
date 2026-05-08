@@ -21,6 +21,11 @@ export const DEFAULT_PROFILE: UserProfile = {
   taxeConsulaireEnabled: false,
   revenueModel: 'days',
   activities: [{ id: 'act-default', type: 'liberalSsi', isPrimary: true }],
+  rfrN2: undefined,
+  partsFiscales: 1,
+  declarationPeriod: 'monthly',
+  ijOption: false,
+  onboardingDone: false,
 };
 
 export const MONTHS = [

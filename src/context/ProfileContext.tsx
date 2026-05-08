@@ -35,6 +35,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         }];
         dirty = true;
       }
+      if (next.partsFiscales === undefined) { next.partsFiscales = DEFAULT_PROFILE.partsFiscales; dirty = true; }
+      if (next.declarationPeriod === undefined) { next.declarationPeriod = DEFAULT_PROFILE.declarationPeriod; dirty = true; }
+      if (next.ijOption === undefined) { next.ijOption = DEFAULT_PROFILE.ijOption; dirty = true; }
+      // onboardingDone : on ne réinitialise PAS sur les profils existants —
+      // si tu as déjà des données, c'est que tu n'as pas besoin de l'onboarding.
+      if (next.onboardingDone === undefined) { next.onboardingDone = true; dirty = true; }
       return dirty ? next : p;
     });
   }, [setProfile]);

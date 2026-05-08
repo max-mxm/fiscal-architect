@@ -45,6 +45,25 @@ export interface UserProfile {
    * dérivé au montage à partir de `activity` (1 seule activité primaire).
    */
   activities?: ActivityEntry[];
+  /**
+   * Revenu Fiscal de Référence N-2 du foyer (€). Sert à vérifier l'éligibilité
+   * au versement libératoire. Plafond ≈ 27 478 € / part fiscale (2026).
+   */
+  rfrN2?: number;
+  /**
+   * Nombre de parts fiscales du foyer (défaut 1). Utilisé pour le calcul
+   * d'éligibilité VL (RFR / parts < seuil).
+   */
+  partsFiscales?: number;
+  /** Périodicité de déclaration URSSAF (info uniquement, ne change pas les calculs). */
+  declarationPeriod?: 'monthly' | 'quarterly';
+  /** Option indemnités journalières (libéraux non réglementés / CIPAV). +0,85 % du CA. */
+  ijOption?: boolean;
+  /**
+   * Marque que l'utilisateur a vu/dépassé l'onboarding. Si false ou absent au
+   * premier mount, on affiche le PersonaPicker.
+   */
+  onboardingDone?: boolean;
 }
 
 // --- Types enrichis (FOUND-03) ---

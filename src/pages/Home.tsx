@@ -11,6 +11,7 @@ import {
   calcCaRealiseFromEntries,
   calcCAYearFromEntries,
   calcEquivDays,
+  calcIJ,
   calcMonthlyBreakdown,
   calcNetCumuleMulti,
   calcSeuilDateFromEntries,
@@ -41,6 +42,8 @@ import { UndoToast } from '~/components/UndoToast';
 import { ConfirmModal } from '~/components/ConfirmModal';
 import { ForfaitList } from '~/components/fiscal/ForfaitList';
 import { FlatRevenueInput } from '~/components/fiscal/FlatRevenueInput';
+import { CompteProAlerte } from '~/components/CompteProAlerte';
+import { PersonaPicker } from '~/components/onboarding/PersonaPicker';
 import type { CalendarMonth, RevenueEntry } from '~/types';
 
 type ConfirmKind = 'clear-year' | 'fill-month' | 'fill-year';
@@ -162,6 +165,8 @@ export const Home: React.FC = () => {
     [fy.fiscalYear.months, profile],
   );
 
+  const ijAnnuel = useMemo(() => calcIJ(caByActivity, profile.ijOption), [caByActivity, profile.ijOption]);
+
   const netCumule = useMemo(
     () => calcNetCumuleMulti(
       profile,
@@ -170,9 +175,9 @@ export const Home: React.FC = () => {
       monthsWithActivity,
       profile.versementLiberatoire,
       // ACRE annualisée : approximation sur les mois d'activité.
-      { ...fiscalOpts, acreReduction: acreInfo.reduction * monthsWithActivity },
+      { ...fiscalOpts, acreReduction: acreInfo.reduction * monthsWithActivity, ijAnnuel },
     ),
-    [profile, caByActivity, chargesFixesMensuelles, monthsWithActivity, fiscalOpts, acreInfo.reduction],
+    [profile, caByActivity, chargesFixesMensuelles, monthsWithActivity, fiscalOpts, acreInfo.reduction, ijAnnuel],
   );
 
   // Projection : en mode 'days' on extrapole les mois sans données via le rythme nominal.
@@ -366,6 +371,8 @@ export const Home: React.FC = () => {
     >
       <h1 className="sr-only">Fiscal Architect — suivi fiscal {year}</h1>
 
+      <CompteProAlerte caCumule={caCumule} />
+
       {/* Hero KPI ou Empty */}
       {isEmpty ? (
         <EmptyHero seuilMicro={profile.seuilMicro} />
@@ -529,6 +536,12 @@ export const Home: React.FC = () => {
         message={undo?.message ?? ''}
         onUndo={handleUndo}
         onDismiss={flushUndo}
+      />
+
+      <PersonaPicker
+        open={profile.onboardingDone === false}
+        onPick={(patch) => setProfile((p) => ({ ...p, ...patch }))}
+        onSkip={() => setProfile((p) => ({ ...p, onboardingDone: true }))}
       />
 
       <LiveAnnouncer message={announce} />

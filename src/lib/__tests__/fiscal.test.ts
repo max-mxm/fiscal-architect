@@ -36,6 +36,10 @@ import {
   calcCAByActivity,
   calcNetMicroMulti,
   activityCategory,
+  calcVLEligibility,
+  calcIJ,
+  isCompteProAlerte,
+  VL_RFR_PLAFOND_PER_PART,
   calcTotalChargesFixes,
   calcTVAStatus,
   calcTVASeuilDate,
@@ -1232,5 +1236,90 @@ describe('calcNetMicroMulti', () => {
       { acreReduction: 1_000 },
     );
     expect(result.acreReductionAnnuelle).toBeCloseTo(1_000, 0);
+  });
+
+  it('ijAnnuel ajouté aux charges obligatoires', () => {
+    const base = calcNetMicroMulti(
+      { ...multiProfile, cfpEnabled: false, taxeConsulaireEnabled: false },
+      { vente: 0, serviceBic: 0, liberalSsi: 60_000, liberalCipav: 0 },
+      0,
+      false,
+    );
+    const withIJ = calcNetMicroMulti(
+      { ...multiProfile, cfpEnabled: false, taxeConsulaireEnabled: false },
+      { vente: 0, serviceBic: 0, liberalSsi: 60_000, liberalCipav: 0 },
+      0,
+      false,
+      { ijAnnuel: 510 },
+    );
+    expect(base.netApresIR - withIJ.netApresIR).toBeCloseTo(510, 0);
+  });
+});
+
+// --- Phase C : VL eligibility, IJ, compte pro ---
+
+describe('calcVLEligibility', () => {
+  it('rfrN2 absent → unknown (non éligible par défaut)', () => {
+    const r = calcVLEligibility(undefined, 1);
+    expect(r.eligible).toBe(false);
+    expect(r.motif).toBe('unknown');
+  });
+
+  it('rfrN2 sous le plafond 1 part → éligible', () => {
+    const r = calcVLEligibility(20_000, 1);
+    expect(r.eligible).toBe(true);
+    expect(r.motif).toBeNull();
+    expect(r.threshold).toBe(VL_RFR_PLAFOND_PER_PART);
+  });
+
+  it('rfrN2 au-dessus du plafond → inéligible avec motif rfr-too-high', () => {
+    const r = calcVLEligibility(40_000, 1);
+    expect(r.eligible).toBe(false);
+    expect(r.motif).toBe('rfr-too-high');
+  });
+
+  it('parts fiscales multiplient le plafond', () => {
+    const r = calcVLEligibility(50_000, 2);
+    expect(r.threshold).toBe(VL_RFR_PLAFOND_PER_PART * 2);
+    expect(r.eligible).toBe(true);
+  });
+
+  it('parts fiscales ≤ 0 → fallback à 1 part', () => {
+    const r = calcVLEligibility(20_000, 0);
+    expect(r.threshold).toBe(VL_RFR_PLAFOND_PER_PART);
+  });
+});
+
+describe('calcIJ', () => {
+  it('option désactivée → 0', () => {
+    expect(calcIJ({ vente: 0, serviceBic: 0, liberalSsi: 60_000, liberalCipav: 0 }, false)).toBe(0);
+  });
+
+  it('option activée mais pas de libéral → 0', () => {
+    expect(calcIJ({ vente: 30_000, serviceBic: 20_000, liberalSsi: 0, liberalCipav: 0 }, true)).toBe(0);
+  });
+
+  it('libéral SSI uniquement', () => {
+    const r = calcIJ({ vente: 0, serviceBic: 0, liberalSsi: 60_000, liberalCipav: 0 }, true);
+    expect(r).toBeCloseTo(60_000 * 0.0085, 2);
+  });
+
+  it('cumul SSI + CIPAV', () => {
+    const r = calcIJ({ vente: 0, serviceBic: 0, liberalSsi: 30_000, liberalCipav: 20_000 }, true);
+    expect(r).toBeCloseTo(50_000 * 0.0085, 2);
+  });
+});
+
+describe('isCompteProAlerte', () => {
+  it('seuil 10 000 € : false en dessous', () => {
+    expect(isCompteProAlerte(9_999)).toBe(false);
+  });
+
+  it('seuil 10 000 € : false à exactement 10 000 €', () => {
+    expect(isCompteProAlerte(10_000)).toBe(false);
+  });
+
+  it('seuil 10 000 € : true au-dessus', () => {
+    expect(isCompteProAlerte(10_001)).toBe(true);
   });
 });

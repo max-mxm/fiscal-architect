@@ -31,6 +31,69 @@ export const TVA_FRANCHISE_2026 = {
   services: { basique: 36_800, majore:  39_100 },
 } as const;
 
+// --- Versement libératoire — éligibilité (RFR N-2) ---
+
+/**
+ * Plafond du Revenu Fiscal de Référence N-2 par part fiscale pour rester éligible
+ * au versement libératoire (2026, source impots.gouv.fr — à confirmer chaque année).
+ */
+export const VL_RFR_PLAFOND_PER_PART = 27_478;
+
+export interface VLEligibility {
+  /** Le foyer est-il éligible au VL ? */
+  eligible: boolean;
+  /** Plafond effectif (par part × parts fiscales). */
+  threshold: number;
+  /** Raison de l'inéligibilité, ou null si éligible / non vérifiable. */
+  motif: 'rfr-too-high' | 'unknown' | null;
+}
+
+/**
+ * Vérifie l'éligibilité au versement libératoire selon le RFR N-2 et le nombre
+ * de parts fiscales. Si rfrN2 n'est pas saisi, retourne `unknown` — l'utilisateur
+ * doit le renseigner pour valider.
+ */
+export function calcVLEligibility(rfrN2: number | undefined, partsFiscales: number = 1): VLEligibility {
+  const parts = partsFiscales > 0 ? partsFiscales : 1;
+  const threshold = VL_RFR_PLAFOND_PER_PART * parts;
+  if (rfrN2 === undefined || rfrN2 < 0) {
+    return { eligible: false, threshold, motif: 'unknown' };
+  }
+  if (rfrN2 > threshold) {
+    return { eligible: false, threshold, motif: 'rfr-too-high' };
+  }
+  return { eligible: true, threshold, motif: null };
+}
+
+// --- Indemnités journalières (libéraux SSI / CIPAV) ---
+
+/** Taux IJ optionnel pour libéraux (≈ 0,85 % du CA — source urssaf.fr 2026). */
+export const IJ_RATE_LIBERAL = 0.0085;
+
+/**
+ * Coût annuel des indemnités journalières si l'option est activée. Ne s'applique
+ * qu'aux activités libérales (SSI + CIPAV) — les BIC les ont incluses dans l'URSSAF.
+ */
+export function calcIJ(caByActivity: Record<Activity, number>, ijOption: boolean | undefined): number {
+  if (!ijOption) return 0;
+  const caLib = (caByActivity.liberalSsi ?? 0) + (caByActivity.liberalCipav ?? 0);
+  return caLib * IJ_RATE_LIBERAL;
+}
+
+// --- Compte bancaire pro obligatoire ---
+
+/** Seuil légal de CA au-delà duquel un compte bancaire dédié est obligatoire. */
+export const COMPTE_PRO_THRESHOLD = 10_000;
+
+/**
+ * Indique si le profil franchit le seuil de 10 000 € de CA, au-delà duquel
+ * un compte bancaire dédié à l'activité devient obligatoire (article L.123-24
+ * du Code de commerce — applicable sur 2 années consécutives).
+ */
+export function isCompteProAlerte(caCumule: number): boolean {
+  return caCumule > COMPTE_PRO_THRESHOLD;
+}
+
 // --- ACRE — réduction d'URSSAF pendant 12 mois post-création ---
 
 /** Date de bascule du taux ACRE : 50 % avant cette date, 25 % à partir. */
@@ -363,7 +426,8 @@ export function calcNetMicroMulti(
     }
   }
 
-  const totalChargesObligatoires = chargesURSSAF + cfpAnnuel + taxeConsulaireAnnuelle;
+  const ijAnnuel = Math.max(0, opts.ijAnnuel ?? 0);
+  const totalChargesObligatoires = chargesURSSAF + cfpAnnuel + taxeConsulaireAnnuelle + ijAnnuel;
   const caTotal = Object.values(caByActivity).reduce((s, v) => s + v, 0);
 
   const tvaStatus: TVAStatus = opts.tvaStatus ?? 'safe';
@@ -535,6 +599,8 @@ export interface FiscalCalcOptions {
   acreReduction?: number;
   tvaStatus?: TVAStatus;           // défaut : 'safe'
   tvaSeuilDate?: Date | null;      // défaut : null
+  /** Coût IJ annuel (libéraux uniquement) à ajouter aux charges. Défaut : 0. */
+  ijAnnuel?: number;
 }
 
 export function calcNetMicro(
