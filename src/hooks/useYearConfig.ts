@@ -6,6 +6,15 @@ import type { YearConfig } from '~/types';
 const yearConfigKey = (year: number) => `fiscal-year-config-${year}`;
 
 /**
+ * Migrations de schéma pour `YearConfig`. Chaque entrée `[N]` reçoit la valeur
+ * en version `N` et la transforme en version `N + 1`.
+ */
+const YEAR_CONFIG_MIGRATIONS: Record<number, (old: any) => any> = {
+  // v1 → v2 : introduction de `tjmByMonth` (sparse, undefined par défaut).
+  1: (old: any) => ({ ...old, schemaVersion: 2 }),
+};
+
+/**
  * Charge / persiste la `YearConfig` d'une année donnée. Si la clé n'existe pas
  * en localStorage, on retombe sur les valeurs par défaut (`buildDefaultYearConfig`).
  *
@@ -15,5 +24,9 @@ const yearConfigKey = (year: number) => `fiscal-year-config-${year}`;
  * pour écrire la config clonée avant de switcher l'année active.
  */
 export function useYearConfig(year: number): [YearConfig, Dispatch<SetStateAction<YearConfig>>] {
-  return useVersionedStorage<YearConfig>(yearConfigKey(year), buildDefaultYearConfig(year));
+  return useVersionedStorage<YearConfig>(
+    yearConfigKey(year),
+    buildDefaultYearConfig(year),
+    YEAR_CONFIG_MIGRATIONS,
+  );
 }

@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { FiscalYear, RevenueEntry } from '~/types';
+import type { FiscalYear, RevenueEntry, UserProfile } from '~/types';
 import { useVersionedStorage } from '~/hooks/useLocalStorage';
 import {
   MONTH_NAMES,
@@ -7,7 +7,7 @@ import {
   getJoursFeries,
   formatDaysFR,
 } from '~/lib/calendar';
-import { calcEquivDays } from '~/lib/fiscal';
+import { calcEquivDays, resolveMonthlyTjm } from '~/lib/fiscal';
 import {
   cycleDayInMonths,
   dragSetDayInMonths,
@@ -102,14 +102,15 @@ export function useFiscalYear(year: number) {
     }
   }, []);
 
-  const exportCSV = useCallback((tjm: number) => {
-    const header = 'Mois,Jours pleins,Demi-journées,Jours équivalents,CA (€)\n';
+  const exportCSV = useCallback((profile: Pick<UserProfile, 'tjm' | 'tjmByMonth'>) => {
+    const header = 'Mois,Jours pleins,Demi-journées,Jours équivalents,TJM (€),CA (€)\n';
     const rows = fiscalYear.months
       .map((m) => {
         const halfCount = m.halfDays.length;
         const equiv = calcEquivDays(m);
-        const ca = equiv * tjm;
-        return `${MONTH_NAMES[m.month]},${m.workedDays.length},${halfCount},${formatDaysFR(equiv)},${ca}`;
+        const tjmMois = resolveMonthlyTjm(profile, m.month);
+        const ca = equiv * tjmMois;
+        return `${MONTH_NAMES[m.month]},${m.workedDays.length},${halfCount},${formatDaysFR(equiv)},${tjmMois},${ca}`;
       })
       .join('\n');
     const csv = header + rows;

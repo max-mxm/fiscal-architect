@@ -83,10 +83,15 @@ export function createYearInherited(
   const legal = getLegalParamsForYear(year);
   const config: YearConfig = {
     ...donor,
-    schemaVersion: 1,
+    schemaVersion: 2,
     year,
     urssafRate: legal.urssafRate,
     seuilMicro: legal.seuilMicro,
+    // Cohérence « j'ai augmenté en décembre, je continue à ce tarif » :
+    // le TJM par défaut de la nouvelle année prend la valeur de décembre N-1
+    // (si une surcharge mensuelle existait), sinon on garde le défaut du donor.
+    tjm: donor.tjmByMonth?.[11] ?? donor.tjm,
+    tjmByMonth: donor.tjmByMonth ? { ...donor.tjmByMonth } : undefined,
     missionStart: `${year}-01-01`,
     rfrN2: null,
     activities: donor.activities.map((a) => ({ ...a })),
@@ -109,10 +114,12 @@ export function previewInheritedConfig(year: number, sourceYear: number): YearCo
   const legal = getLegalParamsForYear(year);
   return {
     ...donor,
-    schemaVersion: 1,
+    schemaVersion: 2,
     year,
     urssafRate: legal.urssafRate,
     seuilMicro: legal.seuilMicro,
+    tjm: donor.tjmByMonth?.[11] ?? donor.tjm,
+    tjmByMonth: donor.tjmByMonth ? { ...donor.tjmByMonth } : undefined,
     missionStart: `${year}-01-01`,
     rfrN2: null,
     activities: donor.activities.map((a) => ({ ...a })),

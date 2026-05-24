@@ -7,6 +7,7 @@ import { VLToggle } from '~/components/fiscal/VLToggle';
 import { EditableField } from '~/components/ui/EditableField';
 import { QuickEditModal } from '~/components/ui/QuickEditModal';
 import { FixedCostsList } from '~/components/fiscal/FixedCostsList';
+import { TjmMonthChip } from '~/components/fiscal/TjmMonthChip';
 import type { UserProfile } from '~/types';
 
 interface MonthSummaryProps {
@@ -37,6 +38,14 @@ interface MonthSummaryProps {
   /** Charges fixes du profil — éditables via popup au clic sur la ligne. */
   costs: UserProfile['fixedCosts'];
   onCostsChange: (next: UserProfile['fixedCosts']) => void;
+  /** TJM applicable au mois affiché (déjà résolu). Si fourni, le chip TJM est rendu. */
+  tjmMois?: number;
+  /** Le mois affiché a-t-il une surcharge dans tjmByMonth ? */
+  isCustomTjmMois?: boolean;
+  /** TJM par défaut de l'année — pour le delta. */
+  defaultTjm?: number;
+  /** Ouvre l'éditeur de TJM mensuel sur le mois courant. */
+  onOpenMonthlyTjm?: () => void;
 }
 
 export const MonthSummary: React.FC<MonthSummaryProps> = ({
@@ -59,6 +68,10 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
   acreRate,
   costs,
   onCostsChange,
+  tjmMois,
+  isCustomTjmMois = false,
+  defaultTjm,
+  onOpenMonthlyTjm,
 }) => {
   const [showIrInfo, setShowIrInfo] = useState(false);
   const [showAcreInfo, setShowAcreInfo] = useState(false);
@@ -91,6 +104,18 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
       </div>
 
       <ul className="space-y-2 text-sm">
+        {tjmMois !== undefined && defaultTjm !== undefined && (
+          <li>
+            <TjmMonthChip
+              tjm={tjmMois}
+              isCustom={isCustomTjmMois}
+              defaultTjm={defaultTjm}
+              onClick={onOpenMonthlyTjm}
+              variant="full"
+              monthName={monthName}
+            />
+          </li>
+        )}
         <li className="flex justify-between items-center">
           <span className="text-on-surface-variant">CA brut</span>
           <span className="font-mono font-bold text-on-surface tabular-nums">

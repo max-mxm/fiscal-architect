@@ -142,6 +142,20 @@ export function calcCAannuel(tjm: number, joursMensuels: number, mois: number = 
   return tjm * joursMensuels * mois;
 }
 
+/**
+ * Résout le TJM applicable à un mois donné en respectant l'ordre :
+ *   `profile.tjmByMonth[monthIndex]` (surcharge mensuelle) → `profile.tjm` (défaut).
+ *
+ * L'override par entry (`RevenueEntry.tjmOverride`) reste prioritaire sur ce résultat
+ * et est appliqué au site de calcul d'amount (cf. `entryAmount`).
+ */
+export function resolveMonthlyTjm(
+  profile: Pick<UserProfile, 'tjm' | 'tjmByMonth'>,
+  monthIndex: number,
+): number {
+  return profile.tjmByMonth?.[monthIndex] ?? profile.tjm;
+}
+
 // --- Modèles de revenu pluggables (jours / forfait / flat) ---
 
 /**
@@ -165,11 +179,16 @@ export function effectiveEntries(month: CalendarMonth): RevenueEntry[] {
   ];
 }
 
-export function entryAmount(entry: RevenueEntry, profile: UserProfile): number {
+export function entryAmount(
+  entry: RevenueEntry,
+  profile: UserProfile,
+  monthIndex?: number,
+): number {
   switch (entry.kind) {
     case 'days': {
       const equiv = entry.days.length + entry.halfDays.length * 0.5;
-      return equiv * (entry.tjmOverride ?? profile.tjm);
+      const baseTjm = monthIndex !== undefined ? resolveMonthlyTjm(profile, monthIndex) : profile.tjm;
+      return equiv * (entry.tjmOverride ?? baseTjm);
     }
     case 'forfait':
       return entry.amount;
@@ -186,7 +205,7 @@ export function entryAmount(entry: RevenueEntry, profile: UserProfile): number {
  * Mode `mixed` : somme de toutes les entries (toutes catégories confondues)
  */
 export function calcCAFromEntries(month: CalendarMonth, profile: UserProfile): number {
-  return effectiveEntries(month).reduce((sum, e) => sum + entryAmount(e, profile), 0);
+  return effectiveEntries(month).reduce((sum, e) => sum + entryAmount(e, profile, month.month), 0);
 }
 
 /** CA annuel = somme des `calcCAFromEntries` sur les 12 mois. */
@@ -218,7 +237,7 @@ export function calcCaRealiseFromEntries(
     for (const e of effectiveEntries(m)) {
       switch (e.kind) {
         case 'days': {
-          const tjm = e.tjmOverride ?? profile.tjm;
+          const tjm = e.tjmOverride ?? resolveMonthlyTjm(profile, m.month);
           if (!isCurrent) {
             const equiv = e.days.length + (e.halfDays?.length ?? 0) * 0.5;
             jours += equiv;
@@ -275,7 +294,7 @@ export function calcSeuilDateFromEntries(
 
     for (const e of effectiveEntries(m)) {
       if (e.kind === 'days') {
-        const tjm = e.tjmOverride ?? profile.tjm;
+        const tjm = e.tjmOverride ?? resolveMonthlyTjm(profile, m.month);
         const halfSet = new Set(e.halfDays ?? []);
         const allDays = [...new Set([...e.days, ...(e.halfDays ?? [])])].sort((a, b) => a - b);
         for (const day of allDays) {
@@ -342,7 +361,7 @@ export function calcCAByActivity(
   for (const m of months) {
     for (const e of effectiveEntries(m)) {
       const type = resolveActivityType(e, profile);
-      result[type] += entryAmount(e, profile);
+      result[type] += entryAmount(e, profile, m.month);
     }
   }
   return result;
@@ -796,16 +815,17 @@ export function calcSeuilDate(
 export function generateChartData(profile: UserProfile): MonthlyChartData[] {
   const chargesFixesMensuelles = calcTotalChargesFixes(profile.fixedCosts);
   const params = getFiscalParams(profile);
-  const brut = calcCAMensuel(profile.tjm, profile.workingDays);
-  const breakdown = calcMonthlyBreakdown(
-    brut,
-    params.urssafRate,
-    chargesFixesMensuelles,
-    profile.versementLiberatoire,
-    { abattement: params.abattement, tauxVL: params.tauxVL },
-  );
 
-  return MONTHS.map((month) => ({
-    month, brut: Math.round(brut), net: Math.round(breakdown.net),
-  }));
+  return MONTHS.map((month, monthIndex) => {
+    const tjmMois = resolveMonthlyTjm(profile, monthIndex);
+    const brut = calcCAMensuel(tjmMois, profile.workingDays);
+    const breakdown = calcMonthlyBreakdown(
+      brut,
+      params.urssafRate,
+      chargesFixesMensuelles,
+      profile.versementLiberatoire,
+      { abattement: params.abattement, tauxVL: params.tauxVL },
+    );
+    return { month, brut: Math.round(brut), net: Math.round(breakdown.net) };
+  });
 }

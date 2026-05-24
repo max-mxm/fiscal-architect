@@ -4,6 +4,7 @@ import { cn } from '~/utils';
 import { formatEuro } from '~/lib/format';
 import { formatDateFR, formatDaysFR } from '~/lib/calendar';
 import { ThresholdGauge, type GaugeStatusKind } from '~/components/ThresholdGauge';
+import { TjmMonthChip } from '~/components/fiscal/TjmMonthChip';
 import { ACTIVITY_PARAMS } from '~/lib/fiscal';
 import type { Activity, ActivityEntry, TVAStatus } from '~/types';
 
@@ -37,6 +38,14 @@ interface KeyMetricsProps {
   activities?: ActivityEntry[];
   /** CA cumulé ventilé par type d'activité (pour mini-table). */
   caByActivity?: Record<Activity, number>;
+  /** TJM applicable au mois affiché (déjà résolu). Si fourni, le chip TJM est rendu. */
+  tjmMois?: number;
+  /** Le mois affiché a-t-il une surcharge dans tjmByMonth ? */
+  isCustomTjmMois?: boolean;
+  /** TJM par défaut de l'année — pour le delta. */
+  defaultTjm?: number;
+  /** Ouvre l'éditeur de TJM mensuel sur le mois courant. */
+  onOpenMonthlyTjm?: () => void;
 }
 
 export const KeyMetrics: React.FC<KeyMetricsProps> = ({
@@ -57,6 +66,10 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
   tvaAssujetti,
   activities,
   caByActivity,
+  tjmMois,
+  isCustomTjmMois = false,
+  defaultTjm,
+  onOpenMonthlyTjm,
 }) => {
   const realisedPct = Math.min(100, (caRealise / seuilMicro) * 100);
   const projectedPct = Math.min(100, (caCumule / seuilMicro) * 100);
@@ -275,6 +288,16 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
           >
             {monthName}
           </span>
+          {tjmMois !== undefined && defaultTjm !== undefined && (
+            <TjmMonthChip
+              tjm={tjmMois}
+              isCustom={isCustomTjmMois}
+              defaultTjm={defaultTjm}
+              onClick={onOpenMonthlyTjm}
+              variant="compact"
+              monthName={monthName}
+            />
+          )}
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-xs text-on-surface-variant">CA brut</span>
             <span className="font-mono tabular-nums text-lg font-bold text-on-surface">

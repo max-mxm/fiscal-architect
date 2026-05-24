@@ -47,6 +47,7 @@ import {
   generateChartData,
   getFiscalParams,
   getTVASeuils,
+  resolveMonthlyTjm,
 } from '~/lib/fiscal';
 
 const fixedCost = (id: string, amount: number): UserProfile['fixedCosts'][number] => ({
@@ -1327,5 +1328,103 @@ describe('isCompteProAlerte', () => {
 
   it('seuil 10 000 € : true au-dessus', () => {
     expect(isCompteProAlerte(10_001)).toBe(true);
+  });
+});
+
+describe('resolveMonthlyTjm', () => {
+  it('retombe sur profile.tjm si tjmByMonth absent', () => {
+    const p = makeProfile({ tjm: 650, tjmByMonth: undefined });
+    expect(resolveMonthlyTjm(p, 3)).toBe(650);
+  });
+
+  it('utilise la surcharge si présente pour ce mois', () => {
+    const p = makeProfile({ tjm: 650, tjmByMonth: { 3: 800 } });
+    expect(resolveMonthlyTjm(p, 3)).toBe(800);
+  });
+
+  it('retombe sur défaut pour les mois absents du record', () => {
+    const p = makeProfile({ tjm: 650, tjmByMonth: { 3: 800 } });
+    expect(resolveMonthlyTjm(p, 5)).toBe(650);
+  });
+});
+
+describe('calcCAFromEntries avec tjmByMonth', () => {
+  it('utilise la surcharge mensuelle quand fournie', () => {
+    const profile = makeProfile({ tjm: 500, tjmByMonth: { 3: 800 } });
+    const months = monthsOf(2026, [
+      {}, {}, {},
+      { month: 3, workedDays: [1, 2, 3], halfDays: [] }, // 3 jours × 800
+    ]);
+    expect(calcCAFromEntries(months[3], profile)).toBe(2400);
+  });
+
+  it('retombe sur le défaut pour les mois non personnalisés', () => {
+    const profile = makeProfile({ tjm: 500, tjmByMonth: { 3: 800 } });
+    const months = monthsOf(2026, [
+      { month: 0, workedDays: [1, 2], halfDays: [] }, // 2 × 500 = 1000
+    ]);
+    expect(calcCAFromEntries(months[0], profile)).toBe(1000);
+  });
+
+  it("l'override par entry reste prioritaire sur le tjm mensuel", () => {
+    const profile = makeProfile({ tjm: 500, tjmByMonth: { 3: 800 } });
+    const months = monthsOf(2026, [
+      {}, {}, {},
+      {
+        month: 3,
+        workedDays: [],
+        halfDays: [],
+        entries: [{ kind: 'days', id: 'e1', days: [1, 2], halfDays: [], tjmOverride: 1000 }],
+      },
+    ]);
+    // entry.tjmOverride (1000) gagne sur tjmByMonth[3] (800) et sur tjm (500)
+    expect(calcCAFromEntries(months[3], profile)).toBe(2000);
+  });
+});
+
+describe('calcCAYearFromEntries avec tjmByMonth', () => {
+  it('somme les CA mensuels en respectant chaque TJM mensuel', () => {
+    const profile = makeProfile({ tjm: 500, tjmByMonth: { 3: 800, 8: 1000 } });
+    const months = monthsOf(2026, [
+      { month: 0, workedDays: [1, 2], halfDays: [] },     // 2 × 500 = 1000
+      {}, {},
+      { month: 3, workedDays: [1, 2, 3], halfDays: [] },  // 3 × 800 = 2400
+      {}, {}, {}, {},
+      { month: 8, workedDays: [1], halfDays: [] },        // 1 × 1000 = 1000
+    ]);
+    expect(calcCAYearFromEntries(months, profile)).toBe(4400);
+  });
+});
+
+describe('calcSeuilDateFromEntries avec tjmByMonth', () => {
+  it('intègre les surcharges futures dans le calcul du franchissement', () => {
+    const profile = makeProfile({ tjm: 1000, tjmByMonth: { 5: 2000 } });
+    // Janv : 1 jour × 1000, Févr : 1 jour × 1000, ... Juin : 1 jour × 2000
+    const months = monthsOf(2026, [
+      { month: 0, workedDays: [1], halfDays: [] },
+      { month: 1, workedDays: [1], halfDays: [] },
+      { month: 2, workedDays: [1], halfDays: [] },
+      { month: 3, workedDays: [1], halfDays: [] },
+      { month: 4, workedDays: [1], halfDays: [] },
+      { month: 5, workedDays: [1], halfDays: [] }, // cumul atteint 7000 → seuil 6500 franchi ici
+    ]);
+    const date = calcSeuilDateFromEntries(months, profile, 6500);
+    // Avec surcharge 2000 en juin, le cumul franchit 6500 au 1er juin (1+1+1+1+1+1) × tjm respectif
+    expect(date).toBeInstanceOf(Date);
+    expect(date?.getMonth()).toBe(5); // juin
+  });
+});
+
+describe('generateChartData avec tjmByMonth', () => {
+  it('chaque mois reflète son TJM personnalisé', () => {
+    const profile = makeProfile({
+      tjm: 500,
+      workingDays: 20,
+      tjmByMonth: { 5: 1000 }, // juin
+    });
+    const data = generateChartData(profile);
+    expect(data[0].brut).toBe(500 * 20);   // janvier : défaut
+    expect(data[5].brut).toBe(1000 * 20);  // juin : surcharge
+    expect(data[11].brut).toBe(500 * 20);  // décembre : défaut
   });
 });

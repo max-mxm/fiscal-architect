@@ -23,6 +23,7 @@ import {
   monthHasRevenue,
   effectiveEntries,
   getPrimaryActivity,
+  resolveMonthlyTjm,
 } from '~/lib/fiscal';
 import {
   MONTH_NAMES,
@@ -43,6 +44,7 @@ import { UndoToast } from '~/components/UndoToast';
 import { ConfirmModal } from '~/components/ConfirmModal';
 import { ForfaitList } from '~/components/fiscal/ForfaitList';
 import { FlatRevenueInput } from '~/components/fiscal/FlatRevenueInput';
+import { TjmMonthlyEditor } from '~/components/fiscal/TjmMonthlyEditor';
 import { DismissableBanner } from '~/components/CompteProAlerte';
 import { PersonaPicker } from '~/components/onboarding/PersonaPicker';
 import { useNotificationsCtx } from '~/context/NotificationsContext';
@@ -70,6 +72,7 @@ export const Home: React.FC = () => {
   const [navDirection, setNavDirection] = useState<number>(1);
   const [undo, setUndo] = useState<UndoState | null>(null);
   const [announce, setAnnounce] = useState<string>('');
+  const [monthlyTjmOpen, setMonthlyTjmOpen] = useState<boolean>(false);
 
   // Snapshot dédié pour le pattern Undo (remplace les actions immédiates).
   const pendingSnapshotRef = useRef<CalendarMonth[] | null>(null);
@@ -113,12 +116,18 @@ export const Home: React.FC = () => {
 
   // ACRE — réduction mensuelle calculée pour le mois sélectionné.
   // On utilise le 15 du mois comme date de référence pour rester stable.
+  const tjmMois = useMemo(
+    () => resolveMonthlyTjm(profile, selectedMonth),
+    [profile.tjm, profile.tjmByMonth, selectedMonth],
+  );
+  const isCustomTjmMois = profile.tjmByMonth?.[selectedMonth] !== undefined;
+
   const acreInfo = useMemo(() => {
     const creationDate = profile.creationDate ? new Date(profile.creationDate) : null;
     const periodDate = new Date(year, selectedMonth, 15);
-    const urssafBrutMensuel = profile.tjm * profile.workingDays * (profile.urssafRate / 100);
+    const urssafBrutMensuel = tjmMois * profile.workingDays * (profile.urssafRate / 100);
     return calcACRE(urssafBrutMensuel, creationDate, periodDate, profile.acreEnabled);
-  }, [profile.creationDate, profile.acreEnabled, profile.tjm, profile.workingDays, profile.urssafRate, year, selectedMonth]);
+  }, [profile.creationDate, profile.acreEnabled, tjmMois, profile.workingDays, profile.urssafRate, year, selectedMonth]);
 
   const fiscalOpts = useMemo(
     () => ({
@@ -417,6 +426,10 @@ export const Home: React.FC = () => {
           tvaAssujetti={profile.tvaAssujetti}
           activities={getActivities(profile)}
           caByActivity={caByActivity}
+          tjmMois={showCalendar ? tjmMois : undefined}
+          isCustomTjmMois={isCustomTjmMois}
+          defaultTjm={profile.tjm}
+          onOpenMonthlyTjm={() => setMonthlyTjmOpen(true)}
         />
       )}
 
@@ -451,7 +464,7 @@ export const Home: React.FC = () => {
                 yearHasData={yearHasData()}
                 onFill={(scope) => (scope === 'month' ? handleFillMonth() : handleFillYear())}
                 onClear={(scope) => (scope === 'month' ? handleClearMonth() : handleClearYear())}
-                onExport={() => fy.exportCSV(profile.tjm)}
+                onExport={() => fy.exportCSV(profile)}
                 onReset={() => navigate({ to: '/', search: { confirm: 'reset-all' } })}
               />
             </>
@@ -497,6 +510,11 @@ export const Home: React.FC = () => {
             onUrssafChange={(v) => setProfile((p) => ({ ...p, urssafRate: v }))}
             onOpenAdvanced={openFiscalSettings}
             showTjmSlider={showCalendar}
+            customTjmMonthCount={profile.tjmByMonth ? Object.keys(profile.tjmByMonth).length : 0}
+            onOpenMonthlyTjm={() => setMonthlyTjmOpen(true)}
+            tjmMois={tjmMois}
+            isCustomTjmMois={isCustomTjmMois}
+            monthName={MONTH_NAMES[selectedMonth]}
           />
           <MonthSummary
             monthName={MONTH_NAMES[selectedMonth]}
@@ -518,6 +536,10 @@ export const Home: React.FC = () => {
             acreRate={acreInfo.rate}
             costs={profile.fixedCosts}
             onCostsChange={(next) => setProfile((p) => ({ ...p, fixedCosts: next }))}
+            tjmMois={showCalendar ? tjmMois : undefined}
+            isCustomTjmMois={isCustomTjmMois}
+            defaultTjm={profile.tjm}
+            onOpenMonthlyTjm={() => setMonthlyTjmOpen(true)}
           />
         </aside>
       </div>
@@ -566,6 +588,18 @@ export const Home: React.FC = () => {
         open={profile.onboardingDone === false}
         onPick={(patch) => setProfile((p) => ({ ...p, ...patch }))}
         onSkip={() => setProfile((p) => ({ ...p, onboardingDone: true }))}
+      />
+
+      <TjmMonthlyEditor
+        open={monthlyTjmOpen}
+        onClose={() => setMonthlyTjmOpen(false)}
+        year={year}
+        defaultTjm={profile.tjm}
+        tjmByMonth={profile.tjmByMonth}
+        initialMonth={selectedMonth}
+        onChange={({ defaultTjm, tjmByMonth }) =>
+          setProfile((p) => ({ ...p, tjm: defaultTjm, tjmByMonth }))
+        }
       />
 
       <LiveAnnouncer message={announce} />

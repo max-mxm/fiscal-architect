@@ -53,7 +53,7 @@ export interface IdentityProfile {
  * Stocké dans la clé `fiscal-year-config-${year}`.
  */
 export interface YearConfig {
-  schemaVersion: 1;
+  schemaVersion: 2;
   year: number;
 
   // Paramètres légaux (fixés par la loi pour cette année)
@@ -62,6 +62,11 @@ export interface YearConfig {
 
   // Paramètres perso fiscaux
   tjm: number;
+  /**
+   * Surcharges de TJM par mois (clés 0..11). Sparse : seuls les mois personnalisés
+   * sont stockés. Les mois absents retombent sur `tjm` (défaut annuel).
+   */
+  tjmByMonth?: Record<number, number>;
   workingDays: number;
   revenueModel: RevenueModel;
   activities: ActivityEntry[];

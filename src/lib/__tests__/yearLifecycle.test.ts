@@ -155,6 +155,64 @@ describe('yearLifecycle', () => {
       config.fixedCosts.push({ id: 'x', name: 'X', description: 'X', amount: 0, icon: '', color: '' });
       expect(sourceRaw.fixedCosts).toHaveLength(3);
     });
+
+    it('clones tjmByMonth from source year', () => {
+      const source = {
+        ...buildDefaultYearConfig(2026),
+        tjm: 650,
+        tjmByMonth: { 3: 700, 11: 800 },
+      };
+      localStorage.setItem(yearConfigKey(2026), JSON.stringify(source));
+      const { config } = createYearInherited(2027, 2026);
+      expect(config.tjmByMonth).toEqual({ 3: 700, 11: 800 });
+    });
+
+    it('sets new default tjm to december value of source year', () => {
+      const source = {
+        ...buildDefaultYearConfig(2026),
+        tjm: 650,
+        tjmByMonth: { 11: 800 },
+      };
+      localStorage.setItem(yearConfigKey(2026), JSON.stringify(source));
+      const { config } = createYearInherited(2027, 2026);
+      expect(config.tjm).toBe(800);
+    });
+
+    it('keeps source default tjm if december was not personalised', () => {
+      const source = {
+        ...buildDefaultYearConfig(2026),
+        tjm: 650,
+        tjmByMonth: { 3: 700 }, // décembre absent
+      };
+      localStorage.setItem(yearConfigKey(2026), JSON.stringify(source));
+      const { config } = createYearInherited(2027, 2026);
+      expect(config.tjm).toBe(650);
+    });
+
+    it('handles source without tjmByMonth as before', () => {
+      const source = {
+        ...buildDefaultYearConfig(2026),
+        tjm: 650,
+        // tjmByMonth absent
+      };
+      localStorage.setItem(yearConfigKey(2026), JSON.stringify(source));
+      const { config } = createYearInherited(2027, 2026);
+      expect(config.tjm).toBe(650);
+      expect(config.tjmByMonth).toBeUndefined();
+    });
+
+    it('does not share tjmByMonth reference with source', () => {
+      const source = {
+        ...buildDefaultYearConfig(2026),
+        tjm: 650,
+        tjmByMonth: { 3: 700 },
+      };
+      localStorage.setItem(yearConfigKey(2026), JSON.stringify(source));
+      const { config } = createYearInherited(2027, 2026);
+      if (config.tjmByMonth) config.tjmByMonth[5] = 999;
+      const sourceRaw = JSON.parse(localStorage.getItem(yearConfigKey(2026)) ?? '{}');
+      expect(sourceRaw.tjmByMonth).toEqual({ 3: 700 });
+    });
   });
 
   describe('previewInheritedConfig', () => {
