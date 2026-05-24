@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AlertTriangle, Smartphone, Apple } from 'lucide-react';
+import { wipeLocalData } from '~/lib/wipeLocalData';
 
 const STORAGE_KEY = 'fiscal-breaking-version';
 const VERSION_URL = '/version.json';
@@ -16,35 +17,6 @@ async function fetchRemoteVersion(): Promise<VersionPayload | null> {
     return data;
   } catch {
     return null;
-  }
-}
-
-async function wipeEverything(): Promise<void> {
-  try {
-    localStorage.clear();
-  } catch {
-    /* ignore */
-  }
-  try {
-    sessionStorage.clear();
-  } catch {
-    /* ignore */
-  }
-  if ('caches' in window) {
-    try {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((k) => caches.delete(k)));
-    } catch {
-      /* ignore */
-    }
-  }
-  if ('serviceWorker' in navigator) {
-    try {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map((r) => r.unregister()));
-    } catch {
-      /* ignore */
-    }
   }
 }
 
@@ -102,7 +74,7 @@ export const BreakingUpdateGate: React.FC = () => {
         /* ignore */
       }
     }
-    await wipeEverything();
+    await wipeLocalData();
     window.location.reload();
   };
 

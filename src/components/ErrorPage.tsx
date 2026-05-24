@@ -1,7 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { RefreshCw, Home } from 'lucide-react';
+import { RefreshCw, Home, Trash2 } from 'lucide-react';
 import { ErrorOrb } from '~/components/ErrorOrb';
+import { ConfirmModal } from '~/components/ConfirmModal';
+import { wipeLocalData } from '~/lib/wipeLocalData';
 import { cn } from '~/utils';
 
 interface ErrorPageProps {
@@ -35,7 +37,15 @@ const COPY = {
  */
 export const ErrorPage: React.FC<ErrorPageProps> = ({ kind, error, onReload }) => {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const [resetOpen, setResetOpen] = useState(false);
   const copy = COPY[kind];
+
+  const handleResetConfirm = async () => {
+    await wipeLocalData();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
+  };
 
   useEffect(() => {
     buttonRef.current?.focus();
@@ -91,6 +101,19 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({ kind, error, onReload }) =
             <copy.Icon className="w-4 h-4" aria-hidden="true" />
             <span>{copy.cta}</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setResetOpen(true)}
+            className={cn(
+              'inline-flex items-center justify-center gap-2 px-5 min-h-[44px] rounded-xl',
+              'text-sm font-medium text-on-surface-variant',
+              'hover:bg-surface-highest/40 transition-colors',
+              'focus:outline-none focus:ring-2 focus:ring-secondary/30',
+            )}
+          >
+            <Trash2 className="w-4 h-4" aria-hidden="true" />
+            <span>Réinitialiser les données</span>
+          </button>
         </div>
 
         {kind === 'error' && error?.message && (
@@ -105,6 +128,16 @@ export const ErrorPage: React.FC<ErrorPageProps> = ({ kind, error, onReload }) =
           </details>
         )}
       </motion.div>
+
+      <ConfirmModal
+        open={resetOpen}
+        title="Réinitialiser toutes les données ?"
+        message="Cette action supprimera toutes vos données locales (identité, années fiscales, calendriers, configuration). Vous devrez tout ressaisir."
+        confirmLabel="Réinitialiser"
+        cancelLabel="Annuler"
+        onCancel={() => setResetOpen(false)}
+        onConfirm={handleResetConfirm}
+      />
     </div>
   );
 };
