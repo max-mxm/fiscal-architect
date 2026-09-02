@@ -3,6 +3,7 @@ import type { CalendarMonth, UserProfile } from '~/types';
 import { buildDefaultYearConfig, DEFAULT_IDENTITY } from '~/constants';
 import { calcVLRegularization } from '~/lib/vlRegularization';
 import { computeNotifications } from '~/lib/notifications';
+import { calcVLEligibilityForYear, getVLRfrThresholdPerPart } from '~/lib/vlEligibility';
 
 const { schemaVersion: _identityVersion, ...identity } = DEFAULT_IDENTITY;
 const { schemaVersion: _yearVersion, ...yearConfig } = buildDefaultYearConfig(2026);
@@ -50,10 +51,12 @@ describe('notification VL', () => {
       rfrN2: 40_000,
       partsFiscales: 1,
       versementLiberatoire: true,
+      year: 2026,
     }).find((item) => item.id === 'vl-ineligible');
 
     expect(notification?.level).toBe('critical');
     expect(notification?.action?.to).toBe('/regularisation-vl');
+    expect(notification?.body).toContain('RFR) 2024');
   });
 
   it('ne se déclenche pas quand le VL est désactivé', () => {
@@ -67,5 +70,19 @@ describe('notification VL', () => {
     }).find((item) => item.id === 'vl-ineligible');
 
     expect(notification).toBeUndefined();
+  });
+});
+
+describe('éligibilité VL par année fiscale', () => {
+  it('utilise pour 2026 le RFR 2024 et le plafond officiel 2026', () => {
+    const result = calcVLEligibilityForYear(30_000, 1, 2026);
+    expect(result.rfrYear).toBe(2024);
+    expect(result.taxNoticeYear).toBe(2025);
+    expect(result.threshold).toBe(29_315);
+    expect(result.motif).toBe('rfr-too-high');
+  });
+
+  it('marque comme indicatif un seuil futur encore inconnu', () => {
+    expect(getVLRfrThresholdPerPart(2028)).toEqual({ amount: 29_579, known: false });
   });
 });

@@ -69,8 +69,8 @@ export function createYearFresh(year: number): { config: YearConfig; calendar: F
 /**
  * Crée une nouvelle année en clonant la config d'une année source (préférences
  * perso conservées : TJM, charges fixes, activités, options déclaratives). Les
- * paramètres légaux (URSSAF, seuil) sont patchés pour l'année cible. Le RFR N-2
- * et missionStart sont réinitialisés. Le calendrier est créé vide.
+ * paramètres légaux (URSSAF, seuil) sont patchés pour l'année cible. Le revenu
+ * fiscal de référence et missionStart sont réinitialisés. Le calendrier est créé vide.
  */
 export function createYearInherited(
   year: number,

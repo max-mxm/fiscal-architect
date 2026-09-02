@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { AlertTriangle, ArrowRight } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
-import { calcVLEligibility, monthHasRevenue } from '~/lib/fiscal';
+import { monthHasRevenue } from '~/lib/fiscal';
+import { calcVLEligibilityForYear } from '~/lib/vlEligibility';
 import { calcVLRegularization } from '~/lib/vlRegularization';
 import { formatEuro } from '~/lib/format';
 import type { CalendarMonth, UserProfile } from '~/types';
@@ -12,7 +13,7 @@ interface VLRegularizationAlertProps {
 }
 
 export const VLRegularizationAlert: React.FC<VLRegularizationAlertProps> = ({ profile, months }) => {
-  const eligibility = calcVLEligibility(profile.rfrN2, profile.partsFiscales);
+  const eligibility = calcVLEligibilityForYear(profile.rfrN2, profile.partsFiscales, profile.year);
   const fallbackMonths = useMemo(
     () => months.filter(monthHasRevenue).map((month) => month.month),
     [months],
@@ -40,7 +41,7 @@ export const VLRegularizationAlert: React.FC<VLRegularizationAlertProps> = ({ pr
               Versement libératoire potentiellement appliqué à tort
             </h2>
             <p className="mt-1 text-xs leading-relaxed text-red-800 dark:text-red-300">
-              Le RFR N-2 renseigné dépasse le plafond. Estimation actuelle à provisionner :{' '}
+              Pour {profile.year}, votre revenu fiscal de référence (RFR) {eligibility.rfrYear} dépasse le plafond. Estimation actuelle à provisionner :{' '}
               <strong className="font-mono tabular-nums">{formatEuro(Math.round(estimate.amountToProvision))} €</strong>.
             </p>
           </div>

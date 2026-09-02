@@ -1,10 +1,10 @@
 import React from 'react';
-import { Info } from 'lucide-react';
-import { VL_RFR_PLAFOND_PER_PART, calcVLEligibility } from '~/lib/fiscal';
+import { ExternalLink, Info } from 'lucide-react';
 import { formatEuro } from '~/lib/format';
 import { cn } from '~/utils';
 import { HelpTooltip } from '~/components/ui/HelpTooltip';
 import { Link } from '@tanstack/react-router';
+import { VL_OFFICIAL_GUIDE_URL, calcVLEligibilityForYear, getVLRfrThresholdPerPart } from '~/lib/vlEligibility';
 
 interface RFRInputProps {
   rfrN2: number | null;
@@ -12,11 +12,14 @@ interface RFRInputProps {
   onRFRChange: (next: number | null) => void;
   onPartsChange: (next: number) => void;
   showRegularizationAction?: boolean;
+  year: number;
 }
 
-export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRChange, onPartsChange, showRegularizationAction = false }) => {
-  const eligibility = calcVLEligibility(rfrN2, partsFiscales);
+export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRChange, onPartsChange, showRegularizationAction = false, year }) => {
+  const eligibility = calcVLEligibilityForYear(rfrN2, partsFiscales, year);
+  const thresholdPerPart = getVLRfrThresholdPerPart(year);
   const showStatus = rfrN2 !== null && rfrN2 >= 0;
+  const helpId = `rfr-help-${year}`;
 
   return (
     <div className="space-y-3">
@@ -27,11 +30,9 @@ export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRC
               htmlFor="rfr-input"
               className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant"
             >
-              Revenu fiscal de référence
+              Revenu fiscal de référence (RFR) · revenus {eligibility.rfrYear}
             </label>
             <HelpTooltip termId="rfr" />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">N-2</span>
-            <HelpTooltip termId="nMinus2" />
           </div>
           <div className="flex items-baseline gap-1">
             <input
@@ -42,6 +43,7 @@ export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRC
               step={100}
               placeholder="—"
               value={rfrN2 ?? ''}
+              aria-describedby={helpId}
               onChange={(e) => {
                 const v = e.target.value.trim();
                 if (v === '') {
@@ -95,10 +97,10 @@ export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRC
           <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
           <div>
             {eligibility.eligible ? (
-              <>Éligible au versement libératoire — RFR sous le plafond <strong>{formatEuro(eligibility.threshold)}€</strong>.</>
+              <>Éligible au versement libératoire pour {year} — votre revenu fiscal de référence {eligibility.rfrYear} reste sous le plafond de <strong>{formatEuro(eligibility.threshold)}€</strong>.</>
             ) : (
               <>
-                <span>Inéligible au VL : RFR supérieur au plafond <strong>{formatEuro(eligibility.threshold)}€</strong> ({partsFiscales} part{partsFiscales > 1 ? 's' : ''}).</span>
+                <span>Inéligible au versement libératoire pour {year} : votre revenu fiscal de référence {eligibility.rfrYear} dépasse le plafond de <strong>{formatEuro(eligibility.threshold)}€</strong> ({partsFiscales} part{partsFiscales > 1 ? 's' : ''}).</span>
                 {showRegularizationAction && (
                   <Link
                     to="/regularisation-vl"
@@ -111,11 +113,26 @@ export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRC
             )}
           </div>
         </div>
-      ) : (
-        <p className="text-[11px] text-on-surface-variant leading-relaxed">
-          Plafond {formatEuro(VL_RFR_PLAFOND_PER_PART)}€ par part. Renseignez votre RFR N-2 (avis d'imposition) pour vérifier l'éligibilité au VL.
+      ) : null}
+
+      <div id={helpId} className="rounded-xl bg-surface-low px-3 py-3 text-[13px] leading-relaxed text-on-surface-variant">
+        <p>
+          Pour l’année fiscale <strong className="text-on-surface">{year}</strong>, saisissez le <strong className="text-on-surface">revenu fiscal de référence {eligibility.rfrYear}</strong>, indiqué sur votre avis d’impôt reçu en {eligibility.taxNoticeYear}.
         </p>
-      )}
+        <p className="mt-1.5">
+          Plafond {thresholdPerPart.known ? 'officiel' : 'indicatif, dernier seuil connu'} : <strong className="text-on-surface">{formatEuro(thresholdPerPart.amount)} € par part</strong>.
+        </p>
+        <a
+          href={VL_OFFICIAL_GUIDE_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-2 py-1 font-bold text-secondary underline decoration-secondary/30 underline-offset-2 hover:decoration-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30"
+        >
+          Consulter les conditions sur impots.gouv.fr
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="sr-only">(s’ouvre dans un nouvel onglet)</span>
+        </a>
+      </div>
     </div>
   );
 };

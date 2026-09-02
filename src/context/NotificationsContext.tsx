@@ -35,6 +35,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     rfrN2: profile.rfrN2,
     partsFiscales: profile.partsFiscales,
     versementLiberatoire: profile.versementLiberatoire,
+    year: profile.year,
   });
 
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;

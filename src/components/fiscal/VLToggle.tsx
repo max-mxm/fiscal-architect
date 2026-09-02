@@ -11,7 +11,7 @@ interface VLToggleProps {
   tauxVL?: number;
   /** Variant inline (chip cliquable dans MonthSummary). */
   variant?: 'default' | 'chip';
-  /** Si true, l'utilisateur n'est pas éligible (RFR N-2 trop élevé) — bloque le toggle. */
+  /** Si défini, l'utilisateur n'est pas éligible — bloque l'activation du toggle. */
   ineligibleReason?: string | null;
 }
 

@@ -79,7 +79,7 @@ export interface YearConfig {
   cfpEnabled: boolean;
   taxeConsulaireEnabled: boolean;
   ijOption: boolean;
-  /** Revenu Fiscal Référence N-2 du foyer (€) — éligibilité VL. null si non saisi. */
+  /** Revenu fiscal de référence de l'avant-dernière année du foyer. null si non saisi. */
   rfrN2: number | null;
   /** Mois (0..11) concernés par un éventuel rattrapage du VL. Absent = mois avec CA. */
   vlRegularizationMonths?: number[];

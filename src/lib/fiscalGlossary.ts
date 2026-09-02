@@ -15,9 +15,9 @@ const ENTRIES = {
     body: "Total des revenus de votre foyer fiscal sur une année donnée. Indiqué sur l'avis d'imposition (cadre « Vos références » en haut). Sert ici à vérifier votre éligibilité au Versement Libératoire.",
   },
   nMinus2: {
-    title: 'N-2',
-    body: "Avant-dernière année fiscale. C'est le RFR de cette année-là qui détermine si vous pouvez choisir le Versement Libératoire pour l'année courante.",
-    example: "En 2026, N-2 = 2024 → on regarde le RFR figurant sur l'avis d'imposition reçu en 2025 (revenus 2024).",
+    title: 'Avant-dernière année fiscale',
+    body: "Pour une année fiscale donnée, l'administration vérifie le revenu fiscal de référence deux ans plus tôt. L'interface affiche toujours cette année précisément.",
+    example: "Pour 2026, on utilise le revenu fiscal de référence 2024 figurant sur l'avis d'impôt reçu en 2025.",
   },
   parts: {
     title: 'Parts fiscales',
@@ -26,7 +26,7 @@ const ENTRIES = {
   },
   vl: {
     title: 'Versement libératoire (VL)',
-    body: "Paiement forfaitaire de l'impôt sur le revenu prélevé en même temps que les cotisations URSSAF (1 % à 2,2 % du CA selon l'activité). Remplace l'impôt au barème progressif. Réservé aux foyers dont le RFR N-2 est sous le plafond.",
+    body: "Paiement forfaitaire de l'impôt sur le revenu prélevé en même temps que les cotisations URSSAF (1 % à 2,2 % du CA selon l'activité). Remplace l'impôt au barème progressif. Réservé aux foyers dont le revenu fiscal de référence de l'avant-dernière année reste sous le plafond.",
   },
   bicBnc: {
     title: 'BIC / BNC',

@@ -1,4 +1,5 @@
 import type { Activity, ActivityEntry, UserProfile, FiscalResult, MonthlyBreakdown, MonthlyChartData, CalendarMonth, RevenueEntry, TVAStatus } from '~/types';
+import { calcVLEligibilityForYear, getVLRfrThresholdPerPart, type VLEligibility } from '~/lib/vlEligibility';
 
 // --- Paramètres fiscaux par activité (2026) ---
 
@@ -31,38 +32,21 @@ export const TVA_FRANCHISE_2026 = {
   services: { basique: 36_800, majore:  39_100 },
 } as const;
 
-// --- Versement libératoire — éligibilité (RFR N-2) ---
+// --- Versement libératoire — éligibilité par année fiscale ---
 
 /**
- * Plafond du Revenu Fiscal de Référence N-2 par part fiscale pour rester éligible
- * au versement libératoire (2026, source impots.gouv.fr — à confirmer chaque année).
+ * Compatibilité historique : plafond 2026 du revenu fiscal de référence par part.
+ * Les nouveaux appels doivent passer l'année active à `calcVLEligibility`.
  */
-export const VL_RFR_PLAFOND_PER_PART = 27_478;
-
-export interface VLEligibility {
-  /** Le foyer est-il éligible au VL ? */
-  eligible: boolean;
-  /** Plafond effectif (par part × parts fiscales). */
-  threshold: number;
-  /** Raison de l'inéligibilité, ou null si éligible / non vérifiable. */
-  motif: 'rfr-too-high' | 'unknown' | null;
-}
+export const VL_RFR_PLAFOND_PER_PART = getVLRfrThresholdPerPart(2026).amount;
+export type { VLEligibility };
 
 /**
- * Vérifie l'éligibilité au versement libératoire selon le RFR N-2 et le nombre
- * de parts fiscales. Si rfrN2 n'est pas saisi (null), retourne `unknown` —
- * l'utilisateur doit le renseigner pour valider.
+ * API historique conservée pour les consommateurs existants. L'année par défaut
+ * est 2026 ; les interfaces passent toujours explicitement leur année active.
  */
-export function calcVLEligibility(rfrN2: number | null, partsFiscales: number = 1): VLEligibility {
-  const parts = partsFiscales > 0 ? partsFiscales : 1;
-  const threshold = VL_RFR_PLAFOND_PER_PART * parts;
-  if (rfrN2 === null || rfrN2 < 0) {
-    return { eligible: false, threshold, motif: 'unknown' };
-  }
-  if (rfrN2 > threshold) {
-    return { eligible: false, threshold, motif: 'rfr-too-high' };
-  }
-  return { eligible: true, threshold, motif: null };
+export function calcVLEligibility(rfrN2: number | null, partsFiscales: number = 1, year: number = 2026): VLEligibility {
+  return calcVLEligibilityForYear(rfrN2, partsFiscales, year);
 }
 
 // --- Indemnités journalières (libéraux SSI / CIPAV) ---

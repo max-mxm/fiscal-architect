@@ -3,7 +3,8 @@ import { AlertTriangle, ArrowLeft, Check, Info, Landmark, RotateCcw } from 'luci
 import { Link } from '@tanstack/react-router';
 import { useProfile } from '~/context/ProfileContext';
 import { useFiscalYearCtx } from '~/context/FiscalYearContext';
-import { calcCAFromEntries, calcVLEligibility, monthHasRevenue } from '~/lib/fiscal';
+import { calcCAFromEntries, monthHasRevenue } from '~/lib/fiscal';
+import { VL_OFFICIAL_GUIDE_URL, calcVLEligibilityForYear } from '~/lib/vlEligibility';
 import { calcVLRegularization } from '~/lib/vlRegularization';
 import { formatEuro } from '~/lib/format';
 import { MONTH_NAMES, MONTH_SHORT } from '~/lib/calendar';
@@ -26,7 +27,7 @@ export const VLRegularization: React.FC = () => {
     () => calcVLRegularization(fy.fiscalYear.months, profile, selectedMonths),
     [fy.fiscalYear.months, profile, selectedMonths],
   );
-  const eligibility = calcVLEligibility(profile.rfrN2, profile.partsFiscales);
+  const eligibility = calcVLEligibilityForYear(profile.rfrN2, profile.partsFiscales, profile.year);
 
   const updateMonths = (next: number[]) => {
     setProfile((current) => ({
@@ -80,18 +81,19 @@ export const VLRegularization: React.FC = () => {
         <div role="alert" className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
           <div className="min-w-0 text-sm">
-            <p className="font-bold">Inéligibilité détectée depuis votre RFR N-2</p>
+            <p className="font-bold">Inéligibilité détectée depuis votre revenu fiscal de référence {eligibility.rfrYear}</p>
             <p className="mt-1 text-xs leading-relaxed">
-              RFR renseigné : <strong>{formatEuro(profile.rfrN2 ?? 0)} €</strong> · plafond pour {profile.partsFiscales} part{profile.partsFiscales > 1 ? 's' : ''} : <strong>{formatEuro(eligibility.threshold)} €</strong>.
+              Pour l’année fiscale {profile.year}, le revenu fiscal de référence (RFR) à utiliser est celui de {eligibility.rfrYear}, indiqué sur l’avis d’impôt reçu en {eligibility.taxNoticeYear}. Montant renseigné : <strong>{formatEuro(profile.rfrN2 ?? 0)} €</strong> · plafond pour {profile.partsFiscales} part{profile.partsFiscales > 1 ? 's' : ''} : <strong>{formatEuro(eligibility.threshold)} €</strong>.
             </p>
+            <a href={VL_OFFICIAL_GUIDE_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-[36px] items-center font-bold underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-red-400/40">Voir les conditions officielles sur impots.gouv.fr<span className="sr-only"> (nouvel onglet)</span></a>
           </div>
         </div>
       ) : (
         <div className="flex items-start gap-3 rounded-2xl border border-outline-variant/30 bg-surface-lowest p-4 text-on-surface-variant">
           <Info className="mt-0.5 h-5 w-5 shrink-0 text-secondary" aria-hidden="true" />
           <div className="text-sm">
-            <p className="font-bold text-on-surface">Aucune inéligibilité RFR détectée</p>
-            <p className="mt-1 text-xs">Vous pouvez tout de même utiliser cette page comme simulation. <Link to="/" search={{ settings: 'fiscal' }} className="font-bold text-secondary underline underline-offset-2">Vérifier le RFR</Link>.</p>
+            <p className="font-bold text-on-surface">Aucune inéligibilité liée au revenu fiscal de référence détectée</p>
+            <p className="mt-1 text-xs">Pour {profile.year}, vérifiez le revenu fiscal de référence (RFR) {eligibility.rfrYear} sur l’avis d’impôt reçu en {eligibility.taxNoticeYear}. <Link to="/" search={{ settings: 'fiscal' }} className="font-bold text-secondary underline underline-offset-2">Modifier le montant</Link>.</p>
           </div>
         </div>
       )}

@@ -1,5 +1,6 @@
 import type { Notification } from '~/types';
-import { COMPTE_PRO_THRESHOLD, calcVLEligibility } from '~/lib/fiscal';
+import { COMPTE_PRO_THRESHOLD } from '~/lib/fiscal';
+import { calcVLEligibilityForYear } from '~/lib/vlEligibility';
 import { formatEuro } from '~/lib/format';
 
 /** Pourcentage à partir duquel on alerte sur la projection annuelle du seuil micro. */
@@ -16,6 +17,7 @@ export interface NotificationsInput {
   rfrN2?: number | null;
   partsFiscales?: number;
   versementLiberatoire?: boolean;
+  year?: number;
 }
 
 /**
@@ -27,14 +29,15 @@ export function computeNotifications(input: NotificationsInput): Notification[] 
   const out: Notification[] = [];
   const { caCumule, caRealise, seuilMicro } = input;
 
-  const vlEligibility = calcVLEligibility(input.rfrN2 ?? null, input.partsFiscales ?? 1);
+  const fiscalYear = input.year ?? new Date().getFullYear();
+  const vlEligibility = calcVLEligibilityForYear(input.rfrN2 ?? null, input.partsFiscales ?? 1, fiscalYear);
   if (input.versementLiberatoire && vlEligibility.motif === 'rfr-too-high') {
     out.push({
       id: 'vl-ineligible',
       level: 'critical',
       icon: 'vl',
       title: 'Versement libératoire : inéligibilité détectée',
-      body: `Votre RFR N-2 dépasse le plafond de ${formatEuro(vlEligibility.threshold)}€. Estimez le montant à provisionner pour une régularisation.`,
+      body: `Pour ${fiscalYear}, votre revenu fiscal de référence (RFR) ${vlEligibility.rfrYear} dépasse le plafond de ${formatEuro(vlEligibility.threshold)}€. Estimez le montant à provisionner pour une régularisation.`,
       action: {
         label: 'Estimer le rattrapage',
         to: '/regularisation-vl',
