@@ -4,15 +4,17 @@ import { VL_RFR_PLAFOND_PER_PART, calcVLEligibility } from '~/lib/fiscal';
 import { formatEuro } from '~/lib/format';
 import { cn } from '~/utils';
 import { HelpTooltip } from '~/components/ui/HelpTooltip';
+import { Link } from '@tanstack/react-router';
 
 interface RFRInputProps {
   rfrN2: number | null;
   partsFiscales: number;
   onRFRChange: (next: number | null) => void;
   onPartsChange: (next: number) => void;
+  showRegularizationAction?: boolean;
 }
 
-export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRChange, onPartsChange }) => {
+export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRChange, onPartsChange, showRegularizationAction = false }) => {
   const eligibility = calcVLEligibility(rfrN2, partsFiscales);
   const showStatus = rfrN2 !== null && rfrN2 >= 0;
 
@@ -90,14 +92,24 @@ export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRC
               : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/30',
           )}
         >
-          <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-          <span>
+          <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+          <div>
             {eligibility.eligible ? (
               <>Éligible au versement libératoire — RFR sous le plafond <strong>{formatEuro(eligibility.threshold)}€</strong>.</>
             ) : (
-              <>Inéligible au VL : RFR supérieur au plafond <strong>{formatEuro(eligibility.threshold)}€</strong> ({partsFiscales} part{partsFiscales > 1 ? 's' : ''}).</>
+              <>
+                <span>Inéligible au VL : RFR supérieur au plafond <strong>{formatEuro(eligibility.threshold)}€</strong> ({partsFiscales} part{partsFiscales > 1 ? 's' : ''}).</span>
+                {showRegularizationAction && (
+                  <Link
+                    to="/regularisation-vl"
+                    className="mt-2 inline-flex min-h-[36px] items-center rounded-lg border border-current/25 px-3 py-2 font-bold hover:bg-red-100/70 dark:hover:bg-red-500/15 focus:outline-none focus:ring-2 focus:ring-red-400/40 transition-colors"
+                  >
+                    Estimer le rattrapage
+                  </Link>
+                )}
+              </>
             )}
-          </span>
+          </div>
         </div>
       ) : (
         <p className="text-[11px] text-on-surface-variant leading-relaxed">

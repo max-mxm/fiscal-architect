@@ -94,6 +94,7 @@ export function createYearInherited(
     tjmByMonth: donor.tjmByMonth ? { ...donor.tjmByMonth } : undefined,
     missionStart: `${year}-01-01`,
     rfrN2: null,
+    vlRegularizationMonths: undefined,
     activities: donor.activities.map((a) => ({ ...a })),
     fixedCosts: donor.fixedCosts.map((c) => ({ ...c })),
   };
@@ -122,6 +123,7 @@ export function previewInheritedConfig(year: number, sourceYear: number): YearCo
     tjmByMonth: donor.tjmByMonth ? { ...donor.tjmByMonth } : undefined,
     missionStart: `${year}-01-01`,
     rfrN2: null,
+    vlRegularizationMonths: undefined,
     activities: donor.activities.map((a) => ({ ...a })),
     fixedCosts: donor.fixedCosts.map((c) => ({ ...c })),
   };

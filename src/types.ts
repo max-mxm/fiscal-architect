@@ -81,6 +81,8 @@ export interface YearConfig {
   ijOption: boolean;
   /** Revenu Fiscal Référence N-2 du foyer (€) — éligibilité VL. null si non saisi. */
   rfrN2: number | null;
+  /** Mois (0..11) concernés par un éventuel rattrapage du VL. Absent = mois avec CA. */
+  vlRegularizationMonths?: number[];
   /** Date de démarrage effective de l'activité dans l'année (ISO). */
   missionStart: string;
 }
@@ -183,12 +185,17 @@ export type NotificationLevel = 'info' | 'warning' | 'critical';
 export type NotificationKind =
   | 'compte-pro'
   | 'seuil-micro-projected'
-  | 'seuil-micro-breach';
+  | 'seuil-micro-breach'
+  | 'vl-ineligible';
 
 export interface Notification {
   id: NotificationKind;
   level: NotificationLevel;
   title: string;
   body: string;
-  icon: 'compte-pro' | 'seuil';
+  icon: 'compte-pro' | 'seuil' | 'vl';
+  action?: {
+    label: string;
+    to: '/regularisation-vl';
+  };
 }

@@ -335,6 +335,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       partsFiscales={profile.partsFiscales}
                       onRFRChange={(v) => updateProfile({ rfrN2: v })}
                       onPartsChange={(v) => updateProfile({ partsFiscales: v })}
+                      showRegularizationAction={profile.versementLiberatoire}
                     />
                     {(() => {
                       const elig = calcVLEligibility(profile.rfrN2, profile.partsFiscales);
