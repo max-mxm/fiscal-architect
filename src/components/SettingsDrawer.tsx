@@ -17,7 +17,8 @@ import { RFRInput } from '~/components/fiscal/RFRInput';
 import { SeuilInput } from '~/components/fiscal/SeuilInput';
 import { FixedCostsList } from '~/components/fiscal/FixedCostsList';
 import { SettingsTabs, type SettingsTabId, type TabDef } from '~/components/settings/SettingsTabs';
-import { ACTIVITY_PARAMS, calcVLEligibility, getActivities, getPrimaryActivity } from '~/lib/fiscal';
+import { ACTIVITY_PARAMS, getActivities, getPrimaryActivity } from '~/lib/fiscal';
+import { calcVLEligibilityForYear } from '~/lib/vlEligibility';
 import { formatEuro } from '~/lib/format';
 
 interface SettingsDrawerProps {
@@ -335,11 +336,13 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       partsFiscales={profile.partsFiscales}
                       onRFRChange={(v) => updateProfile({ rfrN2: v })}
                       onPartsChange={(v) => updateProfile({ partsFiscales: v })}
+                      showRegularizationAction={profile.versementLiberatoire}
+                      year={year}
                     />
                     {(() => {
-                      const elig = calcVLEligibility(profile.rfrN2, profile.partsFiscales);
+                      const elig = calcVLEligibilityForYear(profile.rfrN2, profile.partsFiscales, year);
                       const reason = elig.motif === 'rfr-too-high'
-                        ? `RFR N-2 supérieur au plafond ${formatEuro(elig.threshold)}€ — VL non disponible.`
+                        ? `Revenu fiscal de référence ${elig.rfrYear} supérieur au plafond ${formatEuro(elig.threshold)}€ — versement libératoire ${year} non disponible.`
                         : null;
                       return (
                         <VLToggle

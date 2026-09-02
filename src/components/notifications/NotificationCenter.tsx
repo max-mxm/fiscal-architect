@@ -122,6 +122,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, on
                             notification={n}
                             isDismissed={false}
                             onToggle={() => dismiss(n.id)}
+                            onNavigate={onClose}
                           />
                         </li>
                       ))}

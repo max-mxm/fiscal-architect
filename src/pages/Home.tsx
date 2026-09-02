@@ -49,6 +49,7 @@ import { DismissableBanner } from '~/components/CompteProAlerte';
 import { PersonaPicker } from '~/components/onboarding/PersonaPicker';
 import { useNotificationsCtx } from '~/context/NotificationsContext';
 import { usePrefersReducedMotion } from '~/hooks/usePrefersReducedMotion';
+import { VLRegularizationAlert } from '~/components/VLRegularizationAlert';
 import type { CalendarMonth, RevenueEntry } from '~/types';
 
 type ConfirmKind = 'clear-year' | 'fill-month' | 'fill-year';
@@ -403,6 +404,8 @@ export const Home: React.FC = () => {
           />
         );
       })()}
+
+      <VLRegularizationAlert profile={profile} months={fy.fiscalYear.months} />
 
       {/* Hero KPI ou Empty */}
       {isEmpty ? (

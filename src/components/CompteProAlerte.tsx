@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Building2, AlertTriangle, X } from 'lucide-react';
+import { Building2, AlertTriangle, Landmark, X } from 'lucide-react';
 import type { Notification } from '~/types';
 import { cn } from '~/utils';
 
@@ -12,6 +12,7 @@ interface DismissableBannerProps {
 const ICONS: Record<Notification['icon'], React.ComponentType<{ className?: string }>> = {
   'compte-pro': Building2,
   seuil: AlertTriangle,
+  vl: Landmark,
 };
 
 const TONE: Record<Notification['level'], { wrap: string; iconBg: string; title: string; body: string; close: string }> = {

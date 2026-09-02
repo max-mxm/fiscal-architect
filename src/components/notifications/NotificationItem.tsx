@@ -1,5 +1,6 @@
 import React from 'react';
-import { Building2, AlertTriangle, EyeOff, Eye } from 'lucide-react';
+import { Building2, AlertTriangle, EyeOff, Eye, Landmark } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 import type { Notification } from '~/types';
 import { cn } from '~/utils';
 
@@ -8,11 +9,13 @@ interface NotificationItemProps {
   /** True quand la notif est dans la section « Masquées » du centre. */
   isDismissed: boolean;
   onToggle: () => void;
+  onNavigate?: () => void;
 }
 
 const ICONS: Record<Notification['icon'], React.ComponentType<{ className?: string }>> = {
   'compte-pro': Building2,
   seuil: AlertTriangle,
+  vl: Landmark,
 };
 
 const TONE: Record<Notification['level'], string> = {
@@ -21,7 +24,7 @@ const TONE: Record<Notification['level'], string> = {
   critical: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
 };
 
-export const NotificationItem: React.FC<NotificationItemProps> = ({ notification, isDismissed, onToggle }) => {
+export const NotificationItem: React.FC<NotificationItemProps> = ({ notification, isDismissed, onToggle, onNavigate }) => {
   const Icon = ICONS[notification.icon];
 
   return (
@@ -40,6 +43,15 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       <div className="flex-1 min-w-0">
         <p className="text-sm font-bold text-on-surface">{notification.title}</p>
         <p className="text-[11px] text-on-surface-variant mt-0.5 leading-relaxed">{notification.body}</p>
+        {notification.action && !isDismissed && (
+          <Link
+            to={notification.action.to}
+            onClick={onNavigate}
+            className="mt-2 inline-flex min-h-[36px] items-center rounded-xl px-3 py-2 text-[11px] font-bold text-secondary bg-secondary/10 hover:bg-secondary/15 focus:outline-none focus:ring-2 focus:ring-secondary/30 transition-colors"
+          >
+            {notification.action.label}
+          </Link>
+        )}
       </div>
       <button
         type="button"

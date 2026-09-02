@@ -69,8 +69,8 @@ export function createYearFresh(year: number): { config: YearConfig; calendar: F
 /**
  * Crée une nouvelle année en clonant la config d'une année source (préférences
  * perso conservées : TJM, charges fixes, activités, options déclaratives). Les
- * paramètres légaux (URSSAF, seuil) sont patchés pour l'année cible. Le RFR N-2
- * et missionStart sont réinitialisés. Le calendrier est créé vide.
+ * paramètres légaux (URSSAF, seuil) sont patchés pour l'année cible. Le revenu
+ * fiscal de référence et missionStart sont réinitialisés. Le calendrier est créé vide.
  */
 export function createYearInherited(
   year: number,
@@ -94,6 +94,7 @@ export function createYearInherited(
     tjmByMonth: donor.tjmByMonth ? { ...donor.tjmByMonth } : undefined,
     missionStart: `${year}-01-01`,
     rfrN2: null,
+    vlRegularizationMonths: undefined,
     activities: donor.activities.map((a) => ({ ...a })),
     fixedCosts: donor.fixedCosts.map((c) => ({ ...c })),
   };
@@ -122,6 +123,7 @@ export function previewInheritedConfig(year: number, sourceYear: number): YearCo
     tjmByMonth: donor.tjmByMonth ? { ...donor.tjmByMonth } : undefined,
     missionStart: `${year}-01-01`,
     rfrN2: null,
+    vlRegularizationMonths: undefined,
     activities: donor.activities.map((a) => ({ ...a })),
     fixedCosts: donor.fixedCosts.map((c) => ({ ...c })),
   };
