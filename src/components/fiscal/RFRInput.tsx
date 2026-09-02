@@ -3,7 +3,6 @@ import { ExternalLink, Info } from 'lucide-react';
 import { formatEuro } from '~/lib/format';
 import { cn } from '~/utils';
 import { HelpTooltip } from '~/components/ui/HelpTooltip';
-import { Link } from '@tanstack/react-router';
 import { VL_OFFICIAL_GUIDE_URL, calcVLEligibilityForYear, getVLRfrThresholdPerPart } from '~/lib/vlEligibility';
 
 interface RFRInputProps {
@@ -11,11 +10,10 @@ interface RFRInputProps {
   partsFiscales: number;
   onRFRChange: (next: number | null) => void;
   onPartsChange: (next: number) => void;
-  showRegularizationAction?: boolean;
   year: number;
 }
 
-export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRChange, onPartsChange, showRegularizationAction = false, year }) => {
+export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRChange, onPartsChange, year }) => {
   const eligibility = calcVLEligibilityForYear(rfrN2, partsFiscales, year);
   const thresholdPerPart = getVLRfrThresholdPerPart(year);
   const showStatus = rfrN2 !== null && rfrN2 >= 0;
@@ -101,14 +99,6 @@ export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRC
             ) : (
               <>
                 <span>Inéligible au versement libératoire pour {year} : votre revenu fiscal de référence {eligibility.rfrYear} dépasse le plafond de <strong>{formatEuro(eligibility.threshold)}€</strong> ({partsFiscales} part{partsFiscales > 1 ? 's' : ''}).</span>
-                {showRegularizationAction && (
-                  <Link
-                    to="/regularisation-vl"
-                    className="mt-2 inline-flex min-h-[36px] items-center rounded-lg border border-current/25 px-3 py-2 font-bold hover:bg-red-100/70 dark:hover:bg-red-500/15 focus:outline-none focus:ring-2 focus:ring-red-400/40 transition-colors"
-                  >
-                    Estimer le rattrapage
-                  </Link>
-                )}
               </>
             )}
           </div>

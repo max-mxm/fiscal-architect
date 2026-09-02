@@ -13,7 +13,10 @@ import {
   DatabaseBackup,
   Download,
   Upload,
+  Landmark,
+  ChevronRight,
 } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 import { useTheme, type ThemeMode } from '~/context/ThemeContext';
 import type { UserProfile } from '~/types';
 import { ConfirmModal } from '~/components/ConfirmModal';
@@ -402,7 +405,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       partsFiscales={profile.partsFiscales}
                       onRFRChange={(v) => updateProfile({ rfrN2: v })}
                       onPartsChange={(v) => updateProfile({ partsFiscales: v })}
-                      showRegularizationAction={profile.versementLiberatoire}
                       year={year}
                     />
                     {(() => {
@@ -419,6 +421,30 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                         />
                       );
                     })()}
+                    <Link
+                      to="/regularisation-vl"
+                      onClick={onClose}
+                      className="group flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-outline-variant/30 bg-surface-low px-3 py-3 text-left transition-colors hover:border-secondary/35 hover:bg-secondary/10 focus:outline-none focus:ring-2 focus:ring-secondary/30"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary/10 text-secondary"
+                      >
+                        <Landmark className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-bold text-on-surface">
+                          Préparer une régularisation
+                        </span>
+                        <span className="mt-0.5 block text-[11px] leading-relaxed text-on-surface-variant">
+                          Estimer les fonds à provisionner si le VL a été payé sur des mois non éligibles.
+                        </span>
+                      </span>
+                      <ChevronRight
+                        aria-hidden="true"
+                        className="h-4 w-4 shrink-0 text-on-surface-variant transition-transform group-hover:translate-x-0.5 group-hover:text-secondary"
+                      />
+                    </Link>
                     <TVAToggle
                       value={profile.tvaAssujetti}
                       onChange={(v) => updateProfile({ tvaAssujetti: v })}

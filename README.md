@@ -1,50 +1,70 @@
 **English** · [Français](./README.fr.md)
 
+<div align="center">
+
 # Fiscal Architect
 
-Fiscal Architect is a private, client-side tax and revenue simulator for French micro-entrepreneurs.
-It helps freelancers and small independent businesses plan revenue, social contributions, income tax, VAT thresholds, cash collection and yearly transitions without sending data to a server.
+**A private tax and revenue simulator for French micro-entrepreneurs.**
+
+Plan revenue, social contributions, income tax, VAT thresholds and cash collection from a fully client-side PWA.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![CI](https://github.com/max-mxm/fiscal-architect/actions/workflows/ci.yml/badge.svg)](https://github.com/max-mxm/fiscal-architect/actions/workflows/ci.yml)
 [![React 19](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white)](https://react.dev)
 [![TanStack Start](https://img.shields.io/badge/TanStack-Start-ff4154?logo=react)](https://tanstack.com/start)
+[![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![PWA](https://img.shields.io/badge/PWA-installable-5a0fc8)](./public/manifest.webmanifest)
 
-## App
+[Open the app](https://fiscal-architect-j1gfhjmps-maxmxms-projects.vercel.app/)
 
-[Open Fiscal Architect](https://fiscal-architect-j1gfhjmps-maxmxms-projects.vercel.app/)
+<!-- Demo placeholder: add your GIF here when ready. -->
+<!-- <img src="./.github/screenshots/demo.gif" alt="Fiscal Architect demo" width="100%"> -->
 
-- 100% browser-based: data is stored locally in `localStorage`.
-- Installable PWA: works offline after the first load.
-- Built for French micro-entreprise rules and 2026 tax constants.
-- User interface in French, codebase mostly in English.
+</div>
 
-## Main Features
+---
 
-- Revenue input by worked days, fixed-price work, monthly totals, or mixed mode.
-- Multi-activity profiles: sales, BIC services, unregulated liberal SSI, regulated liberal CIPAV.
-- URSSAF, CFP, chamber tax, ACRE, liberal daily-benefit option and income-tax simulation.
-- Versement liberatoire eligibility check from N-2 RFR and tax shares.
-- Micro-enterprise and VAT franchise threshold tracking.
-- Cashflow projection from invoice dates to expected payment dates.
-- Multi-year navigation with explicit yearly transition.
-- Local backup export/import for restoring data after a reset or redeploy.
-- Dark mode, notification center, quick edits and install prompt.
+## What It Does
 
-## Stack
+Fiscal Architect helps French freelancers and small independent businesses simulate the practical side of a micro-entreprise:
+
+- revenue input by worked days, fixed-price work, monthly totals, or mixed mode;
+- multi-activity profiles across sales, BIC services, liberal SSI and liberal CIPAV;
+- URSSAF, CFP, chamber tax, ACRE, income tax and versement liberatoire simulation;
+- micro-enterprise and VAT franchise threshold tracking;
+- cashflow projection from invoice dates to expected payment dates;
+- multi-year navigation and local backup export/import.
+
+The application has no backend, no account system and no tracking. User data stays in the browser through `localStorage`.
+
+## Developer Overview
 
 | Area | Choice |
 |---|---|
-| Framework | React 19, TanStack Start, TanStack Router |
-| Build | Vite 8 |
-| Styles | Tailwind CSS 4 |
-| Charts | Recharts |
-| Animation | Motion |
-| Icons | Lucide React |
-| Tests | Vitest |
-| Persistence | localStorage |
+| Framework | **React 19** + **TanStack Start** |
+| Routing | **TanStack Router** file routes |
+| Build | **Vite 8** |
+| Styling | **Tailwind CSS 4** with theme tokens |
+| Charts | **Recharts** |
+| Animation | **Motion** |
+| Icons | **Lucide React** |
+| Tests | **Vitest** |
+| Persistence | Versioned `localStorage` hooks |
 
-## Development
+## Project Structure
+
+```text
+src/
+  components/       Shared UI and feature components
+  context/          App providers for profile, fiscal year, theme and notifications
+  hooks/            Browser state, storage and interaction hooks
+  lib/              Fiscal engine, calendar logic, cashflow, import/export and tests
+  pages/            Main application screens
+  routes/           TanStack Router route entries
+  styles/           Tailwind theme and global styles
+```
+
+## Local Development
 
 ```bash
 corepack enable
@@ -56,8 +76,8 @@ The dev server runs on [http://localhost:4000](http://localhost:4000).
 
 | Command | Description |
 |---|---|
-| `pnpm dev` | Start the dev server |
-| `pnpm build` | Build the app |
+| `pnpm dev` | Start the local dev server |
+| `pnpm build` | Build the production app |
 | `pnpm lint` | Run TypeScript checks |
 | `pnpm test` | Run the Vitest suite |
 | `pnpm clean` | Remove generated build folders |
@@ -66,7 +86,7 @@ Node 22 is required. See [.nvmrc](./.nvmrc).
 
 ## Fiscal Scope
 
-The tax engine uses constants defined in `src/lib/fiscal.ts`.
+The tax engine source of truth lives in `src/lib/fiscal.ts`.
 
 | Activity | URSSAF | Allowance | Micro threshold | VL |
 |---|---:|---:|---:|---:|
@@ -75,12 +95,14 @@ The tax engine uses constants defined in `src/lib/fiscal.ts`.
 | Liberal SSI | 25.6% | 34% | EUR 83,600 | 2.2% |
 | Liberal CIPAV | 23.2% | 34% | EUR 83,600 | 2.2% |
 
-Important 2026 values:
+Other modeled rules include VAT franchise thresholds, ACRE reduction windows, RFR-based versement liberatoire eligibility, liberal daily benefits and the dedicated bank-account alert.
 
-- VAT franchise threshold: EUR 36,800 for services/BNC, EUR 91,900 for sales.
-- ACRE: 25% URSSAF reduction for 12 months since 2024-05-01, 50% before that date.
-- VL eligibility: based on household N-2 RFR and tax shares.
-- Dedicated bank account alert: from EUR 10,000 revenue over two consecutive years.
+## Quality Notes
+
+- Calculation-heavy logic is isolated in `src/lib` and covered by Vitest.
+- Persistent objects carry `schemaVersion` fields and can be migrated through `useVersionedStorage`.
+- The app is designed to remain usable offline after the first load.
+- Import/export uses an application backup format rather than CSV, because it is intended for restore workflows.
 
 ## Disclaimer
 
