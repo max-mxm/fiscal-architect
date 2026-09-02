@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
+import clsx from 'clsx';
 import {
   ArrowRight,
   CalendarClock,
@@ -19,11 +20,12 @@ import {
 } from 'recharts';
 import { useProfile } from '~/context/ProfileContext';
 import { useFiscalYearCtx } from '~/context/FiscalYearContext';
-import { getDaysInMonth, isWeekend, MONTH_NAMES, MONTH_SHORT } from '~/lib/calendar';
+import { getDaysInMonth, isWeekend, MONTH_SHORT } from '~/lib/calendar';
 import { monthHasRevenue } from '~/lib/fiscal';
 import {
   buildCashflowTimeline,
   buildPaymentProjections,
+  getNextPaymentProjectionIndex,
   sumReceiptsForYear,
 } from '~/lib/cashflow';
 import { formatEuro } from '~/lib/format';
@@ -59,6 +61,15 @@ export const Cashflow: React.FC = () => {
   const projections = useMemo(
     () => buildPaymentProjections(projectedMonths, profile),
     [projectedMonths, profile],
+  );
+  const today = useMemo(() => new Date(), []);
+  const startOfToday = useMemo(
+    () => new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+    [today],
+  );
+  const nextPaymentIndex = useMemo(
+    () => getNextPaymentProjectionIndex(projections, today),
+    [projections, today],
   );
   const timeline = useMemo(() => buildCashflowTimeline(projections), [projections]);
   const totalInvoiced = projections.reduce((sum, item) => sum + item.amount, 0);
@@ -167,42 +178,92 @@ export const Cashflow: React.FC = () => {
             </p>
 
             <div className="mt-5 space-y-2 md:hidden">
-              {projections.map((item) => (
-                <article key={`${item.serviceYear}-${item.serviceMonth}`} className="rounded-2xl border border-outline-variant/25 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-bold text-on-surface">{MONTH_NAMES[item.serviceMonth]} {item.serviceYear}</p>
-                      <p className="mt-1 text-xs text-on-surface-variant">Facture du {DATE_FORMAT.format(item.invoiceDate)}</p>
+              {projections.map((item, index) => {
+                const isPast = item.dueDate < startOfToday;
+                const isNext = index === nextPaymentIndex;
+                return (
+                  <article
+                    key={`${item.serviceYear}-${item.serviceMonth}`}
+                    className={clsx(
+                      'rounded-2xl border p-4 transition-colors',
+                      isNext
+                        ? 'border-secondary/45 bg-secondary/[0.06] ring-1 ring-secondary/15'
+                        : isPast
+                          ? 'border-outline-variant/15 bg-surface-low/35'
+                          : 'border-outline-variant/25',
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className={clsx('text-[10px] font-bold uppercase tracking-wider', isNext ? 'text-secondary' : 'text-on-surface-variant')}>
+                          Date de paiement
+                        </p>
+                        <p className={clsx('mt-1 text-sm font-bold', isPast ? 'text-on-surface-variant' : 'text-on-surface')}>
+                          {DATE_FORMAT.format(item.dueDate)}
+                        </p>
+                        {isNext ? (
+                          <span className="mt-2 inline-flex rounded-full bg-secondary px-2 py-1 text-[10px] font-black uppercase tracking-wide text-on-secondary">Prochain paiement</span>
+                        ) : isPast ? (
+                          <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant/65">
+                            <CalendarClock className="h-3 w-3" aria-hidden="true" /> Échéance passée
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">À encaisser</p>
+                        <p className={clsx('mt-1 shrink-0 font-mono text-sm font-bold tabular-nums', isPast ? 'text-on-surface-variant' : 'text-on-surface')}>
+                          {formatEuro(item.amount)} €
+                        </p>
+                      </div>
                     </div>
-                    <p className="shrink-0 font-mono text-sm font-bold tabular-nums text-on-surface">{formatEuro(item.amount)} €</p>
-                  </div>
-                  <div className="mt-3 flex items-center gap-2 rounded-xl bg-secondary/8 px-3 py-2 text-xs font-bold text-secondary">
-                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                    Au plus tard le {DATE_FORMAT.format(item.dueDate)}
-                  </div>
-                </article>
-              ))}
+                    <div className={clsx('mt-3 flex items-center justify-between gap-3 border-t pt-3 text-xs', isPast ? 'border-outline-variant/15 text-on-surface-variant/65' : 'border-outline-variant/20 text-on-surface-variant')}>
+                      <span className="font-bold uppercase tracking-wider">Date de facturation</span>
+                      <span>{DATE_FORMAT.format(item.invoiceDate)}</span>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
 
             <div className="mt-5 hidden overflow-x-auto md:block">
               <table className="w-full min-w-[680px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b border-outline-variant/25 text-[11px] uppercase tracking-wider text-on-surface-variant">
-                    <th scope="col" className="px-3 py-3 font-bold">Prestation</th>
-                    <th scope="col" className="px-3 py-3 font-bold">Facture émise</th>
-                    <th scope="col" className="px-3 py-3 font-bold">Paiement au plus tard</th>
-                    <th scope="col" className="px-3 py-3 text-right font-bold">Montant</th>
+                    <th scope="col" className="px-3 py-3 font-bold text-secondary">Date de paiement</th>
+                    <th scope="col" className="px-3 py-3 text-right font-bold">Montant à encaisser</th>
+                    <th scope="col" className="px-3 py-3 font-bold">Date de facturation</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {projections.map((item) => (
-                    <tr key={`${item.serviceYear}-${item.serviceMonth}`} className="border-b border-outline-variant/15 last:border-0">
-                      <th scope="row" className="px-3 py-4 font-bold text-on-surface">{MONTH_NAMES[item.serviceMonth]} {item.serviceYear}</th>
-                      <td className="px-3 py-4 text-on-surface-variant">{DATE_FORMAT.format(item.invoiceDate)}</td>
-                      <td className="px-3 py-4"><span className="rounded-full bg-secondary/8 px-2.5 py-1 font-bold text-secondary">{DATE_FORMAT.format(item.dueDate)}</span></td>
-                      <td className="px-3 py-4 text-right font-mono font-bold tabular-nums text-on-surface">{formatEuro(item.amount)} €</td>
-                    </tr>
-                  ))}
+                  {projections.map((item, index) => {
+                    const isPast = item.dueDate < startOfToday;
+                    const isNext = index === nextPaymentIndex;
+                    return (
+                      <tr
+                        key={`${item.serviceYear}-${item.serviceMonth}`}
+                        className={clsx(
+                          'border-b border-outline-variant/15 transition-colors last:border-0',
+                          isNext ? 'bg-secondary/[0.06]' : isPast && 'bg-surface-low/30',
+                        )}
+                      >
+                        <th scope="row" className={clsx('px-3 py-4 font-bold', isNext && 'border-l-4 border-secondary pl-4', isPast ? 'text-on-surface-variant/70' : 'text-on-surface')}>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={clsx('rounded-full px-2.5 py-1 font-bold', isNext ? 'bg-secondary text-on-secondary shadow-sm' : isPast ? 'bg-surface-highest/30 text-on-surface-variant/70' : 'bg-secondary/8 text-secondary')}>
+                              {DATE_FORMAT.format(item.dueDate)}
+                            </span>
+                            {isNext && <span className="text-[10px] font-black uppercase tracking-wider text-secondary">Prochain paiement</span>}
+                            {isPast && <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/60"><CalendarClock className="h-3 w-3" aria-hidden="true" /> Échéance passée</span>}
+                          </div>
+                        </th>
+                        <td className={clsx('px-3 py-4 text-right font-mono font-bold tabular-nums', isPast ? 'text-on-surface-variant/70' : 'text-on-surface')}>
+                          {formatEuro(item.amount)} €
+                        </td>
+                        <td className={clsx('px-3 py-4', isPast ? 'text-on-surface-variant/60' : 'text-on-surface-variant')}>
+                          {DATE_FORMAT.format(item.invoiceDate)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

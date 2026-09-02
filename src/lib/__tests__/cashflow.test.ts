@@ -4,6 +4,7 @@ import {
   calcInvoiceThresholdDate,
   calcReceiptThresholdDate,
   calculateDueDate,
+  getNextPaymentProjectionIndex,
   type PaymentProjection,
 } from '~/lib/cashflow';
 
@@ -67,5 +68,22 @@ describe('projection des encaissements', () => {
     expect(calcInvoiceThresholdDate(projections, 10_000, 2026))
       .toEqual(new Date(2026, 11, 31, 12));
     expect(calcInvoiceThresholdDate(projections, 22_000, 2026)).toBeNull();
+  });
+
+  it('identifie la prochaine échéance, même si les projections ne sont pas triées', () => {
+    const unordered = [projections[1], projections[0]];
+
+    expect(getNextPaymentProjectionIndex(unordered, new Date(2026, 11, 15)))
+      .toBe(1);
+  });
+
+  it('considère une échéance prévue aujourd’hui comme le prochain paiement', () => {
+    expect(getNextPaymentProjectionIndex(projections, new Date(2027, 0, 29, 18)))
+      .toBe(0);
+  });
+
+  it('ne retourne aucune échéance lorsque tous les paiements sont passés', () => {
+    expect(getNextPaymentProjectionIndex(projections, new Date(2027, 3, 1)))
+      .toBe(-1);
   });
 });

@@ -129,6 +129,22 @@ export function sumReceiptsForYear(projections: PaymentProjection[], year: numbe
     .reduce((sum, item) => sum + item.amount, 0);
 }
 
+/**
+ * Retourne l'index de la prochaine échéance à venir, indépendamment de l'ordre
+ * des projections. Une échéance prévue aujourd'hui est considérée à venir.
+ */
+export function getNextPaymentProjectionIndex(
+  projections: PaymentProjection[],
+  today: Date,
+): number {
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return projections.reduce((nextIndex, item, index) => {
+    if (item.dueDate < startOfToday) return nextIndex;
+    if (nextIndex === -1 || item.dueDate < projections[nextIndex].dueDate) return index;
+    return nextIndex;
+  }, -1);
+}
+
 export function sumReceiptsThroughDate(projections: PaymentProjection[], date: Date): number {
   const limit = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
   return projections
