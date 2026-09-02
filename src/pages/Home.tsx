@@ -51,6 +51,11 @@ import { useNotificationsCtx } from '~/context/NotificationsContext';
 import { usePrefersReducedMotion } from '~/hooks/usePrefersReducedMotion';
 import { VLRegularizationAlert } from '~/components/VLRegularizationAlert';
 import type { CalendarMonth, RevenueEntry } from '~/types';
+import {
+  buildPaymentProjections,
+  calcInvoiceThresholdDate,
+  sumInvoicesThroughDate,
+} from '~/lib/cashflow';
 
 type ConfirmKind = 'clear-year' | 'fill-month' | 'fill-year';
 
@@ -209,10 +214,31 @@ export const Home: React.FC = () => {
 
   // --- TVA ---
   const tvaSeuils = getTVASeuils(primaryActivity);
-  const tvaStatus = useMemo(() => calcTVAStatus(caCumule, primaryActivity), [caCumule, primaryActivity]);
+  const paymentProjections = useMemo(
+    () => buildPaymentProjections(projectedMonths, profile),
+    [projectedMonths, profile],
+  );
+  const tvaTurnoverProjected = useMemo(
+    () => paymentProjections.reduce((sum, item) => sum + item.amount, 0),
+    [paymentProjections],
+  );
+  const invoiceReferenceDate = useMemo(() => {
+    const now = new Date();
+    if (year < now.getFullYear()) return new Date(year, 11, 31, 23, 59, 59, 999);
+    if (year > now.getFullYear()) return new Date(year, 0, 1, 0, 0, 0, 0);
+    return now;
+  }, [year]);
+  const tvaTurnoverRealized = useMemo(
+    () => sumInvoicesThroughDate(paymentProjections, invoiceReferenceDate),
+    [paymentProjections, invoiceReferenceDate],
+  );
+  const tvaStatus = useMemo(
+    () => calcTVAStatus(tvaTurnoverProjected, primaryActivity),
+    [tvaTurnoverProjected, primaryActivity],
+  );
   const tvaSeuilDate = useMemo(
-    () => calcSeuilDateFromEntries(projectedMonths, profile, tvaSeuils.basique),
-    [projectedMonths, profile, tvaSeuils.basique],
+    () => calcInvoiceThresholdDate(paymentProjections, tvaSeuils.majore, year),
+    [paymentProjections, tvaSeuils.majore, year],
   );
 
   const selectedMonthData = fy.fiscalYear.months[selectedMonth];
@@ -412,6 +438,7 @@ export const Home: React.FC = () => {
         <EmptyHero seuilMicro={profile.seuilMicro} />
       ) : (
         <KeyMetrics
+          fiscalYear={year}
           caCumule={caCumule}
           caRealise={caRealise}
           netCumule={netCumule}
@@ -424,6 +451,8 @@ export const Home: React.FC = () => {
           seuilDate={seuilDate}
           onEditMissionStart={openFiscalSettings}
           seuilTVA={tvaSeuils.basique}
+          tvaTurnoverRealized={tvaTurnoverRealized}
+          tvaTurnoverProjected={tvaTurnoverProjected}
           tvaStatus={tvaStatus}
           tvaSeuilDate={tvaSeuilDate}
           tvaAssujetti={profile.tvaAssujetti}

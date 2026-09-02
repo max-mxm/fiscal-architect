@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { cn } from '~/utils';
 
-export type SettingsTabId = 'profile' | 'fiscal' | 'costs';
+export type SettingsTabId = 'profile' | 'fiscal' | 'payments' | 'costs';
 
 export interface TabDef {
   id: SettingsTabId;
@@ -50,7 +50,7 @@ export const SettingsTabs: React.FC<SettingsTabsProps> = ({
       role="tablist"
       aria-label="Sections des réglages"
       onKeyDown={handleKey}
-      className="flex gap-1 px-4 md:px-6 -mx-1 overflow-x-auto scrollbar-none"
+      className="flex gap-1 px-4 md:px-6 -mx-1 overflow-x-auto scrollbar-hide"
     >
       {tabs.map((tab, i) => {
         const isActive = tab.id === active;

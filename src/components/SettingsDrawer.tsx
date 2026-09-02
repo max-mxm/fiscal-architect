@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence, type PanInfo } from 'motion/react';
-import { X, RotateCcw, User, Calculator, Receipt, Monitor, Sun, Moon } from 'lucide-react';
+import { X, RotateCcw, User, Calculator, Receipt, Monitor, Sun, Moon, CalendarClock } from 'lucide-react';
 import { useTheme, type ThemeMode } from '~/context/ThemeContext';
 import type { UserProfile } from '~/types';
 import { MissionStartInput } from '~/components/fiscal/MissionStartInput';
@@ -16,6 +16,7 @@ import { IJToggle } from '~/components/fiscal/IJToggle';
 import { RFRInput } from '~/components/fiscal/RFRInput';
 import { SeuilInput } from '~/components/fiscal/SeuilInput';
 import { FixedCostsList } from '~/components/fiscal/FixedCostsList';
+import { PaymentTermsEditor } from '~/components/fiscal/PaymentTermsEditor';
 import { SettingsTabs, type SettingsTabId, type TabDef } from '~/components/settings/SettingsTabs';
 import { ACTIVITY_PARAMS, getActivities, getPrimaryActivity } from '~/lib/fiscal';
 import { calcVLEligibilityForYear } from '~/lib/vlEligibility';
@@ -36,6 +37,7 @@ const FOCUSABLE = 'a[href],button:not([disabled]),textarea:not([disabled]),input
 
 const TABS: TabDef[] = [
   { id: 'fiscal', label: 'Fiscal', Icon: Calculator },
+  { id: 'payments', label: 'Revenus', Icon: CalendarClock },
   { id: 'profile', label: 'Profil', Icon: User },
   { id: 'costs', label: 'Charges', Icon: Receipt },
 ];
@@ -139,7 +141,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               <div>
                 <h2 className="font-headline text-lg font-bold text-on-surface">Réglages</h2>
                 <p className="text-xs text-on-surface-variant mt-0.5">
-                  Profil, paramètres fiscaux et charges fixes.
+                  Profil, fiscalité, revenus et charges.
                 </p>
               </div>
               <button
@@ -270,34 +272,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   aria-labelledby={tabId('fiscal')}
                   className="space-y-8"
                 >
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-secondary">
-                      Période
-                    </h3>
-                    <CreationDateInput
-                      value={profile.creationDate}
-                      onChange={(v) => updateProfile({ creationDate: v })}
-                    />
-                    <MissionStartInput
-                      value={profile.missionStart}
-                      onChange={(v) => updateProfile({ missionStart: v })}
-                      year={year}
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-secondary">
-                      Mode de saisie
-                    </h3>
-                    <p className="text-[11px] text-on-surface-variant leading-relaxed -mt-1">
-                      Comment vous facturez votre activité — choisissez ce qui correspond à votre quotidien.
-                    </p>
-                    <RevenueModeSelector
-                      value={profile.revenueModel}
-                      onChange={(next) => updateProfile({ revenueModel: next })}
-                    />
-                  </div>
-
                   <div className="space-y-3">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-secondary">
                       Activités
@@ -326,6 +300,10 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     <h3 className="text-xs font-bold uppercase tracking-wider text-secondary">
                       Régime fiscal
                     </h3>
+                    <CreationDateInput
+                      value={profile.creationDate}
+                      onChange={(v) => updateProfile({ creationDate: v })}
+                    />
                     <ACREToggle
                       value={profile.acreEnabled}
                       onChange={(v) => updateProfile({ acreEnabled: v })}
@@ -407,6 +385,47 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                       value={profile.seuilMicro}
                       onChange={(v) => updateProfile({ seuilMicro: v })}
                       defaultValue={ACTIVITY_PARAMS[getPrimaryActivity(profile).type].plafond}
+                    />
+                  </div>
+                </section>
+              )}
+
+              {activeTab === 'payments' && (
+                <section
+                  role="tabpanel"
+                  id={panelId('payments')}
+                  aria-labelledby={tabId('payments')}
+                  className="space-y-8"
+                >
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-secondary">
+                      Mission et facturation
+                    </h3>
+                    <MissionStartInput
+                      value={profile.missionStart}
+                      onChange={(v) => updateProfile({ missionStart: v })}
+                      year={year}
+                    />
+                    <div className="space-y-3 pt-2">
+                      <p className="text-[11px] leading-relaxed text-on-surface-variant">
+                        Comment vous facturez votre activité — choisissez ce qui correspond à votre quotidien.
+                      </p>
+                      <RevenueModeSelector
+                        value={profile.revenueModel}
+                        onChange={(next) => updateProfile({ revenueModel: next })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 border-t border-outline-variant/15 pt-6">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-secondary">
+                      Encaissement
+                    </h3>
+                    <PaymentTermsEditor
+                      days={profile.paymentDelayDays}
+                      mode={profile.paymentDelayMode}
+                      endOfMonthCalculation={profile.endOfMonthCalculation}
+                      onChange={updateProfile}
                     />
                   </div>
                 </section>

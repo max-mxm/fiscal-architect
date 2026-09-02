@@ -12,6 +12,14 @@ const yearConfigKey = (year: number) => `fiscal-year-config-${year}`;
 const YEAR_CONFIG_MIGRATIONS: Record<number, (old: any) => any> = {
   // v1 → v2 : introduction de `tjmByMonth` (sparse, undefined par défaut).
   1: (old: any) => ({ ...old, schemaVersion: 2 }),
+  // v2 → v3 : délai de paiement. Zéro préserve strictement les projections existantes.
+  2: (old: any) => ({
+    ...old,
+    schemaVersion: 3,
+    paymentDelayDays: 0,
+    paymentDelayMode: 'net',
+    endOfMonthCalculation: 'delayThenMonthEnd',
+  }),
 };
 
 /**

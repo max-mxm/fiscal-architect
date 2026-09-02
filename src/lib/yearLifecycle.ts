@@ -83,7 +83,7 @@ export function createYearInherited(
   const legal = getLegalParamsForYear(year);
   const config: YearConfig = {
     ...donor,
-    schemaVersion: 2,
+    schemaVersion: 3,
     year,
     urssafRate: legal.urssafRate,
     seuilMicro: legal.seuilMicro,
@@ -115,7 +115,7 @@ export function previewInheritedConfig(year: number, sourceYear: number): YearCo
   const legal = getLegalParamsForYear(year);
   return {
     ...donor,
-    schemaVersion: 2,
+    schemaVersion: 3,
     year,
     urssafRate: legal.urssafRate,
     seuilMicro: legal.seuilMicro,

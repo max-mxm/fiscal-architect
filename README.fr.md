@@ -122,7 +122,7 @@ Source de vérité applicative : `src/lib/fiscal.ts` (`ACTIVITY_PARAMS`).
 |---|---|---|---|---|---|---|
 | Vente / hébergement (BIC) | **12,3 %** | 71 % | 203 100 € | 1,0 % | 0,1 % | 0,015 % |
 | Services BIC / artisan | **21,2 %** | 50 % | 83 600 € | 1,7 % | 0,3 % | 0,044 % |
-| Libéral non réglementé (SSI) | **26,1 %** | 34 % | 83 600 € | 2,2 % | 0,2 % | 0 |
+| Libéral non réglementé (SSI) | **25,6 %** | 34 % | 83 600 € | 2,2 % | 0,2 % | 0 |
 | Libéral réglementé (CIPAV) | **23,2 %** | 34 % | 83 600 € | 2,2 % | 0,2 % | 0 |
 
 | Concept transverse | Valeur 2026 |

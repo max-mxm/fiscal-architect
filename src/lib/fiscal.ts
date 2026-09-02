@@ -19,17 +19,17 @@ export interface ActivityParams {
 export const ACTIVITY_PARAMS: Record<Activity, ActivityParams> = {
   vente:        { label: 'Vente / hébergement (BIC)',      hint: 'Marchandises, e-commerce, gîte',     urssafRate: 12.3, abattement: 0.71, plafond: 203_100, tauxVL: 0.010, cfpRate: 0.001, taxeConsulaireRate: 0.00015 },
   serviceBic:   { label: 'Services commerciaux / artisan', hint: 'Artisan, prestation BIC',            urssafRate: 21.2, abattement: 0.50, plafond:  83_600, tauxVL: 0.017, cfpRate: 0.003, taxeConsulaireRate: 0.00044 },
-  liberalSsi:   { label: 'Libéral non réglementé (SSI)',   hint: 'BNC SSI : conseil, dev, design',     urssafRate: 26.1, abattement: 0.34, plafond:  83_600, tauxVL: 0.022, cfpRate: 0.002, taxeConsulaireRate: 0 },
+  liberalSsi:   { label: 'Libéral non réglementé (SSI)',   hint: 'BNC SSI : conseil, dev, design',     urssafRate: 25.6, abattement: 0.34, plafond:  83_600, tauxVL: 0.022, cfpRate: 0.002, taxeConsulaireRate: 0 },
   liberalCipav: { label: 'Libéral réglementé (CIPAV)',     hint: 'Architecte, ostéo, psy, etc.',       urssafRate: 23.2, abattement: 0.34, plafond:  83_600, tauxVL: 0.022, cfpRate: 0.002, taxeConsulaireRate: 0 },
 };
 
-// --- TVA — franchise en base (seuils 2026, inchangés depuis 2023) ---
+// --- TVA — franchise en base (seuils nationaux applicables depuis 2025) ---
 
 export const TVA_FRANCHISE_2026 = {
   /** Vente de marchandises et hébergement. */
-  vente:    { basique: 91_900, majore: 101_000 },
+  vente:    { basique: 85_000, majore: 93_500 },
   /** Prestations de services et BNC (s'applique à serviceBic, liberalSsi, liberalCipav). */
-  services: { basique: 36_800, majore:  39_100 },
+  services: { basique: 37_500, majore:  41_250 },
 } as const;
 
 // --- Versement libératoire — éligibilité par année fiscale ---
@@ -394,13 +394,15 @@ export function calcNetMicroMulti(
   const cfpEnabled = profile.cfpEnabled;
   const taxeConsulaireEnabled = profile.taxeConsulaireEnabled;
   const acreTotal = Math.max(0, opts.acreReduction ?? 0);
+  const primaryActivity = getPrimaryActivity(profile).type;
+  const urssafRateFor = (activity: Activity) =>
+    activity === primaryActivity ? profile.urssafRate : ACTIVITY_PARAMS[activity].urssafRate;
 
   let chargesURSSAFBrutTotal = 0;
   for (const a of Object.keys(caByActivity) as Activity[]) {
     const ca = caByActivity[a];
     if (ca <= 0) continue;
-    const params = ACTIVITY_PARAMS[a];
-    chargesURSSAFBrutTotal += ca * (params.urssafRate / 100);
+    chargesURSSAFBrutTotal += ca * (urssafRateFor(a) / 100);
   }
 
   let chargesURSSAF = 0;
@@ -414,7 +416,7 @@ export function calcNetMicroMulti(
     const ca = caByActivity[a];
     if (ca <= 0) continue;
     const params = ACTIVITY_PARAMS[a];
-    const urssafBrutBranche = ca * (params.urssafRate / 100);
+    const urssafBrutBranche = ca * (urssafRateFor(a) / 100);
     // Ventilation ACRE au prorata
     const acreBranche = chargesURSSAFBrutTotal > 0
       ? Math.min(urssafBrutBranche, acreTotal * (urssafBrutBranche / chargesURSSAFBrutTotal))
@@ -474,8 +476,13 @@ export function calcNetMicroMulti(
 }
 
 /**
- * Net cumulé multi-activité — équivalent de `calcNetCumule` mais ventilé.
- * Les charges fixes sont pondérées par les mois avec activité.
+ * Net cumulé multi-activité, avec une provision d'IR cohérente avec la vue
+ * mensuelle. Le rythme moyen des mois renseignés est annualisé, puis la part
+ * d'IR correspondant aux mois actifs est déduite du CA cumulé.
+ *
+ * Exemple : un seul mois à 11 k€ est projeté à 132 k€/an. Le net cumulé de ce
+ * mois est donc identique au net de sa fiche mensuelle, au lieu de considérer
+ * à tort que 11 k€ représente tout le revenu annuel.
  */
 export function calcNetCumuleMulti(
   profile: UserProfile,
@@ -486,10 +493,31 @@ export function calcNetCumuleMulti(
   opts: FiscalCalcOptions = {},
 ): number {
   const caTotal = Object.values(caByActivity).reduce((s, v) => s + v, 0);
-  if (caTotal <= 0) return 0;
-  const chargesFixesTotal = chargesFixesMensuelles * Math.max(0, monthsWithActivity);
-  const result = calcNetMicroMulti(profile, caByActivity, chargesFixesTotal, versementLiberatoire, opts);
-  return Math.round(result.netApresIR);
+  const activeMonths = Math.max(0, Math.min(12, monthsWithActivity));
+  if (caTotal <= 0 || activeMonths === 0) return 0;
+
+  const chargesFixesTotal = chargesFixesMensuelles * activeMonths;
+  const actual = calcNetMicroMulti(profile, caByActivity, chargesFixesTotal, versementLiberatoire, opts);
+
+  const annualizationFactor = 12 / activeMonths;
+  const annualizedCA = Object.fromEntries(
+    (Object.keys(caByActivity) as Activity[]).map((activity) => [
+      activity,
+      caByActivity[activity] * annualizationFactor,
+    ]),
+  ) as Record<Activity, number>;
+  const annualProjection = calcNetMicroMulti(profile, annualizedCA, 0, versementLiberatoire, {
+    ...opts,
+    // Ces charges n'entrent pas dans le calcul de l'IR au barème. Les remettre
+    // ici fausserait seulement le net projeté intermédiaire dont on n'a pas besoin.
+    acreReduction: 0,
+    ijAnnuel: 0,
+  });
+  const estimatedIRToDate = annualProjection.ir * (activeMonths / 12);
+
+  // Remplace l'IR calculé sur le seul CA cumulé par la provision fondée sur le
+  // rythme annuel, tout en conservant les charges réellement dues à date.
+  return Math.round(actual.netApresIR + actual.ir - estimatedIRToDate);
 }
 
 export function calcChargesURSSAF(ca: number, taux: number): number {
@@ -576,8 +604,8 @@ export function getTVASeuils(activity: Activity): { basique: number; majore: num
  */
 export function calcTVAStatus(caCumule: number, activity: Activity): TVAStatus {
   const { basique, majore } = getTVASeuils(activity);
-  if (caCumule >= majore) return 'breach';
-  if (caCumule >= basique) return 'warning';
+  if (caCumule > majore) return 'breach';
+  if (caCumule > basique) return 'warning';
   return 'safe';
 }
 

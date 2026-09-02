@@ -86,7 +86,7 @@ function RootComponent() {
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="fr">
+    <html lang="fr" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
@@ -143,8 +143,9 @@ function AppShell() {
   const fy = useFiscalYearCtx()
   const navigate = useNavigate()
   const search = useRouterState({ select: (s) => s.location.search }) as Record<string, unknown>
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
   const settingsParam = search?.settings as SettingsTabId | undefined
-  const isValidTab = settingsParam === 'profile' || settingsParam === 'fiscal' || settingsParam === 'costs'
+  const isValidTab = settingsParam === 'profile' || settingsParam === 'fiscal' || settingsParam === 'payments' || settingsParam === 'costs'
   const settingsOpen = isValidTab
   const activeTab: SettingsTabId = isValidTab ? settingsParam : 'fiscal'
   const resetConfirmOpen = search?.confirm === 'reset-all'
@@ -156,15 +157,17 @@ function AppShell() {
     [fy.fiscalYear.months, profile],
   )
 
-  const openSettings = (tab: SettingsTabId) => navigate({ to: '/', search: { settings: tab } })
-  const closeSettings = () => navigate({ to: '/', search: {} })
-  const askResetAll = () => navigate({ to: '/', search: { confirm: 'reset-all' } })
+  const navigateOnCurrentPage = (nextSearch: Record<string, string>) =>
+    navigate({ to: pathname, search: nextSearch } as never)
+  const openSettings = (tab: SettingsTabId) => navigateOnCurrentPage({ settings: tab })
+  const closeSettings = () => navigateOnCurrentPage({})
+  const askResetAll = () => navigateOnCurrentPage({ confirm: 'reset-all' })
   const confirmResetAll = () => {
     fy.resetEverything()
-    navigate({ to: '/', search: {} })
+    navigateOnCurrentPage({})
   }
   const cancelReset = () =>
-    navigate({ to: '/', search: settingsOpen ? { settings: activeTab } : {} })
+    navigateOnCurrentPage(settingsOpen ? { settings: activeTab } : {})
 
   return (
     <div className="min-h-screen bg-surface flex flex-col">

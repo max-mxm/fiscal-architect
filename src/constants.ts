@@ -13,9 +13,9 @@ export const DEFAULT_FIXED_COSTS: FixedCost[] = [
 export const LEGAL_PARAMS_BY_YEAR: Record<number, { urssafRate: number; seuilMicro: number }> = {
   2024: { urssafRate: 21.2, seuilMicro: 77_700 },
   2025: { urssafRate: 24.6, seuilMicro: 77_700 },
-  2026: { urssafRate: 26.1, seuilMicro: 83_600 },
-  2027: { urssafRate: 26.1, seuilMicro: 83_600 },
-  2028: { urssafRate: 26.1, seuilMicro: 83_600 },
+  2026: { urssafRate: 25.6, seuilMicro: 83_600 },
+  2027: { urssafRate: 25.6, seuilMicro: 83_600 },
+  2028: { urssafRate: 25.6, seuilMicro: 83_600 },
 };
 
 /** Paramètres légaux applicables à une année — fallback sur l'année la plus récente connue. */
@@ -40,13 +40,16 @@ export const DEFAULT_IDENTITY: IdentityProfile = {
 export function buildDefaultYearConfig(year: number): YearConfig {
   const legal = getLegalParamsForYear(year);
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     year,
     urssafRate: legal.urssafRate,
     seuilMicro: legal.seuilMicro,
     tjm: 650,
     workingDays: 19,
     revenueModel: 'days',
+    paymentDelayDays: 0,
+    paymentDelayMode: 'net',
+    endOfMonthCalculation: 'delayThenMonthEnd',
     activities: [{ id: 'act-default', type: 'liberalSsi', isPrimary: true }],
     fixedCosts: DEFAULT_FIXED_COSTS.map((c) => ({ ...c })),
     versementLiberatoire: false,

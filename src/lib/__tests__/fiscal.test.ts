@@ -23,6 +23,7 @@ import {
   calcIR,
   calcMonthlyBreakdown,
   calcNetCumule,
+  calcNetCumuleMulti,
   calcNetMicro,
   calcReserveVacances,
   calcSeuilDate,
@@ -86,7 +87,10 @@ const makeProfile = (overrides: Partial<UserProfile> = {}): UserProfile => ({
   year: 2026,
   tjm: 500,
   workingDays: 19,
-  urssafRate: 26.1,
+  paymentDelayDays: 0,
+  paymentDelayMode: 'net',
+  endOfMonthCalculation: 'delayThenMonthEnd',
+  urssafRate: 25.6,
   fixedCosts: [],
   seuilMicro: 83_600,
   versementLiberatoire: false,
@@ -384,7 +388,7 @@ describe('countMonthsWithActivity', () => {
 
 describe('calcNetCumule', () => {
   it('retourne 0 quand caCumule est 0', () => {
-    expect(calcNetCumule(0, 26.1, 555, 5, false)).toBe(0);
+    expect(calcNetCumule(0, 25.6, 555, 5, false)).toBe(0);
   });
 
   it('soustrait URSSAF, charges fixes pondérées par les mois et IR au barème', () => {
@@ -435,8 +439,8 @@ describe('ACTIVITY_PARAMS (chiffres 2026)', () => {
     expect(ACTIVITY_PARAMS.serviceBic.tauxVL).toBeCloseTo(0.017);
   });
 
-  it('liberalSsi : URSSAF 26,1 %, abattement 34 %, plafond 83 600 €, VL 2,2 %', () => {
-    expect(ACTIVITY_PARAMS.liberalSsi.urssafRate).toBe(26.1);
+  it('liberalSsi : URSSAF 25,6 %, abattement 34 %, plafond 83 600 €, VL 2,2 %', () => {
+    expect(ACTIVITY_PARAMS.liberalSsi.urssafRate).toBe(25.6);
     expect(ACTIVITY_PARAMS.liberalSsi.abattement).toBeCloseTo(0.34);
     expect(ACTIVITY_PARAMS.liberalSsi.plafond).toBe(83_600);
     expect(ACTIVITY_PARAMS.liberalSsi.tauxVL).toBeCloseTo(0.022);
@@ -512,10 +516,10 @@ describe('calcNetMicro avec opts (par activité)', () => {
     expect(r.netApresIR).toBeCloseTo(60_000 - 12_720 - 2104);
   });
 
-  it('liberalSsi : 60 000 € → URSSAF 26,1 %, IR sur 39 600 € imposable', () => {
+  it('liberalSsi : 60 000 € → URSSAF 25,6 %, IR sur 39 600 € imposable', () => {
     const p = ACTIVITY_PARAMS.liberalSsi;
     const r = calcNetMicro(60_000, p.urssafRate, 0, false, { abattement: p.abattement, tauxVL: p.tauxVL });
-    expect(r.chargesURSSAF).toBeCloseTo(15_660);
+    expect(r.chargesURSSAF).toBeCloseTo(15_360);
     expect(r.revenuImposable).toBeCloseTo(39_600);
     expect(r.ir).toBeGreaterThan(4_900); // sanity check tranche 30 %
     expect(r.ir).toBeLessThan(5_100);
@@ -540,7 +544,7 @@ describe('calcNetMicro avec opts (par activité)', () => {
       abattement: ACTIVITY_PARAMS.vente.abattement,
       tauxVL: ACTIVITY_PARAMS.vente.tauxVL,
     });
-    const ssiVL = calcNetMicro(ca, 26.1, 0, true, {
+    const ssiVL = calcNetMicro(ca, 25.6, 0, true, {
       abattement: ACTIVITY_PARAMS.liberalSsi.abattement,
       tauxVL: ACTIVITY_PARAMS.liberalSsi.tauxVL,
     });
@@ -648,11 +652,11 @@ describe('calcACRE', () => {
 });
 
 describe('getTVASeuils', () => {
-  it('vente → 91 900 / 101 000 €', () => {
+  it('vente → 85 000 / 93 500 €', () => {
     expect(getTVASeuils('vente')).toEqual(TVA_FRANCHISE_2026.vente);
   });
 
-  it('serviceBic, libéraux → 36 800 / 39 100 €', () => {
+  it('serviceBic, libéraux → 37 500 / 41 250 €', () => {
     expect(getTVASeuils('serviceBic')).toEqual(TVA_FRANCHISE_2026.services);
     expect(getTVASeuils('liberalSsi')).toEqual(TVA_FRANCHISE_2026.services);
     expect(getTVASeuils('liberalCipav')).toEqual(TVA_FRANCHISE_2026.services);
@@ -666,21 +670,26 @@ describe('calcTVAStatus', () => {
   });
 
   it('warning quand CA entre basique et majoré (services)', () => {
-    expect(calcTVAStatus(36_800, 'liberalSsi')).toBe('warning');
+    expect(calcTVAStatus(37_501, 'liberalSsi')).toBe('warning');
     expect(calcTVAStatus(38_000, 'serviceBic')).toBe('warning');
   });
 
+  it('ne considère pas un plafond exactement atteint comme dépassé', () => {
+    expect(calcTVAStatus(37_500, 'liberalSsi')).toBe('safe');
+    expect(calcTVAStatus(41_250, 'liberalSsi')).toBe('warning');
+  });
+
   it('breach quand CA >= seuil majoré (services)', () => {
-    expect(calcTVAStatus(39_100, 'liberalSsi')).toBe('breach');
+    expect(calcTVAStatus(41_251, 'liberalSsi')).toBe('breach');
     expect(calcTVAStatus(45_000, 'liberalCipav')).toBe('breach');
   });
 
   it('warning quand CA entre basique et majoré (vente)', () => {
-    expect(calcTVAStatus(95_000, 'vente')).toBe('warning');
+    expect(calcTVAStatus(90_000, 'vente')).toBe('warning');
   });
 
   it('breach quand CA >= seuil majoré (vente)', () => {
-    expect(calcTVAStatus(101_000, 'vente')).toBe('breach');
+    expect(calcTVAStatus(93_501, 'vente')).toBe('breach');
     expect(calcTVAStatus(150_000, 'vente')).toBe('breach');
   });
 });
@@ -701,9 +710,8 @@ describe('calcTVASeuilDate', () => {
     expect(calcTVASeuilDate(months, 500, 'liberalSsi')).toBeNull();
   });
 
-  it('renvoie la date de bascule services à 36 800 €', () => {
-    // TJM 1000, seuil services 36 800 → 37e jour atteint le seuil
-    // Avec 30 jours en jan + 7 jours fév => atteint le 7 fév (cumul 37 000)
+  it('renvoie la date de bascule services à 37 500 €', () => {
+    // TJM 1000, seuil services 37 500 → 38e jour atteint le seuil
     const months = monthsOf2(2026, [
       { workedDays: Array.from({ length: 30 }, (_, i) => i + 1) }, // jan : 30 × 1000 = 30 000
       { workedDays: Array.from({ length: 10 }, (_, i) => i + 1) }, // fev : 10 × 1000
@@ -711,11 +719,11 @@ describe('calcTVASeuilDate', () => {
     const date = calcTVASeuilDate(months, 1000, 'liberalSsi');
     expect(date).not.toBeNull();
     expect(date!.getMonth()).toBe(1); // février
-    expect(date!.getDate()).toBe(7);
+    expect(date!.getDate()).toBe(8);
   });
 
-  it('utilise le seuil vente 91 900 € pour activité vente', () => {
-    // TJM 1000, seuil vente 91 900 → atteint le 92e jour
+  it('utilise le seuil vente 85 000 € pour activité vente', () => {
+    // TJM 1000, seuil vente 85 000 → atteint le 85e jour
     const months = monthsOf2(2026, [
       { workedDays: Array.from({ length: 31 }, (_, i) => i + 1) },
       { workedDays: Array.from({ length: 28 }, (_, i) => i + 1) },
@@ -724,7 +732,7 @@ describe('calcTVASeuilDate', () => {
     ]);
     const date = calcTVASeuilDate(months, 1000, 'vente');
     expect(date).not.toBeNull();
-    expect(date!.getMonth()).toBe(3); // avril
+    expect(date!.getMonth()).toBe(2); // mars
   });
 });
 
@@ -1153,8 +1161,8 @@ describe('getMixedTVASeuils', () => {
 
   it('multi-activité services + vente → les deux seuils', () => {
     const seuils = getMixedTVASeuils(multiProfile);
-    expect(seuils.services?.basique).toBe(36_800);
-    expect(seuils.vente?.basique).toBe(91_900);
+    expect(seuils.services?.basique).toBe(37_500);
+    expect(seuils.vente?.basique).toBe(85_000);
   });
 
   it("activityCategory : seul 'vente' est en catégorie vente", () => {
@@ -1166,10 +1174,10 @@ describe('getMixedTVASeuils', () => {
 });
 
 describe('calcNetMicroMulti', () => {
-  it('mono-activité produit le même résultat que calcNetMicro pour libéral SSI', () => {
+  it('mono-activité respecte le taux URSSAF personnalisé du profil', () => {
     const ca = 60_000;
     const params = ACTIVITY_PARAMS.liberalSsi;
-    const single = calcNetMicro(ca, params.urssafRate, 0, false, {
+    const single = calcNetMicro(ca, multiProfile.urssafRate, 0, false, {
       abattement: params.abattement,
       tauxVL: params.tauxVL,
     });
@@ -1195,8 +1203,8 @@ describe('calcNetMicroMulti', () => {
       0,
       false,
     );
-    // URSSAF : 30 000 × 12,3 % + 60 000 × 26,1 %
-    const expectedURSSAF = 30_000 * 0.123 + 60_000 * 0.261;
+    // URSSAF : taux légal vente + taux personnalisé de l'activité primaire.
+    const expectedURSSAF = 30_000 * 0.123 + 60_000 * (multiProfile.urssafRate / 100);
     expect(result.chargesURSSAF).toBeCloseTo(expectedURSSAF, 0);
   });
 
@@ -1260,6 +1268,41 @@ describe('calcNetMicroMulti', () => {
       { ijAnnuel: 510 },
     );
     expect(base.netApresIR - withIJ.netApresIR).toBeCloseTo(510, 0);
+  });
+});
+
+describe('calcNetCumuleMulti', () => {
+  it('un seul mois produit le même net que sa fiche mensuelle', () => {
+    const profile = makeProfile({ urssafRate: 26.1, cfpEnabled: true });
+    const opts = { abattement: 0.34, tauxVL: 0.022, cfpRate: 0.002 };
+    const monthly = calcMonthlyBreakdown(11_000, profile.urssafRate, 0, false, opts);
+    const cumulative = calcNetCumuleMulti(
+      profile,
+      { vente: 0, serviceBic: 0, liberalSsi: 11_000, liberalCipav: 0 },
+      0,
+      1,
+      false,
+      opts,
+    );
+
+    expect(cumulative).toBe(Math.round(monthly.net));
+    expect(cumulative).toBe(6_480);
+  });
+
+  it('annualise le rythme moyen observé sur plusieurs mois', () => {
+    const profile = makeProfile({ urssafRate: 26.1, cfpEnabled: true });
+    const opts = { abattement: 0.34, tauxVL: 0.022, cfpRate: 0.002 };
+    const monthly = calcMonthlyBreakdown(11_000, profile.urssafRate, 0, false, opts);
+    const cumulative = calcNetCumuleMulti(
+      profile,
+      { vente: 0, serviceBic: 0, liberalSsi: 22_000, liberalCipav: 0 },
+      0,
+      2,
+      false,
+      opts,
+    );
+
+    expect(cumulative).toBe(Math.round(monthly.net * 2));
   });
 });
 

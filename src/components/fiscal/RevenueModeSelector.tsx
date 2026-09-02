@@ -55,12 +55,18 @@ export const RevenueModeSelector: React.FC<RevenueModeSelectorProps> = ({ value,
         const meta = META[m];
         const active = value === m;
         return (
-          <button
+          <div
             key={m}
-            type="button"
             role="radio"
             aria-checked={active}
+            tabIndex={0}
             onClick={() => onChange(m)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onChange(m);
+              }
+            }}
             className={cn(
               'flex items-center gap-3 min-h-[64px] w-full min-w-0 max-w-full rounded-2xl border p-3 text-left transition-colors overflow-hidden',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40',
@@ -94,7 +100,7 @@ export const RevenueModeSelector: React.FC<RevenueModeSelectorProps> = ({ value,
               {meta.tag}
               {active && <Check className="w-3 h-3" aria-hidden="true" />}
             </span>
-          </button>
+          </div>
         );
       })}
     </fieldset>

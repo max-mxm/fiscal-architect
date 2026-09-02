@@ -1,5 +1,6 @@
 import React from 'react';
-import { Receipt } from 'lucide-react';
+import { Link, useRouterState } from '@tanstack/react-router';
+import { CalendarDays, Receipt, WalletCards } from 'lucide-react';
 import type { UserProfile } from '~/types';
 import type { SettingsTabId } from '~/components/settings/SettingsTabs';
 import { formatEuro } from '~/lib/format';
@@ -52,10 +53,11 @@ export const FiscalContextBar: React.FC<FiscalContextBarProps> = ({
   onRequestYearTransition,
   onOpenTab,
 }) => {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   return (
     <div className="bg-surface border-b border-outline-variant/10">
       <div
-        className="px-4 sm:px-6 lg:px-10 py-2 flex items-center gap-2 overflow-x-auto scrollbar-none"
+        className="px-4 sm:px-6 lg:px-10 py-2 flex items-center gap-2 overflow-x-auto scrollbar-hide"
         role="group"
         aria-label="Contexte fiscal"
       >
@@ -65,6 +67,28 @@ export const FiscalContextBar: React.FC<FiscalContextBarProps> = ({
           onSelectYear={onSelectYear}
           onRequestTransition={onRequestYearTransition}
         />
+        <nav aria-label="Vues principales" className="flex shrink-0 items-center rounded-full bg-surface-highest/40 p-0.5">
+          {[
+            { to: '/' as const, label: 'Planning', Icon: CalendarDays },
+            { to: '/encaissements' as const, label: 'Encaissements', Icon: WalletCards },
+          ].map(({ to, label, Icon }) => {
+            const active = pathname === to;
+            return (
+              <Link
+                key={to}
+                to={to}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-xs font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-secondary/30',
+                  active ? 'bg-surface-lowest text-secondary shadow-sm' : 'text-on-surface-variant hover:text-on-surface',
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
         <Chip
           Icon={Receipt}
           label="Seuil"

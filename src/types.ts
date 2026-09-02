@@ -3,6 +3,10 @@ export type Activity = 'vente' | 'serviceBic' | 'liberalSsi' | 'liberalCipav';
 /** Mode de saisie du chiffre d'affaires par défaut au niveau de l'année. */
 export type RevenueModel = 'days' | 'forfait' | 'flat' | 'mixed';
 
+/** Convention contractuelle utilisée pour projeter la date limite d'encaissement. */
+export type PaymentDelayMode = 'net' | 'endOfMonth';
+export type EndOfMonthCalculation = 'delayThenMonthEnd' | 'monthEndThenDelay';
+
 /**
  * Une déclaration d'activité dans la config annuelle. Le micro-entrepreneur peut
  * en cumuler plusieurs (ex. dev BNC + vente de templates) — chaque entry de revenu
@@ -53,7 +57,7 @@ export interface IdentityProfile {
  * Stocké dans la clé `fiscal-year-config-${year}`.
  */
 export interface YearConfig {
-  schemaVersion: 2;
+  schemaVersion: 3;
   year: number;
 
   // Paramètres légaux (fixés par la loi pour cette année)
@@ -69,6 +73,12 @@ export interface YearConfig {
   tjmByMonth?: Record<number, number>;
   workingDays: number;
   revenueModel: RevenueModel;
+  /** Délai contractuel à compter de la facture (0 = paiement comptant). */
+  paymentDelayDays: number;
+  /** Jours calendaires nets ou convention « fin de mois ». */
+  paymentDelayMode: PaymentDelayMode;
+  /** Méthode contractuelle de calcul des délais « fin de mois ». */
+  endOfMonthCalculation: EndOfMonthCalculation;
   activities: ActivityEntry[];
   fixedCosts: FixedCost[];
 

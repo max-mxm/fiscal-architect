@@ -124,7 +124,7 @@ Source of truth in code: `src/lib/fiscal.ts` (`ACTIVITY_PARAMS`).
 |---|---|---|---|---|---|---|
 | Sales / accommodation (BIC) | **12.3%** | 71% | €203,100 | 1.0% | 0.1% | 0.015% |
 | Commercial services / artisan | **21.2%** | 50% | €83,600 | 1.7% | 0.3% | 0.044% |
-| Unregulated liberal (SSI) | **26.1%** | 34% | €83,600 | 2.2% | 0.2% | 0 |
+| Unregulated liberal (SSI) | **25.6%** | 34% | €83,600 | 2.2% | 0.2% | 0 |
 | Regulated liberal (CIPAV) | **23.2%** | 34% | €83,600 | 2.2% | 0.2% | 0 |
 
 | Cross-cutting concept | 2026 value |

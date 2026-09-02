@@ -9,9 +9,10 @@ import { ACTIVITY_PARAMS } from '~/lib/fiscal';
 import type { Activity, ActivityEntry, TVAStatus } from '~/types';
 
 interface KeyMetricsProps {
+  fiscalYear: number;
   caCumule: number;
   caRealise: number;
-  /** Net cumulé estimé : CA cumulé − URSSAF − charges fixes (× mois actifs) − IR. */
+  /** Net cumulé après charges et provision d'IR au rythme annuel moyen. */
   netCumule: number;
   seuilMicro: number;
   /** Nom du mois sélectionné (ex. "Mai"). */
@@ -28,6 +29,10 @@ interface KeyMetricsProps {
   onEditMissionStart: () => void;
   /** Seuil basique de franchise en base TVA pour l'activité courante. */
   seuilTVA: number;
+  /** Factures déjà émises dans l'année civile. */
+  tvaTurnoverRealized: number;
+  /** Chiffre d'affaires facturé projeté dans l'année civile. */
+  tvaTurnoverProjected: number;
   /** Statut TVA dérivé du CA cumulé. */
   tvaStatus: TVAStatus;
   /** Date projetée de bascule TVA, ou null si non dépassé. */
@@ -49,6 +54,7 @@ interface KeyMetricsProps {
 }
 
 export const KeyMetrics: React.FC<KeyMetricsProps> = ({
+  fiscalYear,
   caCumule,
   caRealise,
   netCumule,
@@ -61,6 +67,8 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
   seuilDate,
   onEditMissionStart,
   seuilTVA,
+  tvaTurnoverRealized,
+  tvaTurnoverProjected,
   tvaStatus,
   tvaSeuilDate,
   tvaAssujetti,
@@ -99,9 +107,9 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
   })();
 
   // --- Bloc TVA ---
-  const tvaRealisedPct = Math.min(100, (caRealise / seuilTVA) * 100);
-  const tvaProjectedPct = Math.min(100, (caCumule / seuilTVA) * 100);
-  const tvaMargeRestante = Math.max(0, seuilTVA - caCumule);
+  const tvaRealisedPct = Math.min(100, (tvaTurnoverRealized / seuilTVA) * 100);
+  const tvaProjectedPct = Math.min(100, (tvaTurnoverProjected / seuilTVA) * 100);
+  const tvaMargeRestante = Math.max(0, seuilTVA - tvaTurnoverProjected);
   const tvaSeuilDateIsPast = tvaSeuilDate ? tvaSeuilDate.getTime() < today.getTime() : false;
 
   const tvaTone: GaugeStatusKind =
@@ -109,16 +117,17 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
 
   const tvaLabel = (() => {
     if (tvaStatus === 'safe') return `TVA non applicable · marge ${formatEuro(tvaMargeRestante)} €`;
+    if (tvaStatus === 'warning') {
+      return `Seuil annuel dépassé · TVA au 1er janvier ${fiscalYear + 1} si confirmé`;
+    }
     if (!tvaSeuilDate) {
-      return tvaStatus === 'breach'
-        ? 'Seuil TVA dépassé — bascule obligatoire'
-        : 'Seuil TVA atteint — vigilance';
+      return 'Seuil majoré dépassé — bascule obligatoire';
     }
     const { day, monthName, year } = formatDateFR(tvaSeuilDate);
     const dateStr = `${day} ${monthName.toLowerCase()} ${year}`;
     return tvaSeuilDateIsPast
-      ? `Seuil TVA dépassé le ${dateStr} — bascule obligatoire`
-      : `Bascule TVA projetée le ${dateStr}`;
+      ? `TVA obligatoire sur la facture du ${dateStr}`
+      : `TVA à appliquer à la facture du ${dateStr}`;
   })();
 
   const startLabel = (() => {
@@ -168,7 +177,7 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
             <div className="mt-2 flex items-baseline justify-between gap-3">
               <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-secondary-container/85 font-bold">
                 <Wallet className="w-3 h-3" aria-hidden="true" />
-                Net cumulé estimé
+                Net cumulé après IR estimé
               </span>
               <span className="inline-flex items-baseline gap-1.5">
                 <span className="font-mono tabular-nums text-base sm:text-lg font-bold text-secondary-container">
@@ -183,7 +192,7 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
                         ? 'text-amber-300'
                         : 'text-red-300',
                   )}
-                  title="Taux de rétention annuel (net cumulé / CA cumulé)"
+                  title="Taux de rétention estimé au rythme annuel moyen"
                 >
                   · {tauxRetentionAnnuel}%
                 </span>
@@ -254,7 +263,7 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
               </span>
               <div className="mt-1.5 flex items-baseline justify-between gap-3">
                 <span className="font-mono tabular-nums text-lg sm:text-xl font-bold truncate">
-                  {formatEuro(caCumule)}<span className="text-amber-200">€</span>
+                  {formatEuro(tvaTurnoverProjected)}<span className="text-amber-200">€</span>
                 </span>
                 <span className="text-xs text-amber-200/85 font-mono tabular-nums shrink-0">
                   / {formatEuro(seuilTVA)}€
@@ -265,7 +274,7 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
                 projectedPct={tvaProjectedPct}
                 tone="amber"
                 status={{ kind: tvaTone, label: tvaLabel }}
-                ariaLabel="Progression CA réalisé vs seuil TVA"
+                ariaLabel="Progression du chiffre d’affaires facturé par rapport au seuil TVA"
               />
             </div>
           )}
