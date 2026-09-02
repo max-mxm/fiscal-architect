@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { cn } from '~/utils';
 
-export type SettingsTabId = 'profile' | 'fiscal' | 'payments' | 'costs';
+export type SettingsTabId = 'profile' | 'fiscal' | 'payments' | 'costs' | 'backup';
 
 export interface TabDef {
   id: SettingsTabId;

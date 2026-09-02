@@ -145,7 +145,11 @@ function AppShell() {
   const search = useRouterState({ select: (s) => s.location.search }) as Record<string, unknown>
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const settingsParam = search?.settings as SettingsTabId | undefined
-  const isValidTab = settingsParam === 'profile' || settingsParam === 'fiscal' || settingsParam === 'payments' || settingsParam === 'costs'
+  const isValidTab = settingsParam === 'profile'
+    || settingsParam === 'fiscal'
+    || settingsParam === 'payments'
+    || settingsParam === 'costs'
+    || settingsParam === 'backup'
   const settingsOpen = isValidTab
   const activeTab: SettingsTabId = isValidTab ? settingsParam : 'fiscal'
   const resetConfirmOpen = search?.confirm === 'reset-all'

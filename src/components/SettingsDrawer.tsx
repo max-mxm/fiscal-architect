@@ -1,8 +1,22 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, type PanInfo } from 'motion/react';
-import { X, RotateCcw, User, Calculator, Receipt, Monitor, Sun, Moon, CalendarClock } from 'lucide-react';
+import {
+  X,
+  RotateCcw,
+  User,
+  Calculator,
+  Receipt,
+  Monitor,
+  Sun,
+  Moon,
+  CalendarClock,
+  DatabaseBackup,
+  Download,
+  Upload,
+} from 'lucide-react';
 import { useTheme, type ThemeMode } from '~/context/ThemeContext';
 import type { UserProfile } from '~/types';
+import { ConfirmModal } from '~/components/ConfirmModal';
 import { MissionStartInput } from '~/components/fiscal/MissionStartInput';
 import { CreationDateInput } from '~/components/fiscal/CreationDateInput';
 import { ActivitySelector } from '~/components/fiscal/ActivitySelector';
@@ -21,6 +35,15 @@ import { SettingsTabs, type SettingsTabId, type TabDef } from '~/components/sett
 import { ACTIVITY_PARAMS, getActivities, getPrimaryActivity } from '~/lib/fiscal';
 import { calcVLEligibilityForYear } from '~/lib/vlEligibility';
 import { formatEuro } from '~/lib/format';
+import {
+  BACKUP_MAX_BYTES,
+  buildBackupFilename,
+  createBackupFromStorage,
+  parseBackupText,
+  restoreBackupToStorage,
+  serializeBackup,
+  type ParsedBackup,
+} from '~/lib/importExport';
 
 interface SettingsDrawerProps {
   open: boolean;
@@ -40,7 +63,15 @@ const TABS: TabDef[] = [
   { id: 'payments', label: 'Revenus', Icon: CalendarClock },
   { id: 'profile', label: 'Profil', Icon: User },
   { id: 'costs', label: 'Charges', Icon: Receipt },
+  { id: 'backup', label: 'Sauvegarde', Icon: DatabaseBackup },
 ];
+
+const formatBackupDate = (value: string | null | undefined): string => {
+  if (!value) return 'Date inconnue';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Date inconnue';
+  return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+};
 
 export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   open,
@@ -54,10 +85,16 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
 }) => {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
+  const [backupNotice, setBackupNotice] = useState<string | null>(null);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const [pendingImport, setPendingImport] = useState<ParsedBackup | null>(null);
+  const pendingImportRef = useRef(false);
+  pendingImportRef.current = pendingImport != null;
 
   useEffect(() => {
     if (!open) return;
@@ -65,6 +102,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     closeBtnRef.current?.focus();
 
     const handleKey = (e: KeyboardEvent) => {
+      if (pendingImportRef.current) return;
       if (e.key === 'Escape') {
         e.preventDefault();
         onCloseRef.current();
@@ -100,8 +138,58 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
     if (info.offset.y > 80) onCloseRef.current();
   };
 
+  const handleExportBackup = () => {
+    try {
+      const now = new Date();
+      const backup = createBackupFromStorage(window.localStorage, now);
+      const blob = new Blob([serializeBackup(backup)], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = buildBackupFilename(now);
+      a.click();
+      URL.revokeObjectURL(url);
+      setBackupError(null);
+      setBackupNotice('Sauvegarde exportée.');
+    } catch {
+      setBackupNotice(null);
+      setBackupError("Impossible d'exporter les données locales.");
+    }
+  };
+
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    setBackupNotice(null);
+    setBackupError(null);
+    if (!file) return;
+    if (file.size > BACKUP_MAX_BYTES) {
+      setBackupError('Fichier trop volumineux pour une sauvegarde Fiscal Architect.');
+      return;
+    }
+    try {
+      setPendingImport(parseBackupText(await file.text()));
+    } catch (error) {
+      setBackupError(error instanceof Error ? error.message : 'Sauvegarde invalide.');
+    }
+  };
+
+  const confirmImport = () => {
+    if (!pendingImport) return;
+    try {
+      restoreBackupToStorage(pendingImport.backup, window.localStorage);
+      setPendingImport(null);
+      window.location.replace(window.location.pathname);
+    } catch {
+      setBackupError("Impossible de restaurer cette sauvegarde.");
+      setPendingImport(null);
+    }
+  };
+
   const panelId = (id: SettingsTabId) => `settings-panel-${id}`;
   const tabId = (id: SettingsTabId) => `settings-tab-${id}`;
+  const importSummary = pendingImport?.summary ?? null;
+  const importDate = formatBackupDate(importSummary?.exportedAt);
 
   return (
     <AnimatePresence>
@@ -447,7 +535,100 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   />
                 </section>
               )}
+
+              {activeTab === 'backup' && (
+                <section
+                  role="tabpanel"
+                  id={panelId('backup')}
+                  aria-labelledby={tabId('backup')}
+                  className="space-y-5"
+                >
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-secondary">
+                      Sauvegarde locale
+                    </h3>
+                    <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                      Exportez un snapshot complet des données locales pour le restaurer après un reset ou un redéploiement.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <button
+                      type="button"
+                      onClick={handleExportBackup}
+                      className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] rounded-xl bg-secondary text-on-secondary text-sm font-bold hover:opacity-90 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary/30"
+                    >
+                      <Download className="w-4 h-4" aria-hidden="true" />
+                      Exporter mes données
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] rounded-xl border border-outline-variant/40 bg-surface-lowest text-on-surface text-sm font-bold hover:bg-surface-highest/30 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary/30"
+                    >
+                      <Upload className="w-4 h-4" aria-hidden="true" />
+                      Importer une sauvegarde
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".fiscal-architect-backup,application/json"
+                      className="sr-only"
+                      onChange={handleImportFile}
+                      aria-label="Choisir une sauvegarde Fiscal Architect"
+                    />
+                  </div>
+
+                  {(backupNotice || backupError) && (
+                    <div
+                      role="status"
+                      className={
+                        'rounded-xl border px-3 py-2 text-xs leading-relaxed ' +
+                        (backupError
+                          ? 'border-red-500/30 bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-200'
+                          : 'border-secondary/25 bg-secondary/10 text-secondary')
+                      }
+                    >
+                      {backupError ?? backupNotice}
+                    </div>
+                  )}
+
+                  <div className="rounded-2xl border border-outline-variant/25 bg-surface-lowest p-4">
+                    <h4 className="text-sm font-bold text-on-surface">Ce qui est inclus</h4>
+                    <p className="mt-1 text-[11px] text-on-surface-variant leading-relaxed">
+                      Profil, années, calendriers, paramètres fiscaux, thème et état local de l'application. Rien n'est envoyé à un serveur.
+                    </p>
+                  </div>
+                </section>
+              )}
             </div>
+
+            <ConfirmModal
+              open={pendingImport != null}
+              title="Restaurer cette sauvegarde ?"
+              destructive
+              confirmLabel="Restaurer"
+              cancelLabel="Annuler"
+              onConfirm={confirmImport}
+              onCancel={() => setPendingImport(null)}
+              message={
+                importSummary ? (
+                  <div className="space-y-2">
+                    <p>Les données locales actuelles seront remplacées par cette sauvegarde.</p>
+                    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                      <dt className="font-bold text-on-surface">Export</dt>
+                      <dd>{importDate}</dd>
+                      <dt className="font-bold text-on-surface">Profil</dt>
+                      <dd>{importSummary.profileName ?? 'Non renseigné'}</dd>
+                      <dt className="font-bold text-on-surface">Années</dt>
+                      <dd>{importSummary.years.length > 0 ? importSummary.years.join(', ') : 'Non détectées'}</dd>
+                      <dt className="font-bold text-on-surface">Clés</dt>
+                      <dd>{importSummary.keyCount}</dd>
+                    </dl>
+                  </div>
+                ) : null
+              }
+            />
           </motion.aside>
         </motion.div>
       )}
