@@ -27,6 +27,7 @@ import {
   buildPaymentProjections,
   getNextPaymentProjectionIndex,
   sumReceiptsForYear,
+  sumReceiptsThroughDate,
 } from '~/lib/cashflow';
 import { formatEuro } from '~/lib/format';
 
@@ -74,13 +75,10 @@ export const Cashflow: React.FC = () => {
   const timeline = useMemo(() => buildCashflowTimeline(projections), [projections]);
   const totalInvoiced = projections.reduce((sum, item) => sum + item.amount, 0);
   const receivedInYear = sumReceiptsForYear(projections, fy.year);
+  const receivedThroughToday = sumReceiptsThroughDate(projections, today);
   const shiftedToNextYear = projections
     .filter((item) => item.dueDate.getFullYear() > fy.year)
     .reduce((sum, item) => sum + item.amount, 0);
-  const latestDueDate = projections.reduce<Date | null>(
-    (latest, item) => !latest || item.dueDate > latest ? item.dueDate : latest,
-    null,
-  );
 
   const chartData = timeline.map((row) => ({
     label: `${MONTH_SHORT[row.month]}${row.year !== fy.year ? ` ${String(row.year).slice(2)}` : ''}`,
@@ -115,7 +113,7 @@ export const Cashflow: React.FC = () => {
           { label: 'Facturé en projection', value: `${formatEuro(totalInvoiced)} €`, Icon: ReceiptText },
           { label: `Encaissé en ${fy.year}`, value: `${formatEuro(receivedInYear)} €`, Icon: CircleDollarSign },
           { label: `Reporté après ${fy.year}`, value: `${formatEuro(shiftedToNextYear)} €`, Icon: ArrowRight },
-          { label: 'Dernier paiement', value: latestDueDate ? DATE_FORMAT.format(latestDueDate) : '—', Icon: CalendarClock },
+          { label: 'Encaissé à date', value: `${formatEuro(receivedThroughToday)} €`, Icon: WalletCards },
         ].map(({ label, value, Icon }) => (
           <article key={label} className="min-w-0 rounded-2xl bg-surface-lowest p-4 shadow-sm sm:p-5">
             <Icon className="h-4 w-4 text-secondary" aria-hidden="true" />

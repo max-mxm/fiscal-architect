@@ -5,6 +5,7 @@ import {
   calcReceiptThresholdDate,
   calculateDueDate,
   getNextPaymentProjectionIndex,
+  sumReceiptsThroughDate,
   type PaymentProjection,
 } from '~/lib/cashflow';
 
@@ -85,5 +86,12 @@ describe('projection des encaissements', () => {
   it('ne retourne aucune échéance lorsque tous les paiements sont passés', () => {
     expect(getNextPaymentProjectionIndex(projections, new Date(2027, 3, 1)))
       .toBe(-1);
+  });
+
+  it('additionne les encaissements dus jusqu’à la date du jour incluse', () => {
+    expect(sumReceiptsThroughDate(projections, new Date(2027, 0, 29, 9)))
+      .toBe(10_000);
+    expect(sumReceiptsThroughDate(projections, new Date(2027, 2, 2)))
+      .toBe(22_000);
   });
 });
