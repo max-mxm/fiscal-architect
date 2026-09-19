@@ -456,6 +456,7 @@ export const Home: React.FC = () => {
           tvaStatus={tvaStatus}
           tvaSeuilDate={tvaSeuilDate}
           tvaAssujetti={profile.tvaAssujetti}
+          tvaRate={profile.tvaRate}
           activities={getActivities(profile)}
           caByActivity={caByActivity}
           tjmMois={showCalendar ? tjmMois : undefined}
@@ -510,6 +511,8 @@ export const Home: React.FC = () => {
               monthName={MONTH_NAMES[selectedMonth]}
               onChange={handleEntriesChange}
               activities={getActivities(profile)}
+              tvaAssujetti={profile.tvaAssujetti}
+              tvaRate={profile.tvaRate}
             />
           )}
 
@@ -519,6 +522,8 @@ export const Home: React.FC = () => {
               monthName={MONTH_NAMES[selectedMonth]}
               onChange={handleEntriesChange}
               activities={getActivities(profile)}
+              tvaAssujetti={profile.tvaAssujetti}
+              tvaRate={profile.tvaRate}
             />
           )}
 
@@ -547,6 +552,8 @@ export const Home: React.FC = () => {
             tjmMois={tjmMois}
             isCustomTjmMois={isCustomTjmMois}
             monthName={MONTH_NAMES[selectedMonth]}
+            tvaAssujetti={profile.tvaAssujetti}
+            tvaRate={profile.tvaRate}
           />
           <MonthSummary
             monthName={MONTH_NAMES[selectedMonth]}
@@ -572,6 +579,8 @@ export const Home: React.FC = () => {
             isCustomTjmMois={isCustomTjmMois}
             defaultTjm={profile.tjm}
             onOpenMonthlyTjm={() => setMonthlyTjmOpen(true)}
+            tvaAssujetti={profile.tvaAssujetti}
+            tvaRate={profile.tvaRate}
           />
         </aside>
       </div>
@@ -632,6 +641,8 @@ export const Home: React.FC = () => {
         onChange={({ defaultTjm, tjmByMonth }) =>
           setProfile((p) => ({ ...p, tjm: defaultTjm, tjmByMonth }))
         }
+        tvaAssujetti={profile.tvaAssujetti}
+        tvaRate={profile.tvaRate}
       />
 
       <LiveAnnouncer message={announce} />

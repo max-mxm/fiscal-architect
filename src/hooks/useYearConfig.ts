@@ -20,6 +20,8 @@ const YEAR_CONFIG_MIGRATIONS: Record<number, (old: any) => any> = {
     paymentDelayMode: 'net',
     endOfMonthCalculation: 'delayThenMonthEnd',
   }),
+  // v3 → v4 : le taux est configuré séparément ; 20 % préserve le cas standard.
+  3: (old: any) => ({ ...old, schemaVersion: 4, tvaRate: 0.2 }),
 };
 
 /**

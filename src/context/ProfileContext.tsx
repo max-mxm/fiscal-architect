@@ -112,14 +112,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   const handleExportGlobal = useCallback(() => {
     const chartData = generateChartData(profile);
-    const header = 'Mois,CA Brut (€),Bénéfice Net (€)\n';
-    const rows = chartData.map((d) => `${d.month},${d.brut},${d.net}`).join('\n');
+    const header = 'Mois,CA HT (€),TVA collectée (€),Facturé TTC (€),Bénéfice Net (€)\n';
+    const rows = chartData.map((d) => `${d.month},${d.brut},${d.tva},${d.ttc},${d.net}`).join('\n');
     const totalFixed = profile.fixedCosts.reduce((s, c) => s + c.amount, 0);
     const summary = [
       '',
       `Profil,${profile.name}`,
       `Année,${profile.year}`,
-      `TJM,${profile.tjm}€`,
+      `TJM HT,${profile.tjm}€`,
+      `Taux TVA,${profile.tvaAssujetti ? `${profile.tvaRate * 100}%` : 'Franchise en base'}`,
       `Jours/mois,${profile.workingDays}`,
       `Taux URSSAF,${profile.urssafRate}%`,
       `Charges fixes mensuelles,${totalFixed}€`,

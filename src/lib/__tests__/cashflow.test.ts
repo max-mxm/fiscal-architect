@@ -45,6 +45,8 @@ describe('projection des encaissements', () => {
       invoiceDate: new Date(2026, 10, 30, 12),
       dueDate: new Date(2027, 0, 29, 12),
       amount: 10_000,
+      taxAmount: 2_000,
+      amountTtc: 12_000,
     },
     {
       serviceMonth: 11,
@@ -52,6 +54,8 @@ describe('projection des encaissements', () => {
       invoiceDate: new Date(2026, 11, 31, 12),
       dueDate: new Date(2027, 2, 1, 12),
       amount: 12_000,
+      taxAmount: 2_400,
+      amountTtc: 14_400,
     },
   ];
 

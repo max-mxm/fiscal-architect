@@ -447,7 +447,9 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     </Link>
                     <TVAToggle
                       value={profile.tvaAssujetti}
+                      rate={profile.tvaRate}
                       onChange={(v) => updateProfile({ tvaAssujetti: v })}
+                      onRateChange={(v) => updateProfile({ tvaRate: v })}
                     />
                     <IJToggle
                       value={profile.ijOption}

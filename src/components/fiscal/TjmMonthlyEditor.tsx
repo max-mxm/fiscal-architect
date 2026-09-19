@@ -13,6 +13,8 @@ interface TjmMonthlyEditorProps {
   onChange: (next: { defaultTjm: number; tjmByMonth: Record<number, number> | undefined }) => void;
   /** Mois à pré-sélectionner dans l'inspector (0..11). */
   initialMonth?: number;
+  tvaAssujetti: boolean;
+  tvaRate: number;
 }
 
 const TJM_MIN_INPUT = 50;
@@ -59,6 +61,8 @@ export const TjmMonthlyEditor: React.FC<TjmMonthlyEditorProps> = ({
   tjmByMonth,
   onChange,
   initialMonth = 0,
+  tvaAssujetti,
+  tvaRate,
 }) => {
   const [selectedMonth, setSelectedMonth] = useState<number>(initialMonth);
 
@@ -118,7 +122,7 @@ export const TjmMonthlyEditor: React.FC<TjmMonthlyEditorProps> = ({
         <div className="flex items-center justify-between bg-surface-low rounded-2xl px-4 py-3">
           <div className="flex flex-col">
             <span className="text-[11px] uppercase tracking-[0.14em] font-bold text-on-surface-variant">
-              TJM par défaut
+              TJM HT par défaut
             </span>
             <span className="text-xs text-on-surface-variant">
               Appliqué aux mois non personnalisés
@@ -139,6 +143,7 @@ export const TjmMonthlyEditor: React.FC<TjmMonthlyEditorProps> = ({
             <span className="text-secondary font-bold text-xs">€/j</span>
           </label>
         </div>
+        {tvaAssujetti && <p className="-mt-2 text-right text-[11px] font-bold text-tax">soit {(defaultTjm * (1 + tvaRate)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € TTC / j</p>}
 
         {/* Vue mobile : grille 4×3 */}
         <div
@@ -299,6 +304,7 @@ export const TjmMonthlyEditor: React.FC<TjmMonthlyEditorProps> = ({
             aria-label={`TJM de ${MONTH_NAMES[selectedMonth]} en euros par jour`}
             className="w-full h-1 bg-surface-highest rounded-lg appearance-none cursor-pointer accent-secondary"
           />
+          {tvaAssujetti && <p className="text-right text-[11px] font-bold text-tax">soit {(selectedValue * (1 + tvaRate)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € TTC / j</p>}
 
           <div className="flex items-center justify-between pt-1 border-t border-outline-variant/15 text-xs">
             <span className="text-on-surface-variant">

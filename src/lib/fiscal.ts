@@ -106,6 +106,22 @@ export function getFiscalParams(profile: UserProfile): ActivityParams {
   };
 }
 
+export interface InvoiceTotals {
+  ht: number;
+  tva: number;
+  ttc: number;
+}
+
+/**
+ * Ventilation d'une facture. Le CA de l'application reste toujours hors taxes :
+ * la TVA collectée est présentée séparément et ne participe ni au net ni aux seuils.
+ */
+export function calcInvoiceTotals(amountHT: number, tvaAssujetti: boolean, tvaRate: number = 0.2): InvoiceTotals {
+  const ht = Math.max(0, amountHT);
+  const rate = Math.max(0, Math.min(1, tvaRate));
+  const tva = tvaAssujetti ? Math.round(ht * rate * 100) / 100 : 0;
+  return { ht, tva, ttc: Math.round((ht + tva) * 100) / 100 };
+}
 export const TRANCHES_IR = [
   { min: 0, max: 11_600, taux: 0 },
   { min: 11_601, max: 29_579, taux: 0.11 },
@@ -838,6 +854,13 @@ export function generateChartData(profile: UserProfile): MonthlyChartData[] {
       profile.versementLiberatoire,
       { abattement: params.abattement, tauxVL: params.tauxVL },
     );
-    return { month, brut: Math.round(brut), net: Math.round(breakdown.net) };
+    const invoice = calcInvoiceTotals(brut, profile.tvaAssujetti, profile.tvaRate);
+    return {
+      month,
+      brut: Math.round(invoice.ht * 100) / 100,
+      tva: invoice.tva,
+      ttc: invoice.ttc,
+      net: Math.round(breakdown.net),
+    };
   });
 }
