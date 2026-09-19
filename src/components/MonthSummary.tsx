@@ -9,6 +9,7 @@ import { QuickEditModal } from '~/components/ui/QuickEditModal';
 import { FixedCostsList } from '~/components/fiscal/FixedCostsList';
 import { TjmMonthChip } from '~/components/fiscal/TjmMonthChip';
 import type { UserProfile } from '~/types';
+import { calcInvoiceTotals } from '~/lib/fiscal';
 
 interface MonthSummaryProps {
   monthName: string;
@@ -46,6 +47,8 @@ interface MonthSummaryProps {
   defaultTjm?: number;
   /** Ouvre l'éditeur de TJM mensuel sur le mois courant. */
   onOpenMonthlyTjm?: () => void;
+  tvaAssujetti: boolean;
+  tvaRate: number;
 }
 
 export const MonthSummary: React.FC<MonthSummaryProps> = ({
@@ -72,6 +75,8 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
   isCustomTjmMois = false,
   defaultTjm,
   onOpenMonthlyTjm,
+  tvaAssujetti,
+  tvaRate,
 }) => {
   const [showIrInfo, setShowIrInfo] = useState(false);
   const [showAcreInfo, setShowAcreInfo] = useState(false);
@@ -83,6 +88,7 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
   const acreActive = acreReductionMensuelle > 0 && acreRate > 0;
   const acrePct = Math.round(acreRate * 100);
   const taxeConsulaireVisible = taxeConsulaireRate > 0;
+  const invoice = calcInvoiceTotals(caMensuel, tvaAssujetti, tvaRate);
 
   return (
     <section
@@ -117,11 +123,23 @@ export const MonthSummary: React.FC<MonthSummaryProps> = ({
           </li>
         )}
         <li className="flex justify-between items-center">
-          <span className="text-on-surface-variant">CA brut</span>
+          <span className="text-on-surface-variant">CA HT</span>
           <span className="font-mono font-bold text-on-surface tabular-nums">
             {formatEuro(caMensuel)}€
           </span>
         </li>
+        {tvaAssujetti && (
+          <>
+            <li className="flex justify-between items-center rounded-lg bg-tax-container/70 px-2.5 py-2">
+              <span className="text-on-surface-variant">TVA collectée ({formatPercent(tvaRate * 100, 2)} %)</span>
+              <span className="font-mono font-bold text-tax tabular-nums">{formatEuro(invoice.tva)}€</span>
+            </li>
+            <li className="flex justify-between items-center rounded-lg bg-tax-container/70 px-2.5 py-2">
+              <span className="font-bold uppercase tracking-wider text-tax">Facture TTC</span>
+              <span className="font-mono font-black text-tax tabular-nums">{formatEuro(invoice.ttc)}€</span>
+            </li>
+          </>
+        )}
         <li className="flex justify-between items-center">
           <span className="text-on-surface-variant inline-flex items-center gap-1">
             URSSAF ({formatPercent(urssafRate)} %)

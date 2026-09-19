@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Trash2, Check } from 'lucide-react';
 import type { ActivityEntry, RevenueEntry } from '~/types';
-import { ACTIVITY_PARAMS } from '~/lib/fiscal';
+import { ACTIVITY_PARAMS, calcInvoiceTotals } from '~/lib/fiscal';
 import { formatEuro } from '~/lib/format';
 import { ActivityChip } from '~/components/fiscal/ActivityChip';
 
@@ -16,6 +16,8 @@ interface ForfaitListProps {
   onChange: (next: RevenueEntry[]) => void;
   /** Liste des activités du profil — affiche un sélecteur si > 1. */
   activities: ActivityEntry[];
+  tvaAssujetti: boolean;
+  tvaRate: number;
 }
 
 function pad2(n: number): string {
@@ -28,7 +30,7 @@ function formatForfaitDate(iso: string): string {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 }
 
-export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIndex, monthName, onChange, activities }) => {
+export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIndex, monthName, onChange, activities, tvaAssujetti, tvaRate }) => {
   const multi = activities.length > 1;
   const primaryId = activities.find((a) => a.isPrimary)?.id ?? activities[0]?.id ?? '';
   const [showAdd, setShowAdd] = useState(false);
@@ -41,6 +43,7 @@ export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIn
 
   const forfaits = entries.filter((e): e is Extract<RevenueEntry, { kind: 'forfait' }> => e.kind === 'forfait');
   const total = forfaits.reduce((s, f) => s + f.amount, 0);
+  const invoiceTotal = calcInvoiceTotals(total, tvaAssujetti, tvaRate);
   const monthMin = `${year}-${pad2(monthIndex + 1)}-01`;
   const lastDay = new Date(year, monthIndex + 1, 0).getDate();
   const monthMax = `${year}-${pad2(monthIndex + 1)}-${pad2(lastDay)}`;
@@ -123,11 +126,11 @@ export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIn
                   inputMode="decimal"
                   min={0}
                   step={1}
-                  placeholder="Montant (€)"
+                  placeholder="Montant HT (€)"
                   value={draft.amount}
                   onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
                   onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-                  aria-label="Montant en euros"
+                  aria-label="Montant hors taxes en euros"
                   className="w-32 bg-surface-lowest border-none rounded-lg py-2 px-3 text-sm font-mono font-bold text-on-surface focus:ring-2 focus:ring-secondary/20 min-h-[44px]"
                 />
               </div>
@@ -202,8 +205,9 @@ export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIn
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold font-mono text-on-surface tabular-nums">
-                  {formatEuro(f.amount)}€
+                <span className="text-right font-mono tabular-nums">
+                  <span className="block text-sm font-bold text-on-surface">{formatEuro(f.amount)}€ HT</span>
+                  {tvaAssujetti && <span className="block text-[10px] font-bold text-tax">{formatEuro(calcInvoiceTotals(f.amount, true, tvaRate).ttc)}€ TTC</span>}
                 </span>
                 <button
                   type="button"
@@ -220,12 +224,18 @@ export const ForfaitList: React.FC<ForfaitListProps> = ({ entries, year, monthIn
 
       <div className="mt-3 pt-3 border-t border-outline-variant/20 flex justify-between items-center">
         <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-          Total mois
+          Total HT
         </span>
         <span className="font-headline font-black text-lg text-secondary font-mono tabular-nums">
           {formatEuro(total)}€
         </span>
       </div>
+      {tvaAssujetti && (
+        <div className="mt-2 flex items-center justify-between rounded-xl bg-tax-container/70 px-3 py-2 text-xs">
+          <span className="font-bold text-tax">TVA {Math.round(tvaRate * 10000) / 100} % · {formatEuro(invoiceTotal.tva)}€</span>
+          <span className="font-mono font-black tabular-nums text-tax">{formatEuro(invoiceTotal.ttc)}€ TTC</span>
+        </div>
+      )}
     </section>
   );
 };

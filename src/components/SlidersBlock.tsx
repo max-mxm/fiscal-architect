@@ -29,9 +29,11 @@ interface SlidersBlockProps {
   isCustomTjmMois?: boolean;
   /** Nom du mois courant (pour l'aria-label du chip). */
   monthName?: string;
+  tvaAssujetti: boolean;
+  tvaRate: number;
 }
 
-const Mini: React.FC<{ label: string; value: string; tone?: 'neutral' | 'positive' }> = ({
+const Mini: React.FC<{ label: string; value: string; tone?: 'neutral' | 'positive' | 'tax' }> = ({
   label,
   value,
   tone = 'neutral',
@@ -41,7 +43,7 @@ const Mini: React.FC<{ label: string; value: string; tone?: 'neutral' | 'positiv
     <span
       className={cn(
         'text-sm font-mono font-black tabular-nums',
-        tone === 'positive' ? 'text-secondary' : 'text-on-surface',
+        tone === 'positive' ? 'text-secondary' : tone === 'tax' ? 'text-tax' : 'text-on-surface',
       )}
     >
       {value}
@@ -73,6 +75,8 @@ export const SlidersBlock: React.FC<SlidersBlockProps> = ({
   tjmMois,
   isCustomTjmMois = false,
   monthName,
+  tvaAssujetti,
+  tvaRate,
 }) => {
   return (
     <section
@@ -98,7 +102,7 @@ export const SlidersBlock: React.FC<SlidersBlockProps> = ({
 
       {showTjmSlider && (
         <div className="space-y-2">
-          <TjmSlider value={tjm} onChange={onTjmChange} />
+          <TjmSlider value={tjm} onChange={onTjmChange} tvaAssujetti={tvaAssujetti} tvaRate={tvaRate} />
           {onOpenMonthlyTjm && (
             <button
               type="button"
@@ -140,13 +144,14 @@ export const SlidersBlock: React.FC<SlidersBlockProps> = ({
       <div
         className={cn(
           'pt-4 border-t border-outline-variant/15 grid gap-3',
-          showTjmSlider ? 'grid-cols-3' : 'grid-cols-2',
+          showTjmSlider ? (tvaAssujetti ? 'grid-cols-4' : 'grid-cols-3') : (tvaAssujetti ? 'grid-cols-3' : 'grid-cols-2'),
         )}
       >
         {showTjmSlider && (
           <Mini label="Jours/mois" value={workedDaysEquiv.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} />
         )}
-        <Mini label="CA brut" value={shortEuro(caMensuel)} />
+        <Mini label="CA HT" value={shortEuro(caMensuel)} />
+        {tvaAssujetti && <Mini label="Facture TTC" value={shortEuro(caMensuel * (1 + tvaRate))} tone="tax" />}
         <Mini label="Net mensuel" value={shortEuro(netMensuel)} tone="positive" />
       </div>
     </section>

@@ -3,14 +3,16 @@ import React from 'react';
 interface TjmSliderProps {
   value: number;
   onChange: (next: number) => void;
+  tvaAssujetti: boolean;
+  tvaRate: number;
 }
 
-export const TjmSlider: React.FC<TjmSliderProps> = ({ value, onChange }) => {
+export const TjmSlider: React.FC<TjmSliderProps> = ({ value, onChange, tvaAssujetti, tvaRate }) => {
   return (
     <div>
       <div className="flex justify-between items-center mb-2">
         <label htmlFor="tjm-input" className="text-xs font-bold text-on-surface-variant uppercase tracking-[0.12em]">
-          TJM
+          TJM HT
         </label>
         <div className="flex items-baseline gap-1">
           <input
@@ -40,6 +42,7 @@ export const TjmSlider: React.FC<TjmSliderProps> = ({ value, onChange }) => {
         aria-label="TJM en euros par jour"
         className="w-full h-1 bg-surface-highest rounded-lg appearance-none cursor-pointer accent-secondary"
       />
+      {tvaAssujetti && <p className="mt-2 text-right text-[11px] font-bold text-tax">soit {(value * (1 + tvaRate)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € TTC / j</p>}
     </div>
   );
 };

@@ -4,7 +4,7 @@ import type {
   PaymentDelayMode,
   UserProfile,
 } from '~/types';
-import { calcCAFromEntries } from '~/lib/fiscal';
+import { calcCAFromEntries, calcInvoiceTotals, isTVAApplicableOn } from '~/lib/fiscal';
 
 export interface PaymentTerms {
   days: number;
@@ -17,7 +17,14 @@ export interface PaymentProjection {
   serviceYear: number;
   invoiceDate: Date;
   dueDate: Date;
+  /** Montant HT : sert aux seuils fiscaux et à tous les calculs de CA. */
   amount: number;
+  /** TVA collectée sur la facture. */
+  taxAmount: number;
+  /** Indique que la TVA s'applique à cette facture précise. */
+  tvaApplies: boolean;
+  /** Montant effectivement facturé / encaissé, TVA comprise. */
+  amountTtc: number;
 }
 
 export interface CashflowMonth {
@@ -27,6 +34,10 @@ export interface CashflowMonth {
   received: number;
   cumulativeInvoiced: number;
   cumulativeReceived: number;
+  invoicedTtc: number;
+  receivedTtc: number;
+  cumulativeInvoicedTtc: number;
+  cumulativeReceivedTtc: number;
 }
 
 function atNoon(date: Date): Date {
@@ -76,12 +87,17 @@ export function buildPaymentProjections(
     const amount = calcCAFromEntries(month, profile);
     if (amount <= 0) return [];
     const invoiceDate = new Date(month.year, month.month + 1, 0, 12);
+    const tvaApplies = isTVAApplicableOn(profile, invoiceDate);
+    const totals = calcInvoiceTotals(amount, tvaApplies, profile.tvaRate);
     return [{
       serviceMonth: month.month,
       serviceYear: month.year,
       invoiceDate,
       dueDate: calculateDueDate(invoiceDate, terms),
-      amount,
+      amount: totals.ht,
+      taxAmount: totals.tva,
+      amountTtc: totals.ttc,
+      tvaApplies,
     }];
   });
 }
@@ -105,6 +121,8 @@ export function buildCashflowTimeline(projections: PaymentProjection[]): Cashflo
   const rows: CashflowMonth[] = [];
   let cumulativeInvoiced = 0;
   let cumulativeReceived = 0;
+  let cumulativeInvoicedTtc = 0;
+  let cumulativeReceivedTtc = 0;
 
   while (cursor <= end) {
     const year = cursor.getFullYear();
@@ -115,9 +133,28 @@ export function buildCashflowTimeline(projections: PaymentProjection[]): Cashflo
     const received = projections
       .filter((item) => item.dueDate.getFullYear() === year && item.dueDate.getMonth() === month)
       .reduce((sum, item) => sum + item.amount, 0);
+    const invoicedTtc = projections
+      .filter((item) => item.invoiceDate.getFullYear() === year && item.invoiceDate.getMonth() === month)
+      .reduce((sum, item) => sum + item.amountTtc, 0);
+    const receivedTtc = projections
+      .filter((item) => item.dueDate.getFullYear() === year && item.dueDate.getMonth() === month)
+      .reduce((sum, item) => sum + item.amountTtc, 0);
     cumulativeInvoiced += invoiced;
     cumulativeReceived += received;
-    rows.push({ year, month, invoiced, received, cumulativeInvoiced, cumulativeReceived });
+    cumulativeInvoicedTtc += invoicedTtc;
+    cumulativeReceivedTtc += receivedTtc;
+    rows.push({
+      year,
+      month,
+      invoiced,
+      received,
+      cumulativeInvoiced,
+      cumulativeReceived,
+      invoicedTtc,
+      receivedTtc,
+      cumulativeInvoicedTtc,
+      cumulativeReceivedTtc,
+    });
     cursor.setMonth(cursor.getMonth() + 1);
   }
   return rows;

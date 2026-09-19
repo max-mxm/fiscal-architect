@@ -83,7 +83,7 @@ export function createYearInherited(
   const legal = getLegalParamsForYear(year);
   const config: YearConfig = {
     ...donor,
-    schemaVersion: 3,
+    schemaVersion: 5,
     year,
     urssafRate: legal.urssafRate,
     seuilMicro: legal.seuilMicro,
@@ -92,6 +92,7 @@ export function createYearInherited(
     // (si une surcharge mensuelle existait), sinon on garde le défaut du donor.
     tjm: donor.tjmByMonth?.[11] ?? donor.tjm,
     tjmByMonth: donor.tjmByMonth ? { ...donor.tjmByMonth } : undefined,
+    tvaEffectiveDate: donor.tvaAssujetti ? `${year}-01-01` : null,
     missionStart: `${year}-01-01`,
     rfrN2: null,
     vlRegularizationMonths: undefined,
@@ -115,12 +116,13 @@ export function previewInheritedConfig(year: number, sourceYear: number): YearCo
   const legal = getLegalParamsForYear(year);
   return {
     ...donor,
-    schemaVersion: 3,
+    schemaVersion: 5,
     year,
     urssafRate: legal.urssafRate,
     seuilMicro: legal.seuilMicro,
     tjm: donor.tjmByMonth?.[11] ?? donor.tjm,
     tjmByMonth: donor.tjmByMonth ? { ...donor.tjmByMonth } : undefined,
+    tvaEffectiveDate: donor.tvaAssujetti ? `${year}-01-01` : null,
     missionStart: `${year}-01-01`,
     rfrN2: null,
     vlRegularizationMonths: undefined,

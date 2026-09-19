@@ -13,6 +13,9 @@ interface TjmMonthlyEditorProps {
   onChange: (next: { defaultTjm: number; tjmByMonth: Record<number, number> | undefined }) => void;
   /** Mois à pré-sélectionner dans l'inspector (0..11). */
   initialMonth?: number;
+  tvaAssujetti: boolean;
+  tvaRate: number;
+  tvaEffectiveDate: string | null;
 }
 
 const TJM_MIN_INPUT = 50;
@@ -59,6 +62,9 @@ export const TjmMonthlyEditor: React.FC<TjmMonthlyEditorProps> = ({
   tjmByMonth,
   onChange,
   initialMonth = 0,
+  tvaAssujetti,
+  tvaRate,
+  tvaEffectiveDate,
 }) => {
   const [selectedMonth, setSelectedMonth] = useState<number>(initialMonth);
 
@@ -75,6 +81,15 @@ export const TjmMonthlyEditor: React.FC<TjmMonthlyEditorProps> = ({
   const selectedValue = resolveTjm(defaultTjm, tjmByMonth, selectedMonth);
   const selectedIsCustom = isCustom(tjmByMonth, selectedMonth);
   const selectedDelta = selectedValue - defaultTjm;
+  const tvaAppliesToMonth = (monthIndex: number) => {
+    if (!tvaAssujetti) return false;
+    const invoiceDate = new Date(year, monthIndex + 1, 0, 12);
+    const effectiveDate = tvaEffectiveDate ? new Date(`${tvaEffectiveDate}T12:00:00`) : null;
+    return !effectiveDate || invoiceDate >= effectiveDate;
+  };
+  const tvaEffectiveMonth = tvaEffectiveDate
+    ? new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(`${tvaEffectiveDate}T12:00:00`))
+    : null;
 
   // Pour l'échelle des barres : on s'adapte à la valeur max parmi {défaut, toutes les surcharges, BAR_SCALE_MAX}.
   const barScaleMax = useMemo(() => {
@@ -118,7 +133,7 @@ export const TjmMonthlyEditor: React.FC<TjmMonthlyEditorProps> = ({
         <div className="flex items-center justify-between bg-surface-low rounded-2xl px-4 py-3">
           <div className="flex flex-col">
             <span className="text-[11px] uppercase tracking-[0.14em] font-bold text-on-surface-variant">
-              TJM par défaut
+              TJM HT par défaut
             </span>
             <span className="text-xs text-on-surface-variant">
               Appliqué aux mois non personnalisés
@@ -139,6 +154,7 @@ export const TjmMonthlyEditor: React.FC<TjmMonthlyEditorProps> = ({
             <span className="text-secondary font-bold text-xs">€/j</span>
           </label>
         </div>
+        {tvaAssujetti && <p className="-mt-2 text-right text-[11px] font-bold text-tax">TVA appliquée aux factures à partir de {tvaEffectiveMonth ?? 'la date configurée'}.</p>}
 
         {/* Vue mobile : grille 4×3 */}
         <div
@@ -299,6 +315,7 @@ export const TjmMonthlyEditor: React.FC<TjmMonthlyEditorProps> = ({
             aria-label={`TJM de ${MONTH_NAMES[selectedMonth]} en euros par jour`}
             className="w-full h-1 bg-surface-highest rounded-lg appearance-none cursor-pointer accent-secondary"
           />
+          {tvaAppliesToMonth(selectedMonth) && <p className="text-right text-[11px] font-bold text-tax">soit {(selectedValue * (1 + tvaRate)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € TTC / j</p>}
 
           <div className="flex items-center justify-between pt-1 border-t border-outline-variant/15 text-xs">
             <span className="text-on-surface-variant">

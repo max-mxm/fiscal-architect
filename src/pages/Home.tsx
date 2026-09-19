@@ -17,6 +17,7 @@ import {
   calcSeuilDateFromEntries,
   calcTotalChargesFixes,
   calcTVAStatus,
+  calcInvoiceTotals,
   getActivities,
   getFiscalParams,
   getTVASeuils,
@@ -24,6 +25,7 @@ import {
   effectiveEntries,
   getPrimaryActivity,
   resolveMonthlyTjm,
+  isTVAApplicableOn,
 } from '~/lib/fiscal';
 import {
   MONTH_NAMES,
@@ -218,6 +220,21 @@ export const Home: React.FC = () => {
     () => buildPaymentProjections(projectedMonths, profile),
     [projectedMonths, profile],
   );
+  const invoiceProjections = useMemo(
+    () => buildPaymentProjections(fy.fiscalYear.months, profile),
+    [fy.fiscalYear.months, profile],
+  );
+  const annualInvoice = useMemo(
+    () => invoiceProjections.reduce(
+      (totals, item) => ({
+        ht: totals.ht + item.amount,
+        tva: totals.tva + item.taxAmount,
+        ttc: totals.ttc + item.amountTtc,
+      }),
+      { ht: 0, tva: 0, ttc: 0 },
+    ),
+    [invoiceProjections],
+  );
   const tvaTurnoverProjected = useMemo(
     () => paymentProjections.reduce((sum, item) => sum + item.amount, 0),
     [paymentProjections],
@@ -246,6 +263,18 @@ export const Home: React.FC = () => {
   const caMensuel = useMemo(
     () => (selectedMonthData ? calcCAFromEntries(selectedMonthData, profile) : 0),
     [selectedMonthData, profile],
+  );
+  const selectedInvoiceDate = useMemo(
+    () => new Date(year, selectedMonth + 1, 0, 12),
+    [year, selectedMonth],
+  );
+  const tvaAppliesToSelectedMonth = useMemo(
+    () => isTVAApplicableOn(profile, selectedInvoiceDate),
+    [profile, selectedInvoiceDate],
+  );
+  const monthlyInvoice = useMemo(
+    () => calcInvoiceTotals(caMensuel, tvaAppliesToSelectedMonth, profile.tvaRate),
+    [caMensuel, tvaAppliesToSelectedMonth, profile.tvaRate],
   );
 
   const selectedEntries = useMemo<RevenueEntry[]>(
@@ -456,6 +485,11 @@ export const Home: React.FC = () => {
           tvaStatus={tvaStatus}
           tvaSeuilDate={tvaSeuilDate}
           tvaAssujetti={profile.tvaAssujetti}
+          tvaRate={profile.tvaRate}
+          tvaEffectiveDate={profile.tvaEffectiveDate}
+          annualInvoice={annualInvoice}
+          monthlyInvoice={monthlyInvoice}
+          tvaAppliesToMonth={tvaAppliesToSelectedMonth}
           activities={getActivities(profile)}
           caByActivity={caByActivity}
           tjmMois={showCalendar ? tjmMois : undefined}
@@ -510,6 +544,8 @@ export const Home: React.FC = () => {
               monthName={MONTH_NAMES[selectedMonth]}
               onChange={handleEntriesChange}
               activities={getActivities(profile)}
+              tvaAssujetti={tvaAppliesToSelectedMonth}
+              tvaRate={profile.tvaRate}
             />
           )}
 
@@ -519,6 +555,8 @@ export const Home: React.FC = () => {
               monthName={MONTH_NAMES[selectedMonth]}
               onChange={handleEntriesChange}
               activities={getActivities(profile)}
+              tvaAssujetti={tvaAppliesToSelectedMonth}
+              tvaRate={profile.tvaRate}
             />
           )}
 
@@ -547,6 +585,8 @@ export const Home: React.FC = () => {
             tjmMois={tjmMois}
             isCustomTjmMois={isCustomTjmMois}
             monthName={MONTH_NAMES[selectedMonth]}
+            tvaAssujetti={tvaAppliesToSelectedMonth}
+            tvaRate={profile.tvaRate}
           />
           <MonthSummary
             monthName={MONTH_NAMES[selectedMonth]}
@@ -572,6 +612,8 @@ export const Home: React.FC = () => {
             isCustomTjmMois={isCustomTjmMois}
             defaultTjm={profile.tjm}
             onOpenMonthlyTjm={() => setMonthlyTjmOpen(true)}
+            tvaAssujetti={tvaAppliesToSelectedMonth}
+            tvaRate={profile.tvaRate}
           />
         </aside>
       </div>
@@ -632,6 +674,9 @@ export const Home: React.FC = () => {
         onChange={({ defaultTjm, tjmByMonth }) =>
           setProfile((p) => ({ ...p, tjm: defaultTjm, tjmByMonth }))
         }
+        tvaAssujetti={profile.tvaAssujetti}
+        tvaRate={profile.tvaRate}
+        tvaEffectiveDate={profile.tvaEffectiveDate}
       />
 
       <LiveAnnouncer message={announce} />

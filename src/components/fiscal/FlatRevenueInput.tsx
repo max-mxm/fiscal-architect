@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { ActivityEntry, RevenueEntry } from '~/types';
 import { formatEuro } from '~/lib/format';
+import { calcInvoiceTotals } from '~/lib/fiscal';
 import { ActivityChip } from '~/components/fiscal/ActivityChip';
 
 interface FlatRevenueInputProps {
@@ -8,11 +9,14 @@ interface FlatRevenueInputProps {
   monthName: string;
   onChange: (next: RevenueEntry[]) => void;
   activities: ActivityEntry[];
+  tvaAssujetti: boolean;
+  tvaRate: number;
 }
 
-export const FlatRevenueInput: React.FC<FlatRevenueInputProps> = ({ entries, monthName, onChange, activities }) => {
+export const FlatRevenueInput: React.FC<FlatRevenueInputProps> = ({ entries, monthName, onChange, activities, tvaAssujetti, tvaRate }) => {
   const multi = activities.length > 1;
   const flat = entries.find((e): e is Extract<RevenueEntry, { kind: 'flat' }> => e.kind === 'flat');
+  const invoice = calcInvoiceTotals(flat?.amount ?? 0, tvaAssujetti, tvaRate);
   const [draft, setDraft] = useState<string>(flat ? String(flat.amount) : '');
 
   useEffect(() => {
@@ -49,7 +53,7 @@ export const FlatRevenueInput: React.FC<FlatRevenueInputProps> = ({ entries, mon
       <div>
         <h2 className="font-headline text-lg font-bold text-on-surface">{monthName}</h2>
         <p className="text-xs text-on-surface-variant mt-0.5 font-medium">
-          CA total encaissé sur le mois
+          Montant de facture / encaissement, hors taxes
         </p>
       </div>
 
@@ -58,7 +62,7 @@ export const FlatRevenueInput: React.FC<FlatRevenueInputProps> = ({ entries, mon
           htmlFor="flat-revenue-input"
           className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-2"
         >
-          Chiffre d'affaires
+          Chiffre d'affaires HT
         </label>
         <div className="flex items-baseline gap-2">
           <input
@@ -83,13 +87,19 @@ export const FlatRevenueInput: React.FC<FlatRevenueInputProps> = ({ entries, mon
           <span className="font-headline font-black text-2xl text-secondary">€</span>
         </div>
         <p className="text-[11px] text-on-surface-variant mt-3 leading-relaxed">
-          Saisissez le total réellement encaissé ce mois-ci (toutes sources confondues).
+          Saisissez le total HT encaissé ce mois-ci (toutes sources confondues).
           {flat && flat.amount > 0 && (
             <span className="block mt-1 font-mono tabular-nums">
               Enregistré : {formatEuro(flat.amount)}€
             </span>
           )}
         </p>
+        {tvaAssujetti && flat && flat.amount > 0 && (
+          <div className="mt-3 rounded-xl bg-tax-container/70 px-3 py-2.5 text-xs">
+            <div className="flex justify-between gap-3 text-on-surface-variant"><span>TVA collectée ({Math.round(tvaRate * 10000) / 100} %)</span><span className="font-mono font-bold tabular-nums text-tax">{formatEuro(invoice.tva)} €</span></div>
+            <div className="mt-1 flex justify-between gap-3 font-bold text-tax"><span>Encaissement TTC</span><span className="font-mono tabular-nums">{formatEuro(invoice.ttc)} €</span></div>
+          </div>
+        )}
       </div>
 
       {multi && flat && flat.amount > 0 && (

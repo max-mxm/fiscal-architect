@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildPaymentProjections,
   buildCashflowTimeline,
   calcInvoiceThresholdDate,
   calcReceiptThresholdDate,
@@ -8,6 +9,8 @@ import {
   sumReceiptsThroughDate,
   type PaymentProjection,
 } from '~/lib/cashflow';
+import { DEFAULT_IDENTITY, buildDefaultYearConfig } from '~/constants';
+import type { CalendarMonth, UserProfile } from '~/types';
 
 describe('calculateDueDate', () => {
   const invoice = new Date(2026, 0, 31, 12);
@@ -45,6 +48,9 @@ describe('projection des encaissements', () => {
       invoiceDate: new Date(2026, 10, 30, 12),
       dueDate: new Date(2027, 0, 29, 12),
       amount: 10_000,
+      taxAmount: 2_000,
+      amountTtc: 12_000,
+      tvaApplies: true,
     },
     {
       serviceMonth: 11,
@@ -52,6 +58,9 @@ describe('projection des encaissements', () => {
       invoiceDate: new Date(2026, 11, 31, 12),
       dueDate: new Date(2027, 2, 1, 12),
       amount: 12_000,
+      taxAmount: 2_400,
+      amountTtc: 14_400,
+      tvaApplies: true,
     },
   ];
 
@@ -93,5 +102,29 @@ describe('projection des encaissements', () => {
       .toBe(10_000);
     expect(sumReceiptsThroughDate(projections, new Date(2027, 2, 2)))
       .toBe(22_000);
+  });
+});
+
+describe('TVA à date d’effet', () => {
+  const profile: UserProfile = {
+    ...DEFAULT_IDENTITY,
+    ...buildDefaultYearConfig(2026),
+    tvaAssujetti: true,
+    tvaRate: 0.2,
+    tvaEffectiveDate: '2026-05-01',
+  } as UserProfile;
+  const month = (index: number): CalendarMonth => ({
+    year: 2026,
+    month: index,
+    workedDays: [],
+    halfDays: [],
+    entries: [{ kind: 'flat', id: `flat-${index}`, amount: 1_000 }],
+  });
+
+  it('laisse les factures antérieures HT puis bascule au TTC', () => {
+    const [april, may] = buildPaymentProjections([month(3), month(4)], profile);
+
+    expect(april).toMatchObject({ amount: 1_000, taxAmount: 0, amountTtc: 1_000, tvaApplies: false });
+    expect(may).toMatchObject({ amount: 1_000, taxAmount: 200, amountTtc: 1_200, tvaApplies: true });
   });
 });

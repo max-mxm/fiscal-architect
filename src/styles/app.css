@@ -22,6 +22,8 @@
   --color-hero-accent: #1e293b;
   --color-hero-on-bg: #ffffff;
   --color-half-accent: #8fd8b3;
+  --color-tax: #6d28d9;
+  --color-tax-container: #ede9fe;
 }
 
 .dark {
@@ -40,6 +42,8 @@
   --color-hero-accent: #134034;
   --color-hero-on-bg: #e8efe9;
   --color-half-accent: #064f36;
+  --color-tax: #c4b5fd;
+  --color-tax-container: #2e1a47;
   color-scheme: dark;
 }
 

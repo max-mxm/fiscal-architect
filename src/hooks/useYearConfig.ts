@@ -20,6 +20,14 @@ const YEAR_CONFIG_MIGRATIONS: Record<number, (old: any) => any> = {
     paymentDelayMode: 'net',
     endOfMonthCalculation: 'delayThenMonthEnd',
   }),
+  // v3 → v4 : le taux est configuré séparément ; 20 % préserve le cas standard.
+  3: (old: any) => ({ ...old, schemaVersion: 4, tvaRate: 0.2 }),
+  // v4 → v5 : les profils déjà assujettis conservent une TVA sur toute l'année.
+  4: (old: any) => ({
+    ...old,
+    schemaVersion: 5,
+    tvaEffectiveDate: old.tvaAssujetti ? `${old.year}-01-01` : null,
+  }),
 };
 
 /**

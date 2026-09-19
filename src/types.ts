@@ -57,7 +57,7 @@ export interface IdentityProfile {
  * Stocké dans la clé `fiscal-year-config-${year}`.
  */
 export interface YearConfig {
-  schemaVersion: 3;
+  schemaVersion: 5;
   year: number;
 
   // Paramètres légaux (fixés par la loi pour cette année)
@@ -86,6 +86,10 @@ export interface YearConfig {
   versementLiberatoire: boolean;
   acreEnabled: boolean;
   tvaAssujetti: boolean;
+  /** Taux de TVA facturé, exprimé en décimal (0,2 = 20 %). */
+  tvaRate: number;
+  /** Date à laquelle les nouvelles factures deviennent soumises à la TVA (ISO). */
+  tvaEffectiveDate: string | null;
   cfpEnabled: boolean;
   taxeConsulaireEnabled: boolean;
   ijOption: boolean;
@@ -183,7 +187,12 @@ export interface MonthlyBreakdown {
 
 export interface MonthlyChartData {
   month: string;
+  /** CA / facture hors taxes. */
   brut: number;
+  /** TVA collectée sur le montant HT. */
+  tva: number;
+  /** Montant total de la facture, TVA comprise. */
+  ttc: number;
   net: number;
 }
 
