@@ -5,7 +5,7 @@ import { formatEuro } from '~/lib/format';
 import { formatDateFR, formatDaysFR } from '~/lib/calendar';
 import { ThresholdGauge, type GaugeStatusKind } from '~/components/ThresholdGauge';
 import { TjmMonthChip } from '~/components/fiscal/TjmMonthChip';
-import { ACTIVITY_PARAMS, calcInvoiceTotals } from '~/lib/fiscal';
+import { ACTIVITY_PARAMS, type InvoiceTotals } from '~/lib/fiscal';
 import type { Activity, ActivityEntry, TVAStatus } from '~/types';
 
 interface KeyMetricsProps {
@@ -40,6 +40,10 @@ interface KeyMetricsProps {
   /** True si l'utilisateur facture déjà la TVA → masque la jauge, affiche un badge. */
   tvaAssujetti: boolean;
   tvaRate: number;
+  tvaEffectiveDate: string | null;
+  annualInvoice: InvoiceTotals;
+  monthlyInvoice: InvoiceTotals;
+  tvaAppliesToMonth: boolean;
   /** Liste des activités du profil (pour ventilation multi-activité). */
   activities?: ActivityEntry[];
   /** CA cumulé ventilé par type d'activité (pour mini-table). */
@@ -74,6 +78,10 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
   tvaSeuilDate,
   tvaAssujetti,
   tvaRate,
+  tvaEffectiveDate,
+  annualInvoice,
+  monthlyInvoice,
+  tvaAppliesToMonth,
   activities,
   caByActivity,
   tjmMois,
@@ -86,8 +94,9 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
   const margeRestante = Math.max(0, seuilMicro - caCumule);
   const tauxNet = caMensuel > 0 ? Math.round((netMensuel / caMensuel) * 100) : 0;
   const tauxRetentionAnnuel = caCumule > 0 ? Math.round((netCumule / caCumule) * 100) : 0;
-  const annualInvoice = calcInvoiceTotals(caCumule, tvaAssujetti, tvaRate);
-  const monthlyInvoice = calcInvoiceTotals(caMensuel, tvaAssujetti, tvaRate);
+  const tvaEffectiveMonth = tvaEffectiveDate
+    ? new Intl.DateTimeFormat('fr-FR', { month: 'short', year: 'numeric' }).format(new Date(`${tvaEffectiveDate}T12:00:00`))
+    : null;
 
   // La date renvoyée par calcSeuilDate peut être passée (dépassement déjà acté)
   // ou future (projection à venir). On distingue les deux cas.
@@ -162,7 +171,7 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
             </span>
             {tvaAssujetti && (
               <span className="shrink-0 rounded-full bg-tax-container/20 px-2.5 py-1 text-[10px] font-bold text-tax sm:text-[11px]">
-                TVA active
+                TVA {tvaEffectiveMonth ? `dès ${tvaEffectiveMonth}` : 'active'}
               </span>
             )}
           </div>
@@ -175,7 +184,7 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
             </span>
           </div>
 
-          {tvaAssujetti && (
+          {tvaAssujetti && annualInvoice.tva > 0 && (
             <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 rounded-2xl border border-tax/25 bg-tax-container/15 px-3 py-3">
               <div className="min-w-0">
                 <span className="block text-[10px] font-bold uppercase tracking-wider text-tax">Facturé TTC</span>
@@ -326,7 +335,7 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
               {formatEuro(caMensuel)} €
             </span>
           </div>
-          {tvaAssujetti && (
+          {tvaAppliesToMonth && (
             <div className="space-y-1.5 rounded-xl bg-tax-container/70 px-3 py-2.5">
               <div className="flex items-baseline justify-between gap-3 text-xs">
                 <span className="text-on-surface-variant">TVA collectée · {Math.round(tvaRate * 10000) / 100} %</span>
@@ -337,6 +346,11 @@ export const KeyMetrics: React.FC<KeyMetricsProps> = ({
                 <span className="font-mono text-base font-black tabular-nums text-tax">{formatEuro(monthlyInvoice.ttc)} €</span>
               </div>
             </div>
+          )}
+          {tvaAssujetti && !tvaAppliesToMonth && (
+            <p className="rounded-xl bg-surface-low px-3 py-2 text-[11px] leading-relaxed text-on-surface-variant">
+              Facture HT pour ce mois · TVA à partir de {tvaEffectiveMonth ?? 'la date configurée'}.
+            </p>
           )}
           <div className="flex items-baseline justify-between gap-3 pt-2 border-t border-outline-variant/15">
             <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">

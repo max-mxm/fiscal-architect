@@ -448,8 +448,14 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                     <TVAToggle
                       value={profile.tvaAssujetti}
                       rate={profile.tvaRate}
-                      onChange={(v) => updateProfile({ tvaAssujetti: v })}
+                      effectiveDate={profile.tvaEffectiveDate}
+                      year={year}
+                      onChange={(v) => updateProfile({
+                        tvaAssujetti: v,
+                        tvaEffectiveDate: v ? profile.tvaEffectiveDate ?? `${year}-01-01` : null,
+                      })}
                       onRateChange={(v) => updateProfile({ tvaRate: v })}
+                      onEffectiveDateChange={(v) => updateProfile({ tvaEffectiveDate: v })}
                     />
                     <IJToggle
                       value={profile.ijOption}

@@ -5,12 +5,33 @@ import { HelpTooltip } from '~/components/ui/HelpTooltip';
 interface TVAToggleProps {
   value: boolean;
   rate: number;
+  effectiveDate: string | null;
+  year: number;
   onChange: (next: boolean) => void;
   onRateChange: (next: number) => void;
+  onEffectiveDateChange: (next: string) => void;
 }
 
-export const TVAToggle: React.FC<TVAToggleProps> = ({ value, rate, onChange, onRateChange }) => {
+const monthLabel = (value: string | null): string | null => {
+  if (!value) return null;
+  const match = /^(\d{4})-(\d{2})/.exec(value);
+  if (!match) return null;
+  return new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
+    .format(new Date(Number(match[1]), Number(match[2]) - 1, 1, 12));
+};
+
+export const TVAToggle: React.FC<TVAToggleProps> = ({
+  value,
+  rate,
+  effectiveDate,
+  year,
+  onChange,
+  onRateChange,
+  onEffectiveDateChange,
+}) => {
   const percentage = Math.round(rate * 10000) / 100;
+  const effectiveMonth = effectiveDate?.slice(0, 7) ?? `${year}-01`;
+  const effectiveLabel = monthLabel(effectiveDate);
 
   return (
     <section className="rounded-2xl border border-outline-variant/30 bg-surface-low p-4">
@@ -54,7 +75,9 @@ export const TVAToggle: React.FC<TVAToggleProps> = ({ value, rate, onChange, onR
         role="status"
       >
         <span className={cn('font-bold', value && 'text-tax')}>
-          {value ? `TVA active · ${percentage.toLocaleString('fr-FR')} % sur vos factures` : 'Franchise en base · TVA non facturée'}
+          {value
+            ? `TVA active${effectiveLabel ? ` depuis ${effectiveLabel}` : ''} · ${percentage.toLocaleString('fr-FR')} % sur vos factures`
+            : 'Franchise en base · TVA non facturée'}
         </span>
         <span className="block mt-0.5">
           {value
@@ -64,7 +87,29 @@ export const TVAToggle: React.FC<TVAToggleProps> = ({ value, rate, onChange, onR
       </div>
 
       {value && (
-        <div className="mt-4">
+        <div className="mt-4 space-y-4">
+          <div>
+            <label htmlFor="tva-effective-month" className="block text-xs font-bold uppercase tracking-wider text-tax">
+              TVA à partir de
+            </label>
+            <input
+              id="tva-effective-month"
+              type="month"
+              min={`${year}-01`}
+              max={`${year}-12`}
+              value={effectiveMonth}
+              onChange={(event) => {
+                if (/^\d{4}-\d{2}$/.test(event.target.value)) onEffectiveDateChange(`${event.target.value}-01`);
+              }}
+              aria-describedby="tva-effective-month-help"
+              className="mt-2 min-h-[44px] w-full rounded-xl border border-outline-variant/40 bg-surface-lowest px-3 font-mono text-sm font-bold text-on-surface focus:border-tax focus:outline-none focus:ring-2 focus:ring-tax/20"
+            />
+            <p id="tva-effective-month-help" className="mt-1.5 text-[11px] leading-relaxed text-on-surface-variant">
+              Les factures émises avant ce mois restent en HT. Le mois choisi est inclus.
+            </p>
+          </div>
+
+          <div>
           <label htmlFor="tva-rate" className="block text-xs font-bold uppercase tracking-wider text-tax">
             Taux de TVA facturé
           </label>
@@ -89,6 +134,7 @@ export const TVAToggle: React.FC<TVAToggleProps> = ({ value, rate, onChange, onR
           <p id="tva-rate-help" className="mt-1.5 text-[11px] leading-relaxed text-on-surface-variant">
             Saisissez le taux appliqué à vos prestations ; 20 % est le taux proposé par défaut.
           </p>
+          </div>
         </div>
       )}
     </section>

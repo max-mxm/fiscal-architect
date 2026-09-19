@@ -4,7 +4,7 @@ import type {
   PaymentDelayMode,
   UserProfile,
 } from '~/types';
-import { calcCAFromEntries, calcInvoiceTotals } from '~/lib/fiscal';
+import { calcCAFromEntries, calcInvoiceTotals, isTVAApplicableOn } from '~/lib/fiscal';
 
 export interface PaymentTerms {
   days: number;
@@ -21,6 +21,8 @@ export interface PaymentProjection {
   amount: number;
   /** TVA collectée sur la facture. */
   taxAmount: number;
+  /** Indique que la TVA s'applique à cette facture précise. */
+  tvaApplies: boolean;
   /** Montant effectivement facturé / encaissé, TVA comprise. */
   amountTtc: number;
 }
@@ -84,8 +86,9 @@ export function buildPaymentProjections(
   return months.flatMap((month) => {
     const amount = calcCAFromEntries(month, profile);
     if (amount <= 0) return [];
-    const totals = calcInvoiceTotals(amount, profile.tvaAssujetti, profile.tvaRate);
     const invoiceDate = new Date(month.year, month.month + 1, 0, 12);
+    const tvaApplies = isTVAApplicableOn(profile, invoiceDate);
+    const totals = calcInvoiceTotals(amount, tvaApplies, profile.tvaRate);
     return [{
       serviceMonth: month.month,
       serviceYear: month.year,
@@ -94,6 +97,7 @@ export function buildPaymentProjections(
       amount: totals.ht,
       taxAmount: totals.tva,
       amountTtc: totals.ttc,
+      tvaApplies,
     }];
   });
 }

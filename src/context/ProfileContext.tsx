@@ -121,6 +121,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       `Année,${profile.year}`,
       `TJM HT,${profile.tjm}€`,
       `Taux TVA,${profile.tvaAssujetti ? `${profile.tvaRate * 100}%` : 'Franchise en base'}`,
+      `TVA à partir de,${profile.tvaAssujetti ? profile.tvaEffectiveDate ?? 'Dès le début de l’année' : 'Non applicable'}`,
       `Jours/mois,${profile.workingDays}`,
       `Taux URSSAF,${profile.urssafRate}%`,
       `Charges fixes mensuelles,${totalFixed}€`,

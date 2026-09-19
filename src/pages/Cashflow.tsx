@@ -76,6 +76,7 @@ export const Cashflow: React.FC = () => {
   const totalInvoiced = projections.reduce((sum, item) => sum + item.amount, 0);
   const totalInvoicedTtc = projections.reduce((sum, item) => sum + item.amountTtc, 0);
   const totalTax = projections.reduce((sum, item) => sum + item.taxAmount, 0);
+  const hasTaxableInvoices = projections.some((item) => item.tvaApplies);
   const receivedInYear = sumReceiptsForYear(projections, fy.year);
   const receivedInYearTtc = projections.filter((item) => item.dueDate.getFullYear() === fy.year).reduce((sum, item) => sum + item.amountTtc, 0);
   const receivedThroughToday = sumReceiptsThroughDate(projections, today);
@@ -88,13 +89,12 @@ export const Cashflow: React.FC = () => {
     .reduce((sum, item) => sum + item.amountTtc, 0);
   const awaitingPayment = Math.max(0, totalInvoiced - receivedThroughToday);
   const awaitingPaymentTtc = Math.max(0, totalInvoicedTtc - receivedThroughTodayTtc);
-  const displayAmount = (ht: number, ttc: number) => formatInvoiceEuro(profile.tvaAssujetti ? ttc : ht);
-  const amountSuffix = profile.tvaAssujetti ? ' TTC' : ' HT';
+  const displayAmount = (ht: number, ttc: number) => formatInvoiceEuro(hasTaxableInvoices ? ttc : ht);
 
   const chartData = timeline.map((row) => ({
     label: `${MONTH_SHORT[row.month]}${row.year !== fy.year ? ` ${String(row.year).slice(2)}` : ''}`,
-    facturé: profile.tvaAssujetti ? row.cumulativeInvoicedTtc : row.cumulativeInvoiced,
-    encaissé: profile.tvaAssujetti ? row.cumulativeReceivedTtc : row.cumulativeReceived,
+    facturé: hasTaxableInvoices ? row.cumulativeInvoicedTtc : row.cumulativeInvoiced,
+    encaissé: hasTaxableInvoices ? row.cumulativeReceivedTtc : row.cumulativeReceived,
   }));
 
   return (
@@ -132,7 +132,7 @@ export const Cashflow: React.FC = () => {
             <p className={clsx('mt-1 truncate font-mono text-base font-bold tabular-nums sm:text-lg', emphasis ? 'text-secondary' : 'text-on-surface')} title={`${displayAmount(ht, ttc)} €`}>
               {displayAmount(ht, ttc)} €
             </p>
-            {profile.tvaAssujetti && <p className="mt-1 font-mono text-[11px] font-bold tabular-nums text-tax">HT {formatInvoiceEuro(ht)} €</p>}
+            {hasTaxableInvoices && <p className="mt-1 font-mono text-[11px] font-bold tabular-nums text-tax">CA HT {formatInvoiceEuro(ht)} €</p>}
           </article>
         ))}
       </section>
@@ -141,7 +141,7 @@ export const Cashflow: React.FC = () => {
         <article className="rounded-3xl border border-secondary/30 bg-secondary/[0.07] p-5 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-secondary">À encaisser{amountSuffix}</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-secondary">À encaisser</p>
               <p className="mt-2 font-headline font-black text-3xl leading-none tabular-nums text-on-surface">{displayAmount(awaitingPayment, awaitingPaymentTtc)} €</p>
             </div>
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-on-secondary"><WalletCards className="h-5 w-5" aria-hidden="true" /></span>
@@ -158,7 +158,7 @@ export const Cashflow: React.FC = () => {
           ].map(({ label, ht, ttc, Icon }) => (
             <article key={label} className="min-w-0 rounded-2xl bg-surface-lowest p-4 shadow-sm">
               <Icon className="h-4 w-4 text-on-surface-variant" aria-hidden="true" />
-              <p className="mt-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{label}{amountSuffix}</p>
+              <p className="mt-3 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">{label}</p>
               <p className="mt-1 truncate font-mono text-base font-bold tabular-nums text-on-surface">{displayAmount(ht, ttc)} €</p>
             </article>
           ))}
@@ -172,10 +172,10 @@ export const Cashflow: React.FC = () => {
         )}
       </section>
 
-      {profile.tvaAssujetti && (
+      {hasTaxableInvoices && (
         <aside className="rounded-2xl border border-tax/20 bg-tax-container px-4 py-3 text-xs leading-relaxed text-on-surface">
           <span className="font-bold text-tax">TVA collectée en projection · {formatInvoiceEuro(totalTax)} €</span>
-          <span className="ml-1">Elle est incluse dans les montants TTC, mais exclue du CA et des seuils fiscaux.</span>
+          <span className="ml-1">Elle s’applique aux factures émises depuis le {profile.tvaEffectiveDate ? DATE_FORMAT.format(new Date(`${profile.tvaEffectiveDate}T12:00:00`)) : 'début de l’année'} et reste exclue du CA et des seuils fiscaux.</span>
         </aside>
       )}
 
@@ -195,7 +195,7 @@ export const Cashflow: React.FC = () => {
           <section aria-labelledby="cashflow-chart-title" className="rounded-3xl bg-surface-lowest p-5 shadow-sm sm:p-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h2 id="cashflow-chart-title" className="font-headline text-lg font-bold text-on-surface">Facturé vs encaissé{profile.tvaAssujetti ? ' TTC' : ''}</h2>
+                <h2 id="cashflow-chart-title" className="font-headline text-lg font-bold text-on-surface">Facturé vs encaissé{hasTaxableInvoices ? ' · montant client' : ''}</h2>
                 <p className="mt-1 text-xs leading-relaxed text-on-surface-variant">Cumul des factures mensuelles et de leur paiement à l’échéance maximale.</p>
               </div>
               <div className="flex flex-wrap gap-3 text-[11px] font-bold text-on-surface-variant" aria-hidden="true">
@@ -264,11 +264,11 @@ export const Cashflow: React.FC = () => {
                         ) : null}
                       </div>
                       <div className="text-right">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">À encaisser{profile.tvaAssujetti ? ' TTC' : ''}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">À encaisser{item.tvaApplies ? ' TTC' : ' HT'}</p>
                         <p className={clsx('mt-1 shrink-0 font-mono text-sm font-bold tabular-nums', isPast ? 'text-on-surface-variant' : 'text-on-surface')}>
-                          {formatInvoiceEuro(profile.tvaAssujetti ? item.amountTtc : item.amount)} €
+                          {formatInvoiceEuro(item.tvaApplies ? item.amountTtc : item.amount)} €
                         </p>
-                        {profile.tvaAssujetti && <p className="mt-1 font-mono text-[10px] font-bold tabular-nums text-tax">HT {formatInvoiceEuro(item.amount)} € · TVA {formatInvoiceEuro(item.taxAmount)} €</p>}
+                        {item.tvaApplies && <p className="mt-1 font-mono text-[10px] font-bold tabular-nums text-tax">HT {formatInvoiceEuro(item.amount)} € · TVA {formatInvoiceEuro(item.taxAmount)} €</p>}
                       </div>
                     </div>
                     <div className={clsx('mt-3 flex items-center justify-between gap-3 border-t pt-3 text-xs', isPast ? 'border-outline-variant/15 text-on-surface-variant/65' : 'border-outline-variant/20 text-on-surface-variant')}>
@@ -285,7 +285,7 @@ export const Cashflow: React.FC = () => {
                 <thead>
                   <tr className="border-b border-outline-variant/25 text-[11px] uppercase tracking-wider text-on-surface-variant">
                     <th scope="col" className="px-3 py-3 font-bold text-secondary">Date de paiement</th>
-                    <th scope="col" className="px-3 py-3 text-right font-bold">Montant à encaisser{profile.tvaAssujetti ? ' TTC' : ''}</th>
+                    <th scope="col" className="px-3 py-3 text-right font-bold">Montant à encaisser</th>
                     <th scope="col" className="px-3 py-3 font-bold">Date de facturation</th>
                   </tr>
                 </thead>
@@ -311,8 +311,8 @@ export const Cashflow: React.FC = () => {
                           </div>
                         </th>
                         <td className={clsx('px-3 py-4 text-right font-mono font-bold tabular-nums', isPast ? 'text-on-surface-variant/70' : 'text-on-surface')}>
-                          {formatInvoiceEuro(profile.tvaAssujetti ? item.amountTtc : item.amount)} €
-                          {profile.tvaAssujetti && <span className="mt-1 block text-[10px] font-bold text-tax">HT {formatInvoiceEuro(item.amount)} € · TVA {formatInvoiceEuro(item.taxAmount)} €</span>}
+                          {formatInvoiceEuro(item.tvaApplies ? item.amountTtc : item.amount)} €
+                          {item.tvaApplies && <span className="mt-1 block text-[10px] font-bold text-tax">HT {formatInvoiceEuro(item.amount)} € · TVA {formatInvoiceEuro(item.taxAmount)} €</span>}
                         </td>
                         <td className={clsx('px-3 py-4', isPast ? 'text-on-surface-variant/60' : 'text-on-surface-variant')}>
                           {DATE_FORMAT.format(item.invoiceDate)}

@@ -97,6 +97,7 @@ const makeProfile = (overrides: Partial<UserProfile> = {}): UserProfile => ({
   acreEnabled: false,
   tvaAssujetti: false,
   tvaRate: 0.2,
+  tvaEffectiveDate: null,
   cfpEnabled: false,
   taxeConsulaireEnabled: false,
   revenueModel: 'days',

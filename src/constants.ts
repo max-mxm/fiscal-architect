@@ -40,7 +40,7 @@ export const DEFAULT_IDENTITY: IdentityProfile = {
 export function buildDefaultYearConfig(year: number): YearConfig {
   const legal = getLegalParamsForYear(year);
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     year,
     urssafRate: legal.urssafRate,
     seuilMicro: legal.seuilMicro,
@@ -56,6 +56,7 @@ export function buildDefaultYearConfig(year: number): YearConfig {
     acreEnabled: false,
     tvaAssujetti: false,
     tvaRate: 0.2,
+    tvaEffectiveDate: null,
     cfpEnabled: true,
     taxeConsulaireEnabled: false,
     ijOption: false,

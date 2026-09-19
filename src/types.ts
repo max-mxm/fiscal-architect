@@ -57,7 +57,7 @@ export interface IdentityProfile {
  * Stocké dans la clé `fiscal-year-config-${year}`.
  */
 export interface YearConfig {
-  schemaVersion: 4;
+  schemaVersion: 5;
   year: number;
 
   // Paramètres légaux (fixés par la loi pour cette année)
@@ -88,6 +88,8 @@ export interface YearConfig {
   tvaAssujetti: boolean;
   /** Taux de TVA facturé, exprimé en décimal (0,2 = 20 %). */
   tvaRate: number;
+  /** Date à laquelle les nouvelles factures deviennent soumises à la TVA (ISO). */
+  tvaEffectiveDate: string | null;
   cfpEnabled: boolean;
   taxeConsulaireEnabled: boolean;
   ijOption: boolean;

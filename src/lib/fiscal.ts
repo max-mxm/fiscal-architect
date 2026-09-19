@@ -112,6 +112,31 @@ export interface InvoiceTotals {
   ttc: number;
 }
 
+/** Lit une date ISO sans la décaler au changement d'heure / fuseau local. */
+function parseLocalISODate(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const [, year, month, day] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day), 12);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * Une facture est soumise à TVA uniquement après la date d'effet choisie.
+ * Le fallback conserve le comportement des anciens profils, migrés en v5.
+ */
+export function isTVAApplicableOn(
+  profile: Pick<UserProfile, 'tvaAssujetti' | 'tvaEffectiveDate'>,
+  invoiceDate: Date,
+): boolean {
+  if (!profile.tvaAssujetti) return false;
+  if (!profile.tvaEffectiveDate) return true;
+  const effectiveDate = parseLocalISODate(profile.tvaEffectiveDate);
+  if (!effectiveDate) return true;
+  const normalizedInvoiceDate = new Date(invoiceDate.getFullYear(), invoiceDate.getMonth(), invoiceDate.getDate(), 12);
+  return normalizedInvoiceDate >= effectiveDate;
+}
+
 /**
  * Ventilation d'une facture. Le CA de l'application reste toujours hors taxes :
  * la TVA collectée est présentée séparément et ne participe ni au net ni aux seuils.
@@ -854,7 +879,8 @@ export function generateChartData(profile: UserProfile): MonthlyChartData[] {
       profile.versementLiberatoire,
       { abattement: params.abattement, tauxVL: params.tauxVL },
     );
-    const invoice = calcInvoiceTotals(brut, profile.tvaAssujetti, profile.tvaRate);
+    const invoiceDate = new Date(profile.year, monthIndex + 1, 0, 12);
+    const invoice = calcInvoiceTotals(brut, isTVAApplicableOn(profile, invoiceDate), profile.tvaRate);
     return {
       month,
       brut: Math.round(invoice.ht * 100) / 100,
