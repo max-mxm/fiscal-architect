@@ -105,24 +105,29 @@ export const RFRInput: React.FC<RFRInputProps> = ({ rfrN2, partsFiscales, onRFRC
         </div>
       ) : null}
 
-      <div id={helpId} className="rounded-xl bg-surface-low px-3 py-3 text-[13px] leading-relaxed text-on-surface-variant">
-        <p>
-          Pour l’année fiscale <strong className="text-on-surface">{year}</strong>, saisissez le <strong className="text-on-surface">revenu fiscal de référence {eligibility.rfrYear}</strong>, indiqué sur votre avis d’impôt reçu en {eligibility.taxNoticeYear}.
-        </p>
-        <p className="mt-1.5">
-          Plafond {thresholdPerPart.known ? 'officiel' : 'indicatif, dernier seuil connu'} : <strong className="text-on-surface">{formatEuro(thresholdPerPart.amount)} € par part</strong>.
-        </p>
-        <a
-          href={VL_OFFICIAL_GUIDE_URL}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-2 py-1 font-bold text-secondary underline decoration-secondary/30 underline-offset-2 hover:decoration-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30"
-        >
-          Consulter les conditions sur impots.gouv.fr
-          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-          <span className="sr-only">(s’ouvre dans un nouvel onglet)</span>
-        </a>
-      </div>
+      <details id={helpId} className="rounded-xl bg-surface-low px-3 py-2.5 text-[13px] leading-relaxed text-on-surface-variant">
+        <summary className="min-h-[28px] cursor-pointer list-none py-1 text-xs font-bold text-secondary focus:outline-none [&::-webkit-details-marker]:hidden">
+          Où trouver ce montant ?
+        </summary>
+        <div className="border-t border-outline-variant/15 pt-3">
+          <p>
+            Pour l’année fiscale <strong className="text-on-surface">{year}</strong>, saisissez le <strong className="text-on-surface">revenu fiscal de référence {eligibility.rfrYear}</strong>, indiqué sur votre avis d’impôt reçu en {eligibility.taxNoticeYear}.
+          </p>
+          <p className="mt-1.5">
+            Plafond {thresholdPerPart.known ? 'officiel' : 'indicatif, dernier seuil connu'} : <strong className="text-on-surface">{formatEuro(thresholdPerPart.amount)} € par part</strong>.
+          </p>
+          <a
+            href={VL_OFFICIAL_GUIDE_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-2 py-1 font-bold text-secondary underline decoration-secondary/30 underline-offset-2 hover:decoration-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30"
+          >
+            Consulter les conditions sur impots.gouv.fr
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="sr-only">(s’ouvre dans un nouvel onglet)</span>
+          </a>
+        </div>
+      </details>
     </div>
   );
 };

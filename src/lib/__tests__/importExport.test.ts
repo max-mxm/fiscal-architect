@@ -96,6 +96,26 @@ describe('importExport', () => {
     expect(storage.getItem('ignored')).toBeNull();
   });
 
+  it('preserve les parametres de TVA a l’export et a la restauration', () => {
+    const source = new MemoryStorage();
+    source.setItem('fiscal-year-config-2026', JSON.stringify({
+      year: 2026,
+      tvaAssujetti: true,
+      tvaRate: 0.2,
+      tvaEffectiveDate: '2026-05-01',
+    }));
+
+    const backup = createBackupFromStorage(source, new Date('2026-09-02T10:00:00.000Z'));
+    const target = new MemoryStorage();
+    restoreBackupToStorage(backup, target);
+
+    expect(JSON.parse(target.getItem('fiscal-year-config-2026') ?? '{}')).toMatchObject({
+      tvaAssujetti: true,
+      tvaRate: 0.2,
+      tvaEffectiveDate: '2026-05-01',
+    });
+  });
+
   it('refuse les fichiers invalides', () => {
     expect(() => parseBackupText('{bad')).toThrow(BackupImportError);
     expect(() => parseBackupText('{"format":"wrong","formatVersion":1,"data":{}}')).toThrow(BackupImportError);
