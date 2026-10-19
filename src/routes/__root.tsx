@@ -54,7 +54,7 @@ export const Route = createRootRoute({
   errorComponent: ({ error, reset }) => (
     <ErrorPage
       kind="error"
-      error={error}
+      error={error instanceof Error ? error : new Error(String(error))}
       onReload={reset ?? (() => {
         if (typeof window !== 'undefined') window.location.reload()
       })}
