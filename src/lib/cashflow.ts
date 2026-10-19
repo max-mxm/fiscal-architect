@@ -110,6 +110,19 @@ export function buildPaymentProjections(
 }
 
 /**
+ * Factures de N-1 encaissées en N (décembre, voire novembre, selon le délai) :
+ * le CA se déclare à l'encaissement, elles entrent donc dans les déclarations
+ * URSSAF de N.
+ */
+export function carriedOverPayments(
+  previousMonths: CalendarMonth[],
+  previousProfile: UserProfile,
+  year: number,
+): PaymentProjection[] {
+  return buildPaymentProjections(previousMonths, previousProfile).filter((p) => p.dueDate.getFullYear() === year);
+}
+
+/**
  * Série mensuelle couvrant l'année de prestation et les éventuels encaissements
  * décalés au début de l'année suivante.
  */

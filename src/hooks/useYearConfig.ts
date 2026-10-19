@@ -1,34 +1,8 @@
 import { type Dispatch, type SetStateAction } from 'react';
 import { useVersionedStorage } from '~/hooks/useLocalStorage';
 import { buildDefaultYearConfig } from '~/constants';
+import { YEAR_CONFIG_MIGRATIONS } from '~/lib/yearLifecycle';
 import type { YearConfig } from '~/types';
-
-const yearConfigKey = (year: number) => `fiscal-year-config-${year}`;
-
-/**
- * Migrations de schéma pour `YearConfig`. Chaque entrée `[N]` reçoit la valeur
- * en version `N` et la transforme en version `N + 1`.
- */
-const YEAR_CONFIG_MIGRATIONS: Record<number, (old: any) => any> = {
-  // v1 → v2 : introduction de `tjmByMonth` (sparse, undefined par défaut).
-  1: (old: any) => ({ ...old, schemaVersion: 2 }),
-  // v2 → v3 : délai de paiement. Zéro préserve strictement les projections existantes.
-  2: (old: any) => ({
-    ...old,
-    schemaVersion: 3,
-    paymentDelayDays: 0,
-    paymentDelayMode: 'net',
-    endOfMonthCalculation: 'delayThenMonthEnd',
-  }),
-  // v3 → v4 : le taux est configuré séparément ; 20 % préserve le cas standard.
-  3: (old: any) => ({ ...old, schemaVersion: 4, tvaRate: 0.2 }),
-  // v4 → v5 : les profils déjà assujettis conservent une TVA sur toute l'année.
-  4: (old: any) => ({
-    ...old,
-    schemaVersion: 5,
-    tvaEffectiveDate: old.tvaAssujetti ? `${old.year}-01-01` : null,
-  }),
-};
 
 /**
  * Charge / persiste la `YearConfig` d'une année donnée. Si la clé n'existe pas
@@ -41,7 +15,7 @@ const YEAR_CONFIG_MIGRATIONS: Record<number, (old: any) => any> = {
  */
 export function useYearConfig(year: number): [YearConfig, Dispatch<SetStateAction<YearConfig>>] {
   return useVersionedStorage<YearConfig>(
-    yearConfigKey(year),
+    `fiscal-year-config-${year}`,
     buildDefaultYearConfig(year),
     YEAR_CONFIG_MIGRATIONS,
   );

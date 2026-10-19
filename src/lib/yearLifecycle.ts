@@ -1,7 +1,7 @@
 import { buildDefaultYearConfig } from '~/constants';
 import { createEmptyFiscalYear } from '~/lib/calendar';
 import { getActivityLegalParams } from '~/lib/fiscal';
-import type { CalendarMonth, FiscalYear, YearConfig } from '~/types';
+import { IDENTITY_KEYS, type CalendarMonth, type FiscalYear, type UserProfile, type YearConfig } from '~/types';
 
 const yearConfigKey = (year: number) => `fiscal-year-config-${year}`;
 const yearCalendarKey = (year: number) => `fiscal-calendar-${year}`;
@@ -22,6 +22,57 @@ function writeJSON(key: string, value: unknown): void {
   } catch {
     // localStorage indisponible — silencieux
   }
+}
+
+/**
+ * Migrations de schéma pour `YearConfig`. Chaque entrée `[N]` reçoit la valeur
+ * en version `N` et la transforme en version `N + 1`.
+ */
+export const YEAR_CONFIG_MIGRATIONS: Record<number, (old: any) => any> = {
+  // v1 → v2 : introduction de `tjmByMonth` (sparse, undefined par défaut).
+  1: (old: any) => ({ ...old, schemaVersion: 2 }),
+  // v2 → v3 : délai de paiement. Zéro préserve strictement les projections existantes.
+  2: (old: any) => ({
+    ...old,
+    schemaVersion: 3,
+    paymentDelayDays: 0,
+    paymentDelayMode: 'net',
+    endOfMonthCalculation: 'delayThenMonthEnd',
+  }),
+  // v3 → v4 : le taux est configuré séparément ; 20 % préserve le cas standard.
+  3: (old: any) => ({ ...old, schemaVersion: 4, tvaRate: 0.2 }),
+  // v4 → v5 : les profils déjà assujettis conservent une TVA sur toute l'année.
+  4: (old: any) => ({
+    ...old,
+    schemaVersion: 5,
+    tvaEffectiveDate: old.tvaAssujetti ? `${old.year}-01-01` : null,
+  }),
+};
+
+/**
+ * Config persistée d'une année, migrée au schéma courant, sans rien écrire.
+ * null si l'année n'a jamais été configurée ou si une migration manque.
+ */
+export function readStoredYearConfig(year: number): YearConfig | null {
+  let config = readJSON<any>(yearConfigKey(year));
+  const target = buildDefaultYearConfig(year).schemaVersion;
+  while (config && typeof config.schemaVersion === 'number' && config.schemaVersion < target) {
+    const migrate = YEAR_CONFIG_MIGRATIONS[config.schemaVersion];
+    if (!migrate) return null;
+    config = migrate(config);
+  }
+  return config;
+}
+
+/**
+ * Profil d'une autre année : l'identité (commune à toutes les années) vient du
+ * profil courant, tout le reste de la config de cette année, sans rien hériter
+ * de la config courante (TJM du mois, TVA, délais…).
+ */
+export function profileForYear(current: UserProfile, config: YearConfig): UserProfile {
+  const { schemaVersion: _, ...rest } = config;
+  const identity = Object.fromEntries(IDENTITY_KEYS.map((k) => [k, current[k]]));
+  return { ...identity, ...rest } as UserProfile;
 }
 
 /**

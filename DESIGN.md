@@ -368,6 +368,19 @@ components:
     typography: "{typography.body-sm}"
     rounded: "{rounded.segment}"
     height: "44px"
+  segmented-pill-track:
+    backgroundColor: "{colors.card}"
+    rounded: "{rounded.pill}"
+    padding: "4px"
+  segmented-pill-selected-ht:
+    backgroundColor: "{colors.ca}"
+    textColor: "{colors.ca-on}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.pill}"
+    height: "36px"
+  segmented-pill-selected-ttc:
+    backgroundColor: "{colors.tva-strong}"
+    textColor: "{colors.tva-on}"
   day-empty:
     backgroundColor: "{colors.card-2}"
     textColor: "{colors.ink-2}"
@@ -607,6 +620,7 @@ Francs et compacts, toujours en graisse 600.
 ### Segmented
 - **En ligne :** piste gris nuage de 6px avec 4px de marge, segments de 44px, 14px semi-gras ; segment choisi en carte blanche avec une ombre fine. Flèches du clavier pour changer.
 - **Empilé :** options en cartes bordées à pastille radio ; option choisie bordée de bleu sur bleu glacier.
+- **Pilule :** posé sur le fond d'écran (bascule HT / TTC de la Trésorerie), piste blanche ronde à ombre de carte, options rondes de 36px (44px sous `pointer: coarse`) ; l'option choisie prend l'aplat de la famille qu'elle affiche (HT en bleu activité, TTC en violet soutenu). La bascule ne change que la mise en avant : HT et TTC restent tous deux affichés, la TVA détaillée seulement en mode TTC.
 
 ### Navigation
 - **Barre d'onglets (mobile) :** blanche, filet en haut, quatre onglets de 64px. Chaque onglet a une tuile d'icône de 28×44px : active, la tuile est l'aplat de sa famille (Mois bleu, Année vert, Trésorerie orange, Réglages gris) et le libellé passe en gras encre ; inactive, l'icône prend la teinte lisible de sa famille et le libellé reste en encre pâle 12px.

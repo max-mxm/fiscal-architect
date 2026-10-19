@@ -6,6 +6,8 @@ export interface SegmentedOption<T extends string> {
   label: ReactNode;
   icon?: ReactNode;
   description?: ReactNode;
+  /** Aplat de l'option choisie, dans la couleur de la famille qu'elle affiche (inline). */
+  selectedClassName?: string;
 }
 
 interface SegmentedProps<T extends string> {
@@ -14,11 +16,13 @@ interface SegmentedProps<T extends string> {
   options: ReadonlyArray<SegmentedOption<T>>;
   label: string;
   layout?: 'inline' | 'stack';
+  /** `pill` : piste blanche et options rondes, pour un sélecteur posé sur le fond d'écran. */
+  shape?: 'segment' | 'pill';
   className?: string;
 }
 
 /** Groupe radio au clavier (flèches) : onglets arrondis, ou liste avec description. */
-export function Segmented<T extends string>({ value, onChange, options, label, layout = 'inline', className }: SegmentedProps<T>) {
+export function Segmented<T extends string>({ value, onChange, options, label, layout = 'inline', shape = 'segment', className }: SegmentedProps<T>) {
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
   const index = Math.max(0, options.findIndex((o) => o.value === value));
 
@@ -42,7 +46,11 @@ export function Segmented<T extends string>({ value, onChange, options, label, l
         }
       }}
       className={cn(
-        layout === 'inline' ? 'inline-flex w-full gap-1 rounded-[var(--radius-ctl)] bg-card-2 p-1' : 'flex flex-col gap-2',
+        layout === 'stack'
+          ? 'flex flex-col gap-2'
+          : shape === 'pill'
+            ? 'inline-flex gap-1 rounded-full bg-card p-1 shadow-[var(--shadow-card)]'
+            : 'inline-flex w-full gap-1 rounded-[var(--radius-ctl)] bg-card-2 p-1',
         className,
       )}
     >
@@ -63,8 +71,10 @@ export function Segmented<T extends string>({ value, onChange, options, label, l
               'transition-[background-color,box-shadow,color] duration-150',
               layout === 'inline'
                 ? cn(
-                    'flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[4px] px-3 text-[14px] font-semibold',
+                    'flex flex-1 items-center justify-center gap-1.5 px-3 text-[14px] font-semibold',
+                    shape === 'pill' ? 'min-h-9 rounded-full pointer-coarse:min-h-11' : 'min-h-11 rounded-[4px]',
                     selected ? 'bg-card text-ink shadow-[0_1px_3px_rgb(20_24_52/0.14)]' : 'text-ink-2 hover:text-ink',
+                    selected && opt.selectedClassName,
                   )
                 : cn(
                     'flex min-h-14 items-start gap-3 rounded-[var(--radius-card)] border px-4 py-3 text-left',

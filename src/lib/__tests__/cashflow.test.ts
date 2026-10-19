@@ -5,11 +5,13 @@ import {
   calcInvoiceThresholdDate,
   calcReceiptThresholdDate,
   calculateDueDate,
+  carriedOverPayments,
   getNextPaymentProjectionIndex,
   sumReceiptsThroughDate,
   type PaymentProjection,
 } from '~/lib/cashflow';
 import { DEFAULT_IDENTITY, buildDefaultYearConfig } from '~/constants';
+import { flatMonths, makeProfile } from './testUtils';
 import type { CalendarMonth, UserProfile } from '~/types';
 
 describe('calculateDueDate', () => {
@@ -126,5 +128,22 @@ describe('TVA à date d’effet', () => {
 
     expect(april).toMatchObject({ amount: 1_000, taxAmount: 0, amountTtc: 1_000, tvaApplies: false });
     expect(may).toMatchObject({ amount: 1_000, taxAmount: 200, amountTtc: 1_200, tvaApplies: true });
+  });
+});
+
+describe('carriedOverPayments', () => {
+  const previousMonths = flatMonths(2025, Array(12).fill(1_000));
+  const base = makeProfile({ revenueModel: 'flat', year: 2025 });
+
+  it('ne garde que les factures de N-1 encaissées en N', () => {
+    const carried = carriedOverPayments(previousMonths, { ...base, paymentDelayDays: 45, paymentDelayMode: 'net' }, 2026);
+    expect(carried.map((p) => [p.serviceMonth, p.dueDate])).toEqual([
+      [10, new Date(2026, 0, 14, 12)],
+      [11, new Date(2026, 1, 14, 12)],
+    ]);
+  });
+
+  it('aucun report quand les factures sont payées à réception', () => {
+    expect(carriedOverPayments(previousMonths, base, 2026)).toEqual([]);
   });
 });

@@ -7,7 +7,10 @@ import {
   isYearEmpty,
   previewInheritedConfig,
   readStoredFiscalYear,
+  profileForYear,
+  readStoredYearConfig,
 } from '~/lib/yearLifecycle';
+import { makeProfile } from './testUtils';
 
 const yearConfigKey = (year: number) => `fiscal-year-config-${year}`;
 const yearCalendarKey = (year: number) => `fiscal-calendar-${year}`;
@@ -51,6 +54,35 @@ describe('yearLifecycle', () => {
   });
   afterEach(() => {
     localStorage.clear();
+  });
+
+  describe('profileForYear', () => {
+    it('garde l’identité du profil courant et toute la config de l’autre année', () => {
+      const current = makeProfile({ name: 'Studio', partsFiscales: 2, tjm: 500, tjmByMonth: { 11: 650 } });
+      const { tjmByMonth: _m, ...previous } = { ...buildDefaultYearConfig(2025), tjm: 460 };
+      const profile = profileForYear(current, previous);
+      expect(profile).toMatchObject({ name: 'Studio', partsFiscales: 2, year: 2025, tjm: 460 });
+      expect(profile.tjmByMonth).toBeUndefined(); // le TJM de décembre 2026 ne déborde pas sur 2025
+      expect(profile).not.toHaveProperty('schemaVersion');
+    });
+  });
+
+  describe('readStoredYearConfig', () => {
+    it('renvoie null quand l’année n’a jamais été configurée', () => {
+      expect(readStoredYearConfig(2025)).toBeNull();
+    });
+
+    it('applique les migrations de schéma à une config ancienne', () => {
+      const { paymentDelayDays: _d, paymentDelayMode: _m, endOfMonthCalculation: _e, tvaRate: _r, tvaEffectiveDate: _t, ...v2 } = buildDefaultYearConfig(2025);
+      localStorage.setItem(yearConfigKey(2025), JSON.stringify({ ...v2, schemaVersion: 2, tvaAssujetti: true }));
+      expect(readStoredYearConfig(2025)).toMatchObject({
+        schemaVersion: 5,
+        paymentDelayDays: 0,
+        paymentDelayMode: 'net',
+        tvaRate: 0.2,
+        tvaEffectiveDate: '2025-01-01',
+      });
+    });
   });
 
   describe('isYearEmpty', () => {
