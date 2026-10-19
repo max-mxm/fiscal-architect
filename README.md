@@ -15,7 +15,7 @@ Tap the days you worked and see what you really earn: contributions, income tax,
 [![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![PWA](https://img.shields.io/badge/PWA-installable-5a0fc8)](./public/manifest.webmanifest)
 
-[Open the app](https://fiscal-architect-j1gfhjmps-maxmxms-projects.vercel.app/)
+[Open the app](https://fiscal-architect.vercel.app/)
 
 </div>
 
