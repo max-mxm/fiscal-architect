@@ -1,6 +1,7 @@
-import { buildDefaultYearConfig, getLegalParamsForYear } from '~/constants';
+import { buildDefaultYearConfig } from '~/constants';
 import { createEmptyFiscalYear } from '~/lib/calendar';
-import type { FiscalYear, YearConfig } from '~/types';
+import { getActivityLegalParams } from '~/lib/fiscal';
+import type { CalendarMonth, FiscalYear, YearConfig } from '~/types';
 
 const yearConfigKey = (year: number) => `fiscal-year-config-${year}`;
 const yearCalendarKey = (year: number) => `fiscal-calendar-${year}`;
@@ -21,6 +22,39 @@ function writeJSON(key: string, value: unknown): void {
   } catch {
     // localStorage indisponible — silencieux
   }
+}
+
+/**
+ * Paramètres légaux de l'année cible pour l'activité primaire du donneur (le
+ * taux SSI de `LEGAL_PARAMS_BY_YEAR` n'est juste que pour le libéral SSI).
+ */
+function legalParamsFor(donor: YearConfig, year: number): { urssafRate: number; seuilMicro: number } {
+  const primary = donor.activities?.find((a) => a.isPrimary) ?? donor.activities?.[0];
+  const legal = getActivityLegalParams(primary?.type ?? 'liberalSsi', year);
+  return { urssafRate: legal.urssafRate, seuilMicro: legal.seuilMicro };
+}
+
+/**
+ * Lit le calendrier persisté d'une année (clé `fiscal-calendar-${year}`), avec
+ * repli sur un calendrier vide. Les mois absents ou incomplets sont normalisés.
+ * Sert aux exports qui n'ont pas accès au contexte du calendrier.
+ */
+export function readStoredFiscalYear(year: number): FiscalYear {
+  const empty = createEmptyFiscalYear(year);
+  const stored = readJSON<Partial<FiscalYear>>(yearCalendarKey(year));
+  if (!stored || !Array.isArray(stored.months)) return empty;
+  const months: CalendarMonth[] = empty.months.map((fallback) => {
+    const m = stored.months?.find((candidate) => candidate?.month === fallback.month);
+    if (!m) return fallback;
+    return {
+      month: fallback.month,
+      year,
+      workedDays: Array.isArray(m.workedDays) ? m.workedDays : [],
+      halfDays: Array.isArray(m.halfDays) ? m.halfDays : [],
+      entries: Array.isArray(m.entries) ? m.entries : [],
+    };
+  });
+  return { schemaVersion: 1, year, months };
 }
 
 function configEqualsDefault(config: YearConfig, year: number): boolean {
@@ -80,7 +114,7 @@ export function createYearInherited(
   if (!donor) {
     return createYearFresh(year);
   }
-  const legal = getLegalParamsForYear(year);
+  const legal = legalParamsFor(donor, year);
   const config: YearConfig = {
     ...donor,
     schemaVersion: 5,
@@ -113,7 +147,7 @@ export function createYearInherited(
 export function previewInheritedConfig(year: number, sourceYear: number): YearConfig | null {
   const donor = readJSON<YearConfig>(yearConfigKey(sourceYear));
   if (!donor) return null;
-  const legal = getLegalParamsForYear(year);
+  const legal = legalParamsFor(donor, year);
   return {
     ...donor,
     schemaVersion: 5,

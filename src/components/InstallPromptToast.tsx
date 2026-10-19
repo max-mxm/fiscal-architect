@@ -1,6 +1,8 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Download, ShieldCheck, Share, Plus, X } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { Plus, Share, X } from 'lucide-react';
+import { BrandMark } from '~/shell/BrandMark';
+import { usePrefersReducedMotion } from '~/hooks/usePrefersReducedMotion';
 
 interface InstallPromptToastProps {
   open: boolean;
@@ -9,12 +11,9 @@ interface InstallPromptToastProps {
   onDismiss: () => void;
 }
 
-export const InstallPromptToast: React.FC<InstallPromptToastProps> = ({
-  open,
-  mode,
-  onInstall,
-  onDismiss,
-}) => {
+/** Proposition d'installation, au-dessus de la barre d'onglets. */
+export const InstallPromptToast: React.FC<InstallPromptToastProps> = ({ open, mode, onInstall, onDismiss }) => {
+  const reduced = usePrefersReducedMotion();
   return (
     <AnimatePresence>
       {open && (
@@ -22,82 +21,51 @@ export const InstallPromptToast: React.FC<InstallPromptToastProps> = ({
           role="dialog"
           aria-labelledby="pwa-install-title"
           aria-describedby="pwa-install-desc"
-          initial={{ opacity: 0, y: 20 }}
+          initial={reduced ? { opacity: 0 } : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.18, ease: 'easeOut' }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] w-[min(440px,calc(100vw-2rem))]"
+          exit={reduced ? { opacity: 0 } : { opacity: 0, y: 12 }}
+          transition={{ duration: reduced ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}
+          className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-[80] mx-auto max-w-md rounded-[var(--radius-card)] bg-ink p-4 text-card shadow-[var(--shadow-overlay)] lg:bottom-6 lg:left-auto lg:right-6 lg:mx-0"
         >
-          <div className="relative overflow-hidden rounded-2xl bg-slate-900 text-white dark:bg-surface-lowest dark:text-on-surface dark:border dark:border-outline-variant/30 shadow-2xl">
+          <div className="flex items-start gap-3">
+            <BrandMark className="h-9 w-9 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p id="pwa-install-title" className="text-[17px] font-bold">
+                Installer Fiscal Architect
+              </p>
+              <p id="pwa-install-desc" className="mt-0.5 text-[14px] leading-snug text-card/75">
+                Une icône sur l’écran d’accueil, utilisable hors connexion. Vos données restent sur l’appareil.
+              </p>
+            </div>
             <button
               type="button"
               onClick={onDismiss}
               aria-label="Fermer"
-              className="absolute top-2 right-2 text-white/60 hover:text-white dark:text-on-surface-variant dark:hover:text-on-surface p-1.5 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+              className="-mr-2 -mt-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-ctl)] text-card/75 hover:bg-white/10 hover:text-card"
             >
-              <X className="w-4 h-4" />
+              <X className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
             </button>
-
-            <div className="p-4 pr-12">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 mt-0.5 w-9 h-9 rounded-xl bg-secondary-container/20 flex items-center justify-center">
-                  <Download className="w-5 h-5 text-secondary-container" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p id="pwa-install-title" className="text-sm font-semibold">
-                    Installer Fiscal Architect
-                  </p>
-                  <p
-                    id="pwa-install-desc"
-                    className="mt-1 flex items-center gap-1.5 text-xs text-white/75 dark:text-on-surface-variant"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span>
-                      Vos données restent dans votre navigateur — rien n'est envoyé sur un serveur.
-                    </span>
-                  </p>
-                </div>
-              </div>
-
-              {mode === 'native' ? (
-                <div className="mt-3 flex items-center gap-2 justify-end">
-                  <button
-                    type="button"
-                    onClick={onDismiss}
-                    className="px-3 min-h-[36px] rounded-xl text-white/70 text-sm hover:text-white hover:bg-white/5 dark:text-on-surface-variant dark:hover:text-on-surface dark:hover:bg-surface-highest/40 transition-colors"
-                  >
-                    Plus tard
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onInstall}
-                    className="inline-flex items-center gap-1.5 px-3 min-h-[36px] rounded-xl bg-secondary-container/20 text-secondary-container text-sm font-bold hover:bg-secondary-container/30 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary-container/50"
-                  >
-                    <Download className="w-3.5 h-3.5" /> Installer
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-3 space-y-2">
-                  <p className="text-xs text-white/75 dark:text-on-surface-variant flex items-center gap-1.5 flex-wrap">
-                    <span>Appuyez sur</span>
-                    <Share className="w-4 h-4 inline-block" aria-label="Partager" />
-                    <span>puis</span>
-                    <Plus className="w-4 h-4 inline-block" aria-label="Plus" />
-                    <span>« Sur l'écran d'accueil ».</span>
-                  </p>
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={onDismiss}
-                      className="inline-flex items-center px-3 min-h-[36px] rounded-xl bg-secondary-container/20 text-secondary-container text-sm font-bold hover:bg-secondary-container/30 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary-container/50"
-                    >
-                      J'ai compris
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
+          {mode === 'native' ? (
+            <div className="mt-3 flex justify-end gap-2">
+              <button type="button" onClick={onDismiss} className="min-h-11 rounded-[var(--radius-ctl)] px-3 text-[14px] text-card/75 hover:bg-white/10 hover:text-card">
+                Plus tard
+              </button>
+              <button type="button" onClick={onInstall} className="min-h-11 rounded-[var(--radius-ctl)] bg-primary px-4 text-[14px] font-bold text-white hover:bg-primary-hover">
+                Installer
+              </button>
+            </div>
+          ) : (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="flex flex-wrap items-center gap-1.5 text-[14px] text-card/75">
+                Touchez <Share className="h-4 w-4 text-card" strokeWidth={1.75} aria-label="Partager" /> puis{' '}
+                <Plus className="h-4 w-4 text-card" strokeWidth={1.75} aria-hidden="true" /> « Sur l’écran d’accueil ».
+              </p>
+              <button type="button" onClick={onDismiss} className="min-h-11 rounded-[var(--radius-ctl)] bg-primary px-4 text-[14px] font-bold text-white">
+                Compris
+              </button>
+            </div>
+          )}
         </motion.div>
       )}
     </AnimatePresence>

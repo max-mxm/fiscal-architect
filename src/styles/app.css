@@ -1,97 +1,291 @@
+@import "@fontsource/figtree/400.css";
+@import "@fontsource/figtree/500.css";
+@import "@fontsource/figtree/600.css";
+@import "@fontsource/figtree/700.css";
+@import "@fontsource/figtree/800.css";
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * Tableau coloré : un fond gris très clair, des cartes blanches, et une couleur
+ * fixe par famille de donnée, partout dans l'app :
+ *   net (ce qui vous reste)  → vert
+ *   ca (activité, jours, TJM) → bleu (aussi la couleur des actions)
+ *   tva (TVA, TTC)            → violet, réservé à la TVA
+ *   cot (cotisations URSSAF)  → orange
+ *   impot (IR, VL)            → rose
+ *   charges (charges fixes)   → gris
+ *   alert (dépassement)       → rouge ; warn (approche d'un seuil) → jaune
+ * Chaque famille a : fill (aplat vif), soft (fond teinté), ink (texte lisible),
+ * on (texte posé sur l'aplat).
+ */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-headline: "Manrope", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
 
-  --color-surface: #f7f9fb;
-  --color-surface-low: #f2f4f6;
-  --color-surface-lowest: #ffffff;
-  --color-surface-highest: #e0e3e5;
-  --color-secondary: #006c49;
-  --color-secondary-container: #8fd8b3;
-  --color-on-surface: #0f172a;
-  --color-on-surface-variant: #3d3e44;
-  --color-on-secondary: #ffffff;
-  --color-outline-variant: #c6c6cd;
-  --color-overlay: rgb(15 23 42 / 0.4);
-  --color-hero-bg: #0f172a;
-  --color-hero-accent: #1e293b;
-  --color-hero-on-bg: #ffffff;
-  --color-half-accent: #8fd8b3;
-  --color-tax: #6d28d9;
-  --color-tax-container: #ede9fe;
+  --color-ground: #f6f7fb;
+  --color-card: #ffffff;
+  --color-card-2: #f0f2f8;
+  --color-ink: #323338;
+  --color-ink-2: #5c5e6e;
+  --color-ink-3: #6b6d82;
+  --color-line: #e4e6ef;
+  --color-line-2: #c8cbd9;
+  /* Contour d'un contrôle (champ, interrupteur éteint) : 3:1 sur carte. */
+  --color-line-3: #8f93a8;
+
+  --color-primary: #0073ea;
+  --color-primary-hover: #0060b9;
+  --color-primary-soft: #dcebfe;
+  --color-on-primary: #ffffff;
+
+  --color-net: #00c875;
+  --color-net-soft: #d6f5e6;
+  --color-net-ink: #007443;
+  --color-net-on: #0b2e1c;
+
+  --color-ca: #0073ea;
+  --color-ca-soft: #dcebfe;
+  --color-ca-light: #b9d6fd;
+  --color-ca-ink: #0060b9;
+  --color-ca-on: #ffffff;
+
+  --color-tva: #a25ddc;
+  --color-tva-strong: #8b45d1;
+  --color-tva-soft: #f0e3fa;
+  --color-tva-ink: #7b32b9;
+  --color-tva-on: #ffffff;
+
+  --color-cot: #fdab3d;
+  --color-cot-soft: #ffefd6;
+  --color-cot-ink: #a35a00;
+  --color-cot-on: #3d2400;
+
+  --color-impot: #ff5ac4;
+  --color-impot-soft: #ffe2f4;
+  --color-impot-ink: #b8137a;
+  --color-impot-on: #4a0a31;
+
+  --color-charges: #b4b9cc;
+  --color-charges-soft: #eceef4;
+  --color-charges-ink: #5c6178;
+  --color-charges-on: #23263a;
+
+  --color-alert: #e2445c;
+  --color-alert-strong: #d0304a;
+  --color-alert-soft: #fde4e8;
+  --color-alert-ink: #c01c38;
+  --color-alert-on: #ffffff;
+
+  --color-warn: #ffcb00;
+  --color-warn-soft: #fff5cc;
+  --color-warn-ink: #8a6a00;
+  --color-warn-on: #3a2c00;
+
+  --color-overlay: rgb(20 24 52 / 0.45);
+
+  --radius-ctl: 6px;
+  --radius-card: 10px;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+
+  --shadow-card: 0 1px 2px rgb(20 24 52 / 0.05), 0 6px 16px -6px rgb(20 24 52 / 0.08);
+  --shadow-overlay: 0 22px 48px -12px rgb(20 24 52 / 0.32), 0 4px 12px -4px rgb(20 24 52 / 0.14);
 }
 
 .dark {
-  --color-surface: #0e1512;
-  --color-surface-low: #0a100d;
-  --color-surface-lowest: #161e1a;
-  --color-surface-highest: #1a2620;
-  --color-secondary: #8fd8b3;
-  --color-secondary-container: #8fd8b3;
-  --color-on-surface: #e8efe9;
-  --color-on-surface-variant: #a7b4ad;
-  --color-on-secondary: #0a100d;
-  --color-outline-variant: #2e3b34;
-  --color-overlay: rgb(0 0 0 / 0.6);
-  --color-hero-bg: #0d2820;
-  --color-hero-accent: #134034;
-  --color-hero-on-bg: #e8efe9;
-  --color-half-accent: #064f36;
-  --color-tax: #c4b5fd;
-  --color-tax-container: #2e1a47;
+  --color-ground: #181b34;
+  --color-card: #262a47;
+  --color-card-2: #31355a;
+  --color-ink: #e8eaf3;
+  --color-ink-2: #b6bad0;
+  --color-ink-3: #9196b3;
+  --color-line: #393d61;
+  --color-line-2: #4b5079;
+  --color-line-3: #7a7fab;
+
+  --color-primary: #1f6fe5;
+  --color-primary-hover: #3d86f0;
+  --color-primary-soft: #23395f;
+  --color-on-primary: #ffffff;
+
+  --color-net-soft: #1f4440;
+  --color-net-ink: #4ee2a0;
+  --color-ca: #1f6fe5;
+  --color-ca-soft: #23395f;
+  --color-ca-light: #3a5c92;
+  --color-ca-ink: #7db8ff;
+  --color-ca-on: #ffffff;
+  --color-tva-soft: #3c2f5f;
+  --color-tva-ink: #cfa4f5;
+  --color-cot-soft: #4a3a35;
+  --color-cot-ink: #ffc46e;
+  --color-impot-soft: #4a2d55;
+  --color-impot-ink: #ff94d8;
+  --color-charges: #6f7596;
+  --color-charges-soft: #343858;
+  --color-charges-ink: #c0c4d8;
+  --color-charges-on: #ffffff;
+  --color-alert-soft: #4a2a40;
+  --color-alert-ink: #ff8a9b;
+  --color-warn-soft: #464230;
+  --color-warn-ink: #ffd84d;
+
+  --color-overlay: rgb(5 7 20 / 0.62);
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.04);
+  --shadow-overlay: 0 22px 56px -12px rgb(0 0 0 / 0.6), 0 4px 14px -4px rgb(0 0 0 / 0.4);
+
   color-scheme: dark;
 }
 
 @layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+  }
+
   body {
-    @apply bg-surface text-on-surface font-sans antialiased;
+    @apply bg-ground text-ink font-sans antialiased;
+    font-size: 15px;
+    line-height: 1.45;
+    /* Chiffres alignés partout ; Figtree n'affiche l'espace fine des milliers qu'en mode tabulaire. */
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  ::selection {
+    background: var(--color-primary-soft);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ca-ink);
+    outline-offset: 2px;
+  }
+
+  input,
+  textarea,
+  select {
+    caret-color: var(--color-primary);
+  }
+
+  a {
+    text-underline-offset: 3px;
+  }
+
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-2) transparent;
   }
 }
 
-.scrollbar-hide {
+@utility tnum {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* En-tête de colonne de tableau. */
+@utility label-col {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink-2);
+}
+
+@utility card {
+  background: var(--color-card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+@utility scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
-}
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-
-.glass-panel {
-  background: color-mix(in oklab, var(--color-surface-lowest) 70%, transparent);
-  backdrop-filter: blur(20px);
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
-.hero-panel {
-  background: linear-gradient(to bottom right, var(--color-hero-bg), var(--color-hero-accent));
-  color: var(--color-hero-on-bg);
+@utility safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
-input[type='range'] {
-  -webkit-appearance: none;
-  width: 100%;
-  height: 6px;
-  background: var(--color-surface-highest);
-  border-radius: 3px;
-  outline: none;
+@utility safe-top {
+  padding-top: env(safe-area-inset-top);
 }
 
-input[type='range']::-webkit-slider-thumb {
+/* Curseur : piste épaisse arrondie, remplissage bleu, pastille blanche. */
+input[type='range'].range-pill {
   -webkit-appearance: none;
   appearance: none;
-  width: 24px;
-  height: 24px;
-  background: var(--color-secondary);
+  width: 100%;
+  height: 28px;
+  background: transparent;
   cursor: pointer;
-  border-radius: 50%;
-  border: 2px solid var(--color-surface-lowest);
-  box-shadow: 0 2px 6px color-mix(in oklab, black 25%, transparent);
+}
+input[type='range'].range-pill::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--range-color, var(--color-primary)) 0 var(--range-fill, 50%),
+    var(--color-line) var(--range-fill, 50%) 100%
+  );
+}
+input[type='range'].range-pill::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-line);
+}
+input[type='range'].range-pill::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--range-color, var(--color-primary));
+}
+input[type='range'].range-pill::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  border-radius: 999px;
+  background: #fff;
+  border: 3px solid var(--range-color, var(--color-primary));
+  box-shadow: 0 2px 6px rgb(20 24 52 / 0.2);
+  transition: transform 160ms var(--ease-out-quart);
+}
+input[type='range'].range-pill::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #fff;
+  border: 3px solid var(--range-color, var(--color-primary));
+}
+input[type='range'].range-pill:focus-visible {
+  outline: none;
+}
+input[type='range'].range-pill:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--color-ca-ink);
+  outline-offset: 2px;
+}
+input[type='range'].range-pill:active::-webkit-slider-thumb {
+  transform: scale(1.12);
 }
 
-input[type='range']:focus::-webkit-slider-thumb {
-  box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-secondary) 30%, transparent), 0 2px 6px color-mix(in oklab, black 25%, transparent);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

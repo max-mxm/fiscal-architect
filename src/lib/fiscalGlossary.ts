@@ -7,7 +7,7 @@ export type FiscalTerm = {
 const ENTRIES = {
   acre: {
     title: 'ACRE',
-    body: "Aide aux Créateurs et Repreneurs d'Entreprise. Réduction de moitié des cotisations URSSAF pendant les 12 premiers mois suivant la création de l'entreprise.",
+    body: "Aide aux Créateurs et Repreneurs d'Entreprise. Réduction de 25 % des cotisations URSSAF pendant les 12 premiers mois suivant la création de l'entreprise, pour une création depuis le 1er mai 2024 (réduction de 50 % pour les créations antérieures).",
     example: "Demandée auprès de l'URSSAF lors de la création — un gain de trésorerie significatif la 1ʳᵉ année.",
   },
   rfr: {

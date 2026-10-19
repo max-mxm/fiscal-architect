@@ -1,11 +1,8 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 
-/**
- * Route legacy `/profile` — redirige vers la single-page avec l'onglet Profil ouvert.
- * Préserve les bookmarks existants après la fusion Calendar + Profile.
- */
+/** Ancienne route `/profile` : conservée pour les favoris. */
 export const Route = createFileRoute('/profile')({
   beforeLoad: () => {
-    throw redirect({ to: '/', search: { settings: 'profile' } })
+    throw redirect({ to: '/reglages/$section', params: { section: 'profil' } })
   },
 })

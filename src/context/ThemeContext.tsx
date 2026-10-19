@@ -12,8 +12,8 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 const STORAGE_KEY = 'fiscal-theme';
-const META_LIGHT = '#006c49';
-const META_DARK = '#0e1512';
+const META_LIGHT = '#ffffff';
+const META_DARK = '#181b34';
 
 function readStoredMode(): ThemeMode {
   if (typeof window === 'undefined') return 'system';

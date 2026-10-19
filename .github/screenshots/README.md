@@ -1,14 +1,11 @@
 # Screenshots
 
-À produire avant publication :
+Captures versionnées et utilisées dans les README :
 
-- `hero.png` — vue par défaut (1280×720), données réalistes (TJM 600 €, ~15 j/mois)
-- `hero.gif` (≤ 5 s, ≤ 5 Mo) — interaction sliders → recalcul live
-- `calendar.png` — calendrier 12 mois rempli
+- `month.png` — écran Mois sur bureau (1440×960) : net, montant TTC à facturer, répartition du CA, calendrier et réglages rapides ;
+- `year.png` — écran Année : net cumulé, courbe du CA face aux seuils, leviers ;
+- `treasury.png` — écran Trésorerie : reste à encaisser, sommes à prévoir, déclarations URSSAF ;
+- `mobile-month.png` — écran Mois sur mobile (390×844, @2x), thème clair ;
+- `mobile-treasury-dark.png` — écran Trésorerie sur mobile (390×844, @2x), thème sombre.
 
-Outils suggérés :
-
-- macOS : [Kap](https://getkap.co), [CleanShot X](https://cleanshot.com)
-- Cross-platform : [vhs](https://github.com/charmbracelet/vhs), [GIPHY Capture](https://giphy.com/apps/giphycapture)
-
-Une fois ajoutés, dé-commentez la balise `<img>` du README racine.
+Elles sont réalisées avec un jeu de démonstration entièrement fictif (**Studio Lumen**, script `scripts/seed-demo.js` à coller dans la console du navigateur, dans une fenêtre privée : il efface les données locales de l’app). Aucune donnée personnelle ou de production ne doit être utilisée pour les remplacer.

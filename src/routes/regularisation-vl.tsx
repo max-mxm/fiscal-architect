@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { VLRegularization } from '~/pages/VLRegularization';
+import { VLRegularizationScreen } from '~/screens/VLRegularizationScreen';
 
 export const Route = createFileRoute('/regularisation-vl')({
-  component: VLRegularization,
+  component: VLRegularizationScreen,
 });

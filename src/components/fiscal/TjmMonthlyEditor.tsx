@@ -1,7 +1,10 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
-import { QuickEditModal } from '~/components/ui/QuickEditModal';
-import { MONTH_SHORT, MONTH_NAMES } from '~/lib/calendar';
+import { MONTH_NAMES, MONTH_SHORT } from '~/lib/calendar';
+import { Dialog } from '~/ui/Dialog';
+import { Button } from '~/ui/Button';
+import { NumberInput } from '~/ui/Field';
+import { eur } from '~/ui/Money';
 import { cn } from '~/utils';
 
 interface TjmMonthlyEditorProps {
@@ -11,49 +14,26 @@ interface TjmMonthlyEditorProps {
   defaultTjm: number;
   tjmByMonth: Record<number, number> | undefined;
   onChange: (next: { defaultTjm: number; tjmByMonth: Record<number, number> | undefined }) => void;
-  /** Mois à pré-sélectionner dans l'inspector (0..11). */
   initialMonth?: number;
   tvaAssujetti: boolean;
   tvaRate: number;
   tvaEffectiveDate: string | null;
 }
 
-const TJM_MIN_INPUT = 50;
-const TJM_MAX_INPUT = 3000;
-const TJM_MIN_SLIDER = 100;
-const TJM_MAX_SLIDER = 2000;
+const MIN_INPUT = 50;
+const MAX_INPUT = 3000;
+const MIN_SLIDER = 100;
+const MAX_SLIDER = 2000;
 
-/** Échelle visuelle pour la hauteur des barres de la timeline desktop. */
-const BAR_SCALE_MAX = 2000;
-const BAR_MIN_HEIGHT_PCT = 22;
-
-function isCustom(tjmByMonth: Record<number, number> | undefined, monthIndex: number): boolean {
-  return tjmByMonth !== undefined && tjmByMonth[monthIndex] !== undefined;
-}
-
-function resolveTjm(defaultTjm: number, tjmByMonth: Record<number, number> | undefined, monthIndex: number): number {
-  return tjmByMonth?.[monthIndex] ?? defaultTjm;
-}
-
-function setMonthValue(
-  tjmByMonth: Record<number, number> | undefined,
-  monthIndex: number,
-  value: number,
-): Record<number, number> {
-  return { ...(tjmByMonth ?? {}), [monthIndex]: value };
-}
-
-function unsetMonthValue(
-  tjmByMonth: Record<number, number> | undefined,
-  monthIndex: number,
-): Record<number, number> | undefined {
-  if (!tjmByMonth) return undefined;
-  const next = { ...tjmByMonth };
-  delete next[monthIndex];
-  // Si plus aucune surcharge → repasser à undefined (état canonique).
+const resolve = (def: number, map: Record<number, number> | undefined, m: number) => map?.[m] ?? def;
+const unset = (map: Record<number, number> | undefined, m: number) => {
+  if (!map) return undefined;
+  const next = { ...map };
+  delete next[m];
   return Object.keys(next).length === 0 ? undefined : next;
-}
+};
 
+/** TJM par défaut et exceptions mois par mois, appliqués en direct. */
 export const TjmMonthlyEditor: React.FC<TjmMonthlyEditorProps> = ({
   open,
   onClose,
@@ -66,303 +46,182 @@ export const TjmMonthlyEditor: React.FC<TjmMonthlyEditorProps> = ({
   tvaRate,
   tvaEffectiveDate,
 }) => {
-  const [selectedMonth, setSelectedMonth] = useState<number>(initialMonth);
-
-  // À chaque ouverture, on recale la sélection sur le mois courant fourni.
+  const [selected, setSelected] = useState(initialMonth);
   useEffect(() => {
-    if (open) setSelectedMonth(initialMonth);
+    if (open) setSelected(initialMonth);
   }, [open, initialMonth]);
 
-  const customCount = useMemo(
-    () => (tjmByMonth ? Object.keys(tjmByMonth).length : 0),
-    [tjmByMonth],
-  );
-
-  const selectedValue = resolveTjm(defaultTjm, tjmByMonth, selectedMonth);
-  const selectedIsCustom = isCustom(tjmByMonth, selectedMonth);
-  const selectedDelta = selectedValue - defaultTjm;
-  const tvaAppliesToMonth = (monthIndex: number) => {
+  const customCount = tjmByMonth ? Object.keys(tjmByMonth).length : 0;
+  const value = resolve(defaultTjm, tjmByMonth, selected);
+  const custom = tjmByMonth?.[selected] !== undefined;
+  const scale = useMemo(() => Math.max(MAX_SLIDER, defaultTjm, ...(tjmByMonth ? Object.values(tjmByMonth) : [])), [defaultTjm, tjmByMonth]);
+  const tvaApplies = (m: number) => {
     if (!tvaAssujetti) return false;
-    const invoiceDate = new Date(year, monthIndex + 1, 0, 12);
-    const effectiveDate = tvaEffectiveDate ? new Date(`${tvaEffectiveDate}T12:00:00`) : null;
-    return !effectiveDate || invoiceDate >= effectiveDate;
+    const eff = tvaEffectiveDate ? new Date(`${tvaEffectiveDate}T12:00:00`) : null;
+    return !eff || new Date(year, m + 1, 0, 12) >= eff;
   };
-  const tvaEffectiveMonth = tvaEffectiveDate
-    ? new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(`${tvaEffectiveDate}T12:00:00`))
-    : null;
-
-  // Pour l'échelle des barres : on s'adapte à la valeur max parmi {défaut, toutes les surcharges, BAR_SCALE_MAX}.
-  const barScaleMax = useMemo(() => {
-    const values = [defaultTjm, ...(tjmByMonth ? Object.values(tjmByMonth) : [])];
-    return Math.max(BAR_SCALE_MAX, ...values);
-  }, [defaultTjm, tjmByMonth]);
-
-  const handleDefaultChange = (next: number) => {
-    if (Number.isNaN(next)) return;
-    onChange({ defaultTjm: next, tjmByMonth });
+  const setMonth = (m: number, v: number) => {
+    if (!Number.isFinite(v)) return;
+    onChange({ defaultTjm, tjmByMonth: { ...(tjmByMonth ?? {}), [m]: v } });
   };
-
-  const handleMonthChange = (monthIndex: number, next: number) => {
-    if (Number.isNaN(next)) return;
-    onChange({
-      defaultTjm,
-      tjmByMonth: setMonthValue(tjmByMonth, monthIndex, next),
-    });
-  };
-
-  const handleMonthReset = (monthIndex: number) => {
-    onChange({
-      defaultTjm,
-      tjmByMonth: unsetMonthValue(tjmByMonth, monthIndex),
-    });
-  };
-
-  const handleResetAll = () => {
-    onChange({ defaultTjm, tjmByMonth: undefined });
-  };
+  const fill = `${((Math.min(MAX_SLIDER, Math.max(MIN_SLIDER, value)) - MIN_SLIDER) / (MAX_SLIDER - MIN_SLIDER)) * 100}%`;
 
   return (
-    <QuickEditModal
+    <Dialog
       open={open}
       onClose={onClose}
-      title={`TJM mensuel — ${year}`}
-      description="Personnalise le TJM des mois où ton tarif change. Les mois non touchés gardent la valeur par défaut."
+      size="lg"
+      title={`TJM ${year}, mois par mois`}
+      description="Donnez un TJM propre aux mois où votre tarif change. Les autres mois suivent le TJM par défaut."
+      footer={
+        <>
+          <Button variant="ghost" disabled={customCount === 0} onClick={() => onChange({ defaultTjm, tjmByMonth: undefined })}>
+            Retirer les {customCount > 0 ? customCount : ''} exceptions
+          </Button>
+          <Button variant="primary" onClick={onClose}>
+            Terminé
+          </Button>
+        </>
+      }
     >
-      <div className="space-y-4">
-        {/* Bandeau TJM par défaut */}
-        <div className="flex items-center justify-between bg-surface-low rounded-2xl px-4 py-3">
-          <div className="flex flex-col">
-            <span className="text-[11px] uppercase tracking-[0.14em] font-bold text-on-surface-variant">
-              TJM HT par défaut
-            </span>
-            <span className="text-xs text-on-surface-variant">
-              Appliqué aux mois non personnalisés
-            </span>
-          </div>
-          <label className="flex items-baseline gap-1">
-            <span className="sr-only">Modifier le TJM par défaut</span>
-            <input
-              type="number"
-              inputMode="decimal"
-              min={TJM_MIN_INPUT}
-              max={TJM_MAX_INPUT}
-              step={10}
-              value={defaultTjm}
-              onChange={(e) => handleDefaultChange(parseInt(e.target.value, 10))}
-              className="w-20 font-headline font-black text-lg text-secondary bg-transparent border-b border-secondary/30 p-0 text-right focus:ring-0 focus:border-secondary appearance-none transition-colors outline-none"
-            />
-            <span className="text-secondary font-bold text-xs">€/j</span>
-          </label>
+      <div className="border-y border-line py-3">
+      <div className="flex items-center justify-between gap-3">
+        <label htmlFor="tjm-defaut" className="text-[15px] font-medium text-ink">
+          TJM par défaut <span className="block text-[13px] font-normal text-ink-2">hors taxes</span>
+        </label>
+        <NumberInput
+          id="tjm-defaut"
+          min={MIN_INPUT}
+          max={MAX_INPUT}
+          step={10}
+          suffix="€/j"
+          value={defaultTjm}
+          onChange={(e) => {
+            const v = parseInt(e.target.value, 10);
+            if (Number.isFinite(v)) onChange({ defaultTjm: v, tjmByMonth });
+          }}
+          className="w-36"
+        />
+      </div>
+      <input
+        type="range"
+        className="range-pill mt-2"
+        min={MIN_SLIDER}
+        max={MAX_SLIDER}
+        step={10}
+        value={Math.min(MAX_SLIDER, Math.max(MIN_SLIDER, defaultTjm))}
+        onChange={(e) => onChange({ defaultTjm: Number(e.target.value), tjmByMonth })}
+        aria-label="TJM par défaut"
+        aria-valuetext={eur(defaultTjm)}
+        style={{ ['--range-fill' as string]: `${((Math.min(MAX_SLIDER, Math.max(MIN_SLIDER, defaultTjm)) - MIN_SLIDER) / (MAX_SLIDER - MIN_SLIDER)) * 100}%` }}
+      />
+      {customCount > 0 && (
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-ctl)] bg-ca-soft px-3 py-2">
+          <p className="min-w-0 flex-1 text-[13px] leading-snug text-ca-ink">
+            {customCount === 1 ? 'Ce mois garde' : 'Ces mois gardent'} leur propre TJM et ne suivent pas ce curseur :{' '}
+            <strong className="font-bold">
+              {Object.keys(tjmByMonth ?? {})
+                .map(Number)
+                .sort((x, y) => x - y)
+                .map((m) => MONTH_NAMES[m].toLowerCase())
+                .join(', ')}
+            </strong>
+            .
+          </p>
+          <Button variant="secondary" size="sm" onClick={() => onChange({ defaultTjm, tjmByMonth: undefined })}>
+            Appliquer à tous les mois
+          </Button>
         </div>
-        {tvaAssujetti && <p className="-mt-2 text-right text-[11px] font-bold text-tax">TVA appliquée aux factures à partir de {tvaEffectiveMonth ?? 'la date configurée'}.</p>}
+      )}
+      </div>
 
-        {/* Vue mobile : grille 4×3 */}
-        <div
-          className="md:hidden grid grid-cols-4 gap-2"
-          role="tablist"
-          aria-label="Mois de l'année"
-        >
-          {MONTH_SHORT.map((label, m) => {
-            const value = resolveTjm(defaultTjm, tjmByMonth, m);
-            const custom = isCustom(tjmByMonth, m);
-            const active = m === selectedMonth;
-            return (
-              <button
-                key={m}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                aria-label={`${MONTH_NAMES[m]} — ${value} euros par jour${custom ? ' (personnalisé)' : ''}`}
-                onClick={() => setSelectedMonth(m)}
-                className={cn(
-                  'relative flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-3 min-h-[80px]',
-                  'border-2 transition-all duration-150',
-                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40',
-                  active
-                    ? 'bg-secondary text-on-secondary border-secondary shadow-sm'
-                    : custom
-                      ? 'bg-secondary-container/30 border-secondary/40 text-on-surface hover:bg-secondary-container/45'
-                      : 'bg-surface-low border-transparent text-on-surface hover:bg-secondary-container/15',
-                )}
-              >
-                {custom && !active && (
-                  <span
-                    className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-secondary"
-                    aria-hidden="true"
-                  />
-                )}
-                <span
-                  className={cn(
-                    'text-[10px] font-bold uppercase tracking-[0.12em]',
-                    active ? 'text-on-secondary/80' : 'text-on-surface-variant',
-                  )}
-                >
-                  {label}
-                </span>
-                <span
-                  className={cn(
-                    'font-headline font-black text-base tabular-nums leading-none',
-                    active
-                      ? 'text-on-secondary'
-                      : custom
-                        ? 'text-secondary'
-                        : 'text-on-surface-variant',
-                  )}
-                >
-                  {value}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Vue desktop : timeline 12 segments avec barres proportionnelles */}
-        <div
-          className="hidden md:grid grid-cols-12 gap-1 bg-surface-low rounded-2xl p-2"
-          role="tablist"
-          aria-label="Évolution du TJM sur l'année"
-        >
-          {MONTH_SHORT.map((label, m) => {
-            const value = resolveTjm(defaultTjm, tjmByMonth, m);
-            const custom = isCustom(tjmByMonth, m);
-            const active = m === selectedMonth;
-            const barHeight = Math.max(
-              BAR_MIN_HEIGHT_PCT,
-              (value / barScaleMax) * 100,
-            );
-            return (
-              <button
-                key={m}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                aria-label={`${MONTH_NAMES[m]} — ${value} euros par jour${custom ? ' (personnalisé)' : ''}`}
-                onClick={() => setSelectedMonth(m)}
-                className={cn(
-                  'relative flex flex-col items-center justify-end gap-1 rounded-xl bg-surface-lowest pt-2 pb-1.5 px-0.5 min-h-[100px]',
-                  'border-2 transition-all duration-150',
-                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40',
-                  active
-                    ? 'border-secondary'
-                    : 'border-transparent hover:-translate-y-0.5',
-                  custom && !active && 'bg-secondary-container/20',
-                )}
-              >
-                {custom && (
-                  <span
-                    className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-secondary"
-                    aria-hidden="true"
-                  />
-                )}
-                <div
-                  className={cn(
-                    'w-3/5 rounded-t transition-[height] duration-300',
-                    custom ? 'bg-secondary' : 'bg-surface-highest',
-                  )}
-                  style={{ height: `${barHeight}%` }}
-                  aria-hidden="true"
-                />
-                <span
-                  className={cn(
-                    'font-mono font-bold tabular-nums text-[11px] leading-none',
-                    custom ? 'text-secondary' : 'text-on-surface',
-                  )}
-                >
-                  {value}
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant leading-none">
-                  {label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Inspector du mois sélectionné */}
-        <div className="bg-surface-low rounded-2xl p-4 space-y-3">
-          <div className="flex items-end justify-between gap-3">
-            <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-[0.14em] font-bold text-on-surface-variant">
-                Mois sélectionné
-              </span>
-              <span className="font-headline font-black text-xl leading-none mt-1">
-                {MONTH_NAMES[selectedMonth]}
-              </span>
-            </div>
-            <label className="flex items-baseline gap-1">
-              <span className="sr-only">Modifier le TJM de {MONTH_NAMES[selectedMonth]}</span>
-              <input
-                type="number"
-                inputMode="decimal"
-                min={TJM_MIN_INPUT}
-                max={TJM_MAX_INPUT}
-                step={10}
-                value={selectedValue}
-                onChange={(e) => handleMonthChange(selectedMonth, parseInt(e.target.value, 10))}
-                className="w-20 font-headline font-black text-xl text-secondary bg-transparent border-b border-secondary/30 p-0 text-right focus:ring-0 focus:border-secondary appearance-none transition-colors outline-none"
-              />
-              <span className="text-secondary font-bold text-xs">€/j</span>
-            </label>
-          </div>
-
-          <input
-            type="range"
-            min={TJM_MIN_SLIDER}
-            max={TJM_MAX_SLIDER}
-            step={10}
-            value={selectedValue}
-            onChange={(e) => handleMonthChange(selectedMonth, parseInt(e.target.value, 10))}
-            aria-label={`TJM de ${MONTH_NAMES[selectedMonth]} en euros par jour`}
-            className="w-full h-1 bg-surface-highest rounded-lg appearance-none cursor-pointer accent-secondary"
-          />
-          {tvaAppliesToMonth(selectedMonth) && <p className="text-right text-[11px] font-bold text-tax">soit {(selectedValue * (1 + tvaRate)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € TTC / j</p>}
-
-          <div className="flex items-center justify-between pt-1 border-t border-outline-variant/15 text-xs">
-            <span className="text-on-surface-variant">
-              {selectedIsCustom
-                ? `Personnalisé • ${selectedDelta > 0 ? '+' : ''}${selectedDelta} € vs défaut`
-                : 'Valeur par défaut'}
-            </span>
-            {selectedIsCustom && (
-              <button
-                type="button"
-                onClick={() => handleMonthReset(selectedMonth)}
-                className="inline-flex items-center gap-1 text-secondary font-bold hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40 rounded px-1 py-0.5 min-h-[28px]"
-              >
-                <RotateCcw className="w-3 h-3" />
-                Réinitialiser
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Footer : compteur + actions */}
-        <div className="flex items-center justify-between pt-2 border-t border-outline-variant/15">
-          <span className="text-xs text-on-surface-variant">
-            {customCount === 0
-              ? 'Aucun mois personnalisé'
-              : `${customCount} mois personnalisé${customCount > 1 ? 's' : ''}`}
-          </span>
-          <div className="flex items-center gap-1">
-            {customCount > 0 && (
-              <button
-                type="button"
-                onClick={handleResetAll}
-                className="px-3 min-h-[40px] rounded-xl text-xs font-bold text-on-surface-variant hover:bg-surface-highest/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
-              >
-                Tout réinitialiser
-              </button>
-            )}
+      <div className="mt-4 grid grid-cols-12 items-end gap-1" role="tablist" aria-label="Mois de l'année">
+        {MONTH_SHORT.map((label, m) => {
+          const v = resolve(defaultTjm, tjmByMonth, m);
+          const isCustom = tjmByMonth?.[m] !== undefined;
+          const active = m === selected;
+          return (
             <button
+              key={m}
               type="button"
-              onClick={onClose}
-              className="px-4 min-h-[40px] rounded-xl text-sm font-bold bg-secondary text-on-secondary hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
+              role="tab"
+              aria-selected={active}
+              aria-label={`${MONTH_NAMES[m]} : ${eur(v)} par jour${isCustom ? ', TJM propre' : ''}`}
+              onClick={() => setSelected(m)}
+              className="flex min-h-11 flex-col items-center gap-1"
             >
-              Terminé
+              <span className={cn('text-[11px] tnum', active ? 'font-semibold text-ca-ink' : isCustom ? 'text-ink' : 'text-ink-3')}>
+                {v}
+              </span>
+              <span className="flex h-20 w-full items-end">
+                <span
+                  className={cn(
+                    'block w-full transition-[height] duration-300',
+                    active ? 'bg-ca' : isCustom ? 'bg-ca-light' : 'border-2 border-dashed border-ca-light',
+                  )}
+                  style={{ height: `${Math.max(12, (v / scale) * 100)}%` }}
+                />
+              </span>
+              <span className={cn('text-[11px]', active ? 'font-semibold text-ca-ink' : 'text-ink-3')}>{label.slice(0, 3)}</span>
             </button>
-          </div>
+          );
+        })}
+      </div>
+      <p className="mt-1 text-[12px] text-ink-3">Plein : TJM propre · tireté : TJM par défaut.</p>
+
+      <div className="mt-4 rounded-[var(--radius-card)] border border-line p-4">
+        <div className="flex items-center justify-between gap-3">
+          <label htmlFor="tjm-mois" className="text-[15px] font-semibold text-ink">
+            {MONTH_NAMES[selected]}
+            <span className="block text-[13px] font-normal text-ink-2">
+              {custom ? `TJM propre, ${eur(value - defaultTjm, { sign: true })} par rapport au défaut` : 'Suit le TJM par défaut'}
+            </span>
+          </label>
+          <NumberInput
+            id="tjm-mois"
+            min={MIN_INPUT}
+            max={MAX_INPUT}
+            step={10}
+            suffix="€/j"
+            value={value}
+            onChange={(e) => setMonth(selected, parseInt(e.target.value, 10))}
+            className="w-36"
+          />
+        </div>
+        <input
+          type="range"
+          className="range-pill mt-2"
+          min={MIN_SLIDER}
+          max={MAX_SLIDER}
+          step={10}
+          value={Math.min(MAX_SLIDER, Math.max(MIN_SLIDER, value))}
+          onChange={(e) => setMonth(selected, Number(e.target.value))}
+          aria-label={`TJM de ${MONTH_NAMES[selected].toLowerCase()}`}
+          aria-valuetext={eur(value)}
+          style={{ ['--range-fill' as string]: fill }}
+        />
+        <div className="mt-1 flex items-center justify-between gap-3">
+          <p className="text-[13px] text-ink-2">
+            {tvaApplies(selected) ? (
+              <>
+                Soit <span className="font-bold text-tva-ink">{eur(value * (1 + tvaRate))} TTC</span> par jour.
+              </>
+            ) : (
+              'Hors taxes.'
+            )}
+          </p>
+          {custom && (
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<RotateCcw className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />}
+              onClick={() => onChange({ defaultTjm, tjmByMonth: unset(tjmByMonth, selected) })}
+            >
+              Revenir au défaut
+            </Button>
+          )}
         </div>
       </div>
-    </QuickEditModal>
+    </Dialog>
   );
 };

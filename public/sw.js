@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fiscal-architect-v3';
+const CACHE_NAME = 'fiscal-architect-v4';
 
 const PRECACHE_ASSETS = [
   '/',

@@ -1,142 +1,115 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motion } from 'motion/react';
-import { RefreshCw, Home, Trash2 } from 'lucide-react';
-import { ErrorOrb } from '~/components/ErrorOrb';
-import { ConfirmModal } from '~/components/ConfirmModal';
+import { Home, RefreshCw } from 'lucide-react';
 import { wipeLocalData } from '~/lib/wipeLocalData';
-import { cn } from '~/utils';
+import { Dialog } from '~/ui/Dialog';
+import { Button } from '~/ui/Button';
+import { BrandMark } from '~/shell/BrandMark';
 
 interface ErrorPageProps {
   kind: 'error' | 'not-found';
-  /** Disponible uniquement quand kind === 'error'. Affiché dans un détail repliable. */
   error?: Error;
-  /** Action principale : reload de l'app. Si non fourni, fallback sur window.location.reload. */
   onReload?: () => void;
 }
 
 const COPY = {
   error: {
-    title: 'Quelque chose s\'est cassé',
-    body: 'Une erreur inattendue s\'est produite. Vos données restent en sécurité dans votre navigateur.',
-    cta: 'Recharger l\'app',
+    title: 'Quelque chose s’est cassé',
+    body: 'Une erreur inattendue a interrompu l’écran. Vos données restent intactes dans ce navigateur.',
+    cta: 'Recharger l’application',
     Icon: RefreshCw,
   },
   'not-found': {
     title: 'Page introuvable',
-    body: 'Cette adresse n\'existe pas dans Fiscal Architect.',
-    cta: 'Retour à l\'accueil',
+    body: 'Cette adresse ne correspond à aucun écran de Fiscal Architect.',
+    cta: 'Revenir au mois en cours',
     Icon: Home,
   },
 } as const;
 
-/**
- * Fallback global quand TanStack Router rencontre une erreur ou une route
- * inconnue. Affiche un orbe ambre pulsant + texte rassurant + bouton de
- * reprise. Monté en isolation (en dehors du shell) — pas de TopBar ni
- * FiscalContextBar disponibles.
- */
+/** Une barre de répartition dont un morceau s'est détaché. */
+function BrokenBar() {
+  return (
+    <svg viewBox="0 0 280 90" className="h-auto w-full max-w-[280px]" aria-hidden="true">
+      <rect x="0" y="30" width="120" height="22" rx="11" fill="#00c875" />
+      <rect x="126" y="30" width="46" height="22" rx="4" fill="#fdab3d" />
+      <rect x="196" y="48" width="34" height="22" rx="6" fill="#ff5ac4" transform="rotate(14 213 59)" />
+      <rect x="244" y="12" width="30" height="22" rx="11" fill="#a25ddc" transform="rotate(-18 259 23)" />
+      <circle cx="186" cy="82" r="3" fill="#c8cbd9" />
+      <circle cx="236" cy="84" r="2" fill="#c8cbd9" />
+    </svg>
+  );
+}
+
+/** Erreur globale et 404, hors du shell. */
 export const ErrorPage: React.FC<ErrorPageProps> = ({ kind, error, onReload }) => {
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const btn = useRef<HTMLButtonElement | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
   const copy = COPY[kind];
+  useEffect(() => btn.current?.focus(), []);
 
-  const handleResetConfirm = async () => {
-    await wipeLocalData();
-    if (typeof window !== 'undefined') {
-      window.location.href = '/';
-    }
-  };
-
-  useEffect(() => {
-    buttonRef.current?.focus();
-  }, []);
-
-  const handleAction = () => {
+  const act = () => {
+    if (typeof window === 'undefined') return;
     if (kind === 'not-found') {
-      if (typeof window !== 'undefined') {
-        window.location.href = '/';
-      }
+      window.location.href = '/';
       return;
     }
-    if (onReload) {
-      onReload();
-      return;
-    }
-    if (typeof window !== 'undefined') {
-      window.location.reload();
-    }
+    if (onReload) onReload();
+    else window.location.reload();
   };
 
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center px-4 py-10">
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, ease: 'easeOut' }}
-        className="w-full max-w-md flex flex-col items-center text-center"
-      >
-        <ErrorOrb />
-
-        <div role="alert" className="mt-8 md:mt-10 space-y-2">
-          <h1 className="font-headline text-2xl md:text-3xl font-bold text-on-surface">
-            {copy.title}
-          </h1>
-          <p className="text-sm md:text-base text-on-surface-variant leading-relaxed">
-            {copy.body}
-          </p>
+    <div className="flex min-h-dvh flex-col bg-ground text-ink">
+      <div className="flex items-center gap-2.5 px-5 pt-5">
+        <BrandMark />
+        <span className="text-[17px] font-extrabold">Fiscal Architect</span>
+      </div>
+      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-5 py-10">
+        <BrokenBar />
+        <h1 className="mt-6 text-[30px] font-extrabold leading-tight tracking-[-0.01em]">{copy.title}</h1>
+        <p className="mt-2 text-[16px] leading-snug text-ink-2 text-pretty">{copy.body}</p>
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+          <Button ref={btn} variant="primary" icon={<copy.Icon className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />} onClick={act}>
+            {copy.cta}
+          </Button>
+          {kind === 'error' && (
+            <Button variant="ghost" onClick={() => setResetOpen(true)}>
+              Effacer les données de l’app
+            </Button>
+          )}
         </div>
-
-        <div className="mt-8 flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
-          <button
-            ref={buttonRef}
-            type="button"
-            onClick={handleAction}
-            className={cn(
-              'inline-flex items-center justify-center gap-2 px-5 min-h-[44px] rounded-xl',
-              'bg-secondary text-on-secondary text-sm font-bold',
-              'hover:opacity-90 transition-opacity',
-              'focus:outline-none focus:ring-2 focus:ring-secondary/40 focus:ring-offset-2 focus:ring-offset-surface',
-            )}
-          >
-            <copy.Icon className="w-4 h-4" aria-hidden="true" />
-            <span>{copy.cta}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setResetOpen(true)}
-            className={cn(
-              'inline-flex items-center justify-center gap-2 px-5 min-h-[44px] rounded-xl',
-              'text-sm font-medium text-on-surface-variant',
-              'hover:bg-surface-highest/40 transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-secondary/30',
-            )}
-          >
-            <Trash2 className="w-4 h-4" aria-hidden="true" />
-            <span>Réinitialiser les données</span>
-          </button>
-        </div>
-
         {kind === 'error' && error?.message && (
-          <details className="mt-8 w-full text-left">
-            <summary className="cursor-pointer text-xs font-medium text-on-surface-variant hover:text-on-surface transition-colors select-none">
-              Détails techniques
-            </summary>
-            <pre className="mt-2 p-3 rounded-xl bg-surface-highest/40 text-[11px] text-on-surface-variant whitespace-pre-wrap break-words font-mono max-h-48 overflow-auto">
+          <details className="mt-6 text-[13px] text-ink-2">
+            <summary className="min-h-9 pointer-coarse:min-h-11 cursor-pointer font-semibold">Détails techniques</summary>
+            <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-ctl)] bg-card p-3 font-mono text-[12px]">
               {error.message}
               {error.stack ? `\n\n${error.stack}` : ''}
             </pre>
           </details>
         )}
-      </motion.div>
-
-      <ConfirmModal
+      </main>
+      <Dialog
         open={resetOpen}
-        title="Réinitialiser toutes les données ?"
-        message="Cette action supprimera toutes vos données locales (identité, années fiscales, calendriers, configuration). Vous devrez tout ressaisir."
-        confirmLabel="Réinitialiser"
-        cancelLabel="Annuler"
-        onCancel={() => setResetOpen(false)}
-        onConfirm={handleResetConfirm}
+        onClose={() => setResetOpen(false)}
+        role="alertdialog"
+        size="sm"
+        title="Effacer toutes les données ?"
+        description="Profil, années, calendriers et réglages seront supprimés de ce navigateur. À réserver au cas où l’erreur revient à chaque ouverture."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setResetOpen(false)} data-autofocus>
+              Annuler
+            </Button>
+            <Button
+              variant="danger"
+              onClick={async () => {
+                await wipeLocalData();
+                window.location.href = '/';
+              }}
+            >
+              Tout effacer
+            </Button>
+          </>
+        }
       />
     </div>
   );

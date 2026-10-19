@@ -1,7 +1,7 @@
 {
   "name": "fiscal-architect",
   "private": true,
-  "version": "1.4.0",
+  "version": "2.0.0",
   "type": "module",
   "description": "Simulateur fiscal et de revenus pour micro-entrepreneurs francais. 100% client-side, pas de backend, pas de tracking.",
   "keywords": [
@@ -38,21 +38,21 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@fontsource/figtree": "^5.3.0",
     "@tailwindcss/vite": "^4.2.2",
-    "@tanstack/react-router": "^1.168.4",
-    "@tanstack/react-start": "^1.167.7",
-    "@vitejs/plugin-react": "^6.0.1",
+    "@tanstack/react-router": "^1.170.45",
+    "@tanstack/react-start": "^1.169.3",
+    "@vitejs/plugin-react": "^6.1.2",
     "clsx": "^2.1.1",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "nitro": "^3.0.260311-beta",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "recharts": "^3.8.0",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
-    "@tanstack/router-generator": "^1.166.39",
+    "@tanstack/router-generator": "^1.167.45",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

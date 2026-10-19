@@ -111,11 +111,11 @@ export const HelpTooltip: React.FC<HelpTooltipProps> = ({ termId, className }) =
         aria-controls={open ? popoverId : undefined}
         aria-label={`Aide : ${term.title}`}
         className={cn(
-          'inline-flex items-center justify-center w-5 h-5 shrink-0 rounded-full text-on-surface-variant hover:text-secondary hover:bg-secondary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40 transition-colors cursor-help',
+          'relative inline-flex h-5 w-5 shrink-0 cursor-help items-center justify-center rounded-full text-ink-3 transition-colors hover:text-ca-ink after:absolute after:-inset-3 after:content-[""]',
           className,
         )}
       >
-        <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
+        <HelpCircle className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       {mounted &&
@@ -139,17 +139,17 @@ export const HelpTooltip: React.FC<HelpTooltipProps> = ({ termId, className }) =
                   width: POPOVER_WIDTH,
                   transformOrigin: pos.placement === 'top' ? 'bottom center' : 'top center',
                 }}
-                className="z-[100] bg-surface-lowest border border-outline-variant rounded-xl shadow-xl px-3 py-2.5 pointer-events-auto"
+                className="pointer-events-auto z-[100] rounded-[var(--radius-card)] border border-line-2 bg-card px-3.5 py-3 text-ink shadow-[var(--shadow-overlay)]"
                 onClick={(e) => e.stopPropagation()}
               >
-                <p className="text-xs font-bold uppercase tracking-wider text-secondary mb-1">
+                <p className="mb-1 text-[15px] font-semibold text-ink">
                   {term.title}
                 </p>
-                <p className="text-[12px] text-on-surface-variant leading-relaxed whitespace-pre-line">
+                <p className="whitespace-pre-line text-[13px] leading-snug text-ink-2">
                   {term.body}
                 </p>
                 {term.example && (
-                  <p className="mt-2 bg-surface-highest/50 rounded-lg px-2 py-1.5 text-[11px] text-on-surface-variant leading-relaxed italic">
+                  <p className="mt-2 border-t border-line pt-2 text-[13px] leading-snug text-ink-2">
                     {term.example}
                   </p>
                 )}

@@ -1,53 +1,48 @@
-import { useMemo, type ReactNode } from 'react'
-import {
-  Outlet,
-  createRootRoute,
-  HeadContent,
-  Scripts,
-  useNavigate,
-  useRouterState,
-} from '@tanstack/react-router'
+import { type ReactNode } from 'react'
+import { Outlet, createRootRoute, HeadContent, Scripts, redirect } from '@tanstack/react-router'
 import appCss from '~/styles/app.css?url'
-import { TopBar } from '~/components/Navigation'
-import { ProfileProvider, useProfile } from '~/context/ProfileContext'
+import { ProfileProvider } from '~/context/ProfileContext'
 import { FiscalYearProvider, useFiscalYearCtx } from '~/context/FiscalYearContext'
 import { NotificationsProvider } from '~/context/NotificationsContext'
 import { ThemeProvider } from '~/context/ThemeContext'
-import { SettingsDrawer } from '~/components/SettingsDrawer'
-import { FiscalContextBar } from '~/components/FiscalContextBar'
-import { ConfirmModal } from '~/components/ConfirmModal'
+import { AppShell } from '~/shell/AppShell'
+import { LEGACY_SETTINGS } from '~/shell/nav'
 import { PwaInstallController } from '~/components/PwaInstallController'
 import { YearTransitionModal } from '~/components/YearTransitionModal'
 import { BreakingUpdateGate } from '~/components/BreakingUpdateGate'
 import { ErrorPage } from '~/components/ErrorPage'
 import { useYearAutoTransition } from '~/hooks/useYearAutoTransition'
-import { calcCAYearFromEntries } from '~/lib/fiscal'
-import type { SettingsTabId } from '~/components/settings/SettingsTabs'
+import { useProfile } from '~/context/ProfileContext'
+import { FiscalViewProvider } from '~/view/useFiscalView'
+
+const THEME_LIGHT = '#ffffff'
+const THEME_DARK = '#181b34'
 
 export const Route = createRootRoute({
+  beforeLoad: ({ location }) => {
+    // Anciens liens : `?settings=fiscal` ouvrait un tiroir, c'est désormais une page.
+    const legacy = (location.search as Record<string, unknown> | undefined)?.settings
+    if (typeof legacy === 'string' && LEGACY_SETTINGS[legacy]) {
+      throw redirect({ to: '/reglages/$section', params: { section: LEGACY_SETTINGS[legacy] } })
+    }
+  },
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'Fiscal Architect — Simulation fiscale' },
+      { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
+      { title: 'Fiscal Architect — votre net de micro-entrepreneur' },
       {
         name: 'description',
         content:
-          "Suivi et simulation fiscale pour micro-entrepreneurs. 100% local — vos données restent dans votre navigateur.",
+          "Du jour travaillé au net réel : cotisations, impôt, seuils, TVA et encaissements pour micro-entrepreneurs. 100 % local, vos données restent dans votre navigateur.",
       },
-      { name: 'theme-color', content: '#006c49' },
+      { name: 'theme-color', content: THEME_LIGHT },
       { name: 'mobile-web-app-capable', content: 'yes' },
       { name: 'apple-mobile-web-app-capable', content: 'yes' },
-      { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+      { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
       { name: 'apple-mobile-web-app-title', content: 'Fiscal Architect' },
     ],
     links: [
-      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-      { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
-      {
-        rel: 'stylesheet',
-        href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap',
-      },
       { rel: 'stylesheet', href: appCss },
       { rel: 'manifest', href: '/manifest.webmanifest' },
       { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
@@ -59,7 +54,7 @@ export const Route = createRootRoute({
   errorComponent: ({ error, reset }) => (
     <ErrorPage
       kind="error"
-      error={error}
+      error={error instanceof Error ? error : new Error(String(error))}
       onReload={reset ?? (() => {
         if (typeof window !== 'undefined') window.location.reload()
       })}
@@ -75,7 +70,9 @@ function RootComponent() {
         <ProfileProvider>
           <FiscalYearProvider>
             <NotificationsProvider>
-              <AppShell />
+              <FiscalViewProvider>
+                <Shell />
+              </FiscalViewProvider>
             </NotificationsProvider>
           </FiscalYearProvider>
         </ProfileProvider>
@@ -101,7 +98,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
                   var isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
                   if (isDark) document.documentElement.classList.add('dark');
                   var meta = document.querySelector('meta[name="theme-color"]');
-                  if (meta) meta.setAttribute('content', isDark ? '#0e1512' : '#006c49');
+                  if (meta) meta.setAttribute('content', isDark ? '${THEME_DARK}' : '${THEME_LIGHT}');
                 } catch (e) {}
               })();
             `,
@@ -138,91 +135,28 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
   )
 }
 
-function AppShell() {
-  const { profile, setProfile, handleExportGlobal, years, activeYear, setActiveYear } = useProfile()
+function Shell() {
   const fy = useFiscalYearCtx()
-  const navigate = useNavigate()
-  const search = useRouterState({ select: (s) => s.location.search }) as Record<string, unknown>
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const settingsParam = search?.settings as SettingsTabId | undefined
-  const isValidTab = settingsParam === 'profile'
-    || settingsParam === 'fiscal'
-    || settingsParam === 'payments'
-    || settingsParam === 'costs'
-    || settingsParam === 'backup'
-  const settingsOpen = isValidTab
-  const activeTab: SettingsTabId = isValidTab ? settingsParam : 'fiscal'
-  const resetConfirmOpen = search?.confirm === 'reset-all'
-
+  const { activeYear } = useProfile()
   useYearAutoTransition()
 
-  const caCumule = useMemo(
-    () => calcCAYearFromEntries(fy.fiscalYear.months, profile),
-    [fy.fiscalYear.months, profile],
-  )
-
-  const navigateOnCurrentPage = (nextSearch: Record<string, string>) =>
-    navigate({ to: pathname, search: nextSearch } as never)
-  const openSettings = (tab: SettingsTabId) => navigateOnCurrentPage({ settings: tab })
-  const closeSettings = () => navigateOnCurrentPage({})
-  const askResetAll = () => navigateOnCurrentPage({ confirm: 'reset-all' })
-  const confirmResetAll = () => {
-    fy.resetEverything()
-    navigateOnCurrentPage({})
-  }
-  const cancelReset = () =>
-    navigateOnCurrentPage(settingsOpen ? { settings: activeTab } : {})
-
   return (
-    <div className="min-h-screen bg-surface flex flex-col">
-      <TopBar
-        profile={profile}
-        caCumule={caCumule}
-        onExport={handleExportGlobal}
-        onOpenSettings={() => openSettings('fiscal')}
-        onProfileChange={(patch) => setProfile((p) => ({ ...p, ...patch }))}
-      />
-      <FiscalContextBar
-        profile={profile}
-        years={years}
-        activeYear={activeYear}
-        onSelectYear={setActiveYear}
-        onRequestYearTransition={fy.requestYearTransition}
-        onOpenTab={openSettings}
-      />
-      <main className="flex-1 px-4 sm:px-6 lg:px-10 py-6 lg:py-10">
-        <div className="max-w-7xl mx-auto">
-          <Outlet />
-        </div>
-      </main>
-      <SettingsDrawer
-        open={settingsOpen}
-        activeTab={activeTab}
-        onTabChange={openSettings}
-        onClose={closeSettings}
-        year={fy.year}
-        profile={profile}
-        setProfile={setProfile}
-        onResetAll={askResetAll}
-      />
-      <ConfirmModal
-        open={resetConfirmOpen}
-        title="Tout réinitialiser ?"
-        message="Calendrier, profil, charges et sliders reviendront à leurs valeurs par défaut. Action irréversible."
-        confirmLabel="Tout réinitialiser"
-        destructive
-        onConfirm={confirmResetAll}
-        onCancel={cancelReset}
-      />
-      <YearTransitionModal
-        open={fy.transitionRequest != null}
-        targetYear={fy.transitionRequest?.targetYear ?? activeYear + 1}
-        sourceYear={fy.transitionRequest?.sourceYear ?? null}
-        onConfirm={fy.confirmYearTransition}
-        onCancel={fy.cancelYearTransition}
-      />
-      <PwaInstallController />
-      <BreakingUpdateGate />
-    </div>
+    <AppShell
+      overlays={
+        <>
+          <YearTransitionModal
+            open={fy.transitionRequest != null}
+            targetYear={fy.transitionRequest?.targetYear ?? activeYear + 1}
+            sourceYear={fy.transitionRequest?.sourceYear ?? null}
+            onConfirm={fy.confirmYearTransition}
+            onCancel={fy.cancelYearTransition}
+          />
+          <PwaInstallController />
+          <BreakingUpdateGate />
+        </>
+      }
+    >
+      <Outlet />
+    </AppShell>
   )
 }

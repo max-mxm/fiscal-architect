@@ -1,11 +1,13 @@
-import React, { useEffect, useRef, useId } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Briefcase, Hammer, ShoppingBag, Car, Home as HomeIcon, Settings, X } from 'lucide-react';
-import type { UserProfile, Activity } from '~/types';
+import React from 'react';
+import { ArrowRight, Briefcase, Car, Hammer, Home as HomeIcon, ShoppingBag } from 'lucide-react';
+import type { Activity, UserProfile } from '~/types';
+import { primaryActivityParamsPatch } from '~/lib/activity';
+import { Dialog } from '~/ui/Dialog';
 import { cn } from '~/utils';
 
 interface PersonaPickerProps {
   open: boolean;
+  year: number;
   onPick: (patch: Partial<UserProfile>) => void;
   onSkip: () => void;
 }
@@ -14,197 +16,82 @@ interface Persona {
   id: string;
   label: string;
   hint: string;
-  Icon: React.ComponentType<{ className?: string }>;
-  patch: Partial<UserProfile>;
+  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  revenueModel: UserProfile['revenueModel'];
+  activity: Activity;
+  activityLabel: string;
 }
 
-function activityFor(type: Activity, label?: string): UserProfile['activities'] {
-  return [{ id: `act-${type}-${Date.now()}`, type, isPrimary: true, label }];
-}
+const PRIMARY: Persona = {
+  id: 'freelance',
+  label: 'Freelance au TJM',
+  hint: 'Conseil, développement, design : vous cochez vos jours, l’app calcule le reste.',
+  Icon: Briefcase,
+  revenueModel: 'days',
+  activity: 'liberalSsi',
+  activityLabel: 'Conseil indépendant',
+};
 
-const PERSONAS: Persona[] = [
-  {
-    id: 'freelance',
-    label: 'Freelance / consultant',
-    hint: 'TJM × jours travaillés (dev, design, conseil)',
-    Icon: Briefcase,
-    patch: {
-      revenueModel: 'days',
-      activities: activityFor('liberalSsi', 'Conseil indépendant'),
-      cfpEnabled: true,
-      taxeConsulaireEnabled: false,
-    },
-  },
-  {
-    id: 'artisan',
-    label: 'Artisan / prestataire forfait',
-    hint: 'Devis ponctuels datés (BTP, plomberie, dev web)',
-    Icon: Hammer,
-    patch: {
-      revenueModel: 'forfait',
-      activities: activityFor('serviceBic', 'Prestations'),
-      cfpEnabled: true,
-      taxeConsulaireEnabled: true,
-    },
-  },
-  {
-    id: 'ecommerce',
-    label: 'E-commerce / marketplace',
-    hint: 'Vente en ligne (Shopify, Etsy, Vinted)',
-    Icon: ShoppingBag,
-    patch: {
-      revenueModel: 'flat',
-      activities: activityFor('vente', 'Vente en ligne'),
-      cfpEnabled: true,
-      taxeConsulaireEnabled: true,
-    },
-  },
-  {
-    id: 'vtc',
-    label: 'VTC / livreur',
-    hint: 'Courses agrégées (Uber, Deliveroo, taxi)',
-    Icon: Car,
-    patch: {
-      revenueModel: 'flat',
-      activities: activityFor('serviceBic', 'Transport / livraison'),
-      cfpEnabled: true,
-      taxeConsulaireEnabled: false,
-    },
-  },
-  {
-    id: 'meuble',
-    label: 'Loueur meublé / hôte',
-    hint: 'Saisonnalité (Airbnb, gîte, chambre d\'hôte)',
-    Icon: HomeIcon,
-    patch: {
-      revenueModel: 'flat',
-      activities: activityFor('vente', 'Location meublée'),
-      cfpEnabled: false,
-      taxeConsulaireEnabled: false,
-    },
-  },
-  {
-    id: 'libre',
-    label: 'Configuration libre',
-    hint: 'Je règle tout moi-même dans les paramètres',
-    Icon: Settings,
-    patch: {},
-  },
+const OTHERS: Persona[] = [
+  { id: 'artisan', label: 'Prestations au forfait', hint: 'Devis datés : artisan, projets', Icon: Hammer, revenueModel: 'forfait', activity: 'serviceBic', activityLabel: 'Prestations' },
+  { id: 'ecommerce', label: 'Vente en ligne', hint: 'Boutique, marketplace', Icon: ShoppingBag, revenueModel: 'flat', activity: 'vente', activityLabel: 'Vente en ligne' },
+  { id: 'vtc', label: 'VTC ou livraison', hint: 'Courses agrégées par mois', Icon: Car, revenueModel: 'flat', activity: 'serviceBic', activityLabel: 'Transport, livraison' },
+  { id: 'meuble', label: 'Location meublée', hint: 'Revenus saisonniers', Icon: HomeIcon, revenueModel: 'flat', activity: 'vente', activityLabel: 'Location meublée' },
 ];
 
-const FOCUSABLE = 'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+function patchFor(p: Persona, year: number): Partial<UserProfile> {
+  const activities = [{ id: `act-${p.activity}-${Date.now()}`, type: p.activity, isPrimary: true, label: p.activityLabel }];
+  return { onboardingDone: true, revenueModel: p.revenueModel, ...primaryActivityParamsPatch(activities, year), activities };
+}
 
-export const PersonaPicker: React.FC<PersonaPickerProps> = ({ open, onPick, onSkip }) => {
-  const titleId = useId();
-  const dialogRef = useRef<HTMLDivElement | null>(null);
-  const onSkipRef = useRef(onSkip);
-  onSkipRef.current = onSkip;
+/** Premier lancement : choisir son profil pré-règle le mode de saisie et l'activité. */
+export const PersonaPicker: React.FC<PersonaPickerProps> = ({ open, year, onPick, onSkip }) => (
+  <Dialog
+    open={open}
+    onClose={onSkip}
+    size="md"
+    title="Comment travaillez-vous ?"
+    description="Votre choix règle le mode de saisie et l’activité déclarée. Tout reste modifiable dans les réglages."
+  >
+    <button
+      type="button"
+      data-autofocus
+      onClick={() => onPick(patchFor(PRIMARY, year))}
+      className="group flex w-full items-start gap-4 rounded-[14px] bg-ca p-4 text-left text-ca-on transition-colors hover:bg-primary-hover"
+    >
+      <PRIMARY.Icon className="mt-0.5 h-6 w-6 shrink-0" strokeWidth={1.5} />
+      <span className="min-w-0 flex-1">
+        <span className="block text-[17px] font-semibold">{PRIMARY.label}</span>
+        <span className="mt-0.5 block text-[14px] text-on-primary/80">{PRIMARY.hint}</span>
+      </span>
+      <ArrowRight className="mt-1 h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5" strokeWidth={1.75} aria-hidden="true" />
+    </button>
 
-  useEffect(() => {
-    if (!open) return;
-    const previousFocus = document.activeElement as HTMLElement | null;
-    // Focus le premier persona button
-    const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE);
-    firstFocusable?.focus();
-
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onSkipRef.current();
-        return;
-      }
-      if (e.key !== 'Tab') return;
-      const root = dialogRef.current;
-      if (!root) return;
-      const items = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE));
-      if (items.length === 0) return;
-      const first = items[0];
-      const last = items[items.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => {
-      window.removeEventListener('keydown', handleKey);
-      previousFocus?.focus?.();
-    };
-  }, [open]);
-
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-overlay backdrop-blur-sm"
-          onClick={onSkip}
-        >
-          <motion.div
-            ref={dialogRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-            initial={{ opacity: 0, scale: 0.96, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="relative bg-surface-lowest rounded-3xl shadow-2xl max-w-lg w-full p-6 max-h-[92dvh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
+    <p className="mb-2 mt-5 text-[14px] font-medium text-ink-2">Autres façons de facturer</p>
+    <ul className="grid grid-cols-2 gap-2">
+      {OTHERS.map((p) => (
+        <li key={p.id}>
+          <button
+            type="button"
+            onClick={() => onPick(patchFor(p, year))}
+            className={cn(
+              'flex h-full min-h-20 w-full flex-col items-start gap-1 rounded-[var(--radius-card)] border-2 border-line p-3 text-left transition-colors hover:border-primary',
+            )}
           >
-            <button
-              type="button"
-              onClick={onSkip}
-              aria-label="Fermer (configurer plus tard)"
-              className="absolute top-4 right-4 w-9 h-9 rounded-xl text-on-surface-variant hover:bg-surface-highest/40 inline-flex items-center justify-center transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <h2 id={titleId} className="font-headline text-xl font-black text-on-surface pr-8">
-              Bienvenue
-            </h2>
-            <p className="text-sm text-on-surface-variant mt-1.5 leading-relaxed pr-8">
-              Quel profil correspond à votre activité ? Cela pré-remplit le mode de saisie et les options fiscales — vous pourrez tout ajuster ensuite.
-            </p>
+            <p.Icon className="h-5 w-5 text-ink-2" strokeWidth={1.5} />
+            <span className="text-[15px] font-medium text-ink">{p.label}</span>
+            <span className="text-[13px] leading-snug text-ink-2">{p.hint}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
 
-            <ul className="mt-5 space-y-2">
-              {PERSONAS.map((p) => {
-                const Icon = p.Icon;
-                return (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      onClick={() => onPick({ ...p.patch, onboardingDone: true })}
-                      className={cn(
-                        'flex w-full items-center gap-3 min-h-[64px] rounded-2xl border border-outline-variant/30 p-3 text-left transition-colors',
-                        'hover:border-secondary hover:bg-secondary/5',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40',
-                      )}
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary/10 text-secondary"
-                      >
-                        <Icon className="w-5 h-5" />
-                      </span>
-                      <span className="flex flex-col flex-1 min-w-0">
-                        <span className="text-sm font-bold text-on-surface">{p.label}</span>
-                        <span className="text-[11px] text-on-surface-variant">{p.hint}</span>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-};
+    <button
+      type="button"
+      onClick={onSkip}
+      className="mt-4 inline-flex min-h-11 items-center text-[14px] font-medium text-ca-ink underline decoration-primary/40 hover:decoration-primary"
+    >
+      Je règle tout moi-même
+    </button>
+  </Dialog>
+);

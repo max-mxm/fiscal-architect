@@ -11,7 +11,8 @@ import { useVersionedStorage } from '~/hooks/useLocalStorage';
 import { useYearsIndex } from '~/hooks/useYearsIndex';
 import { useYearConfig } from '~/hooks/useYearConfig';
 import { DEFAULT_IDENTITY } from '~/constants';
-import { generateChartData } from '~/lib/fiscal';
+import { buildAnnualCsv } from '~/lib/csvExport';
+import { readStoredFiscalYear } from '~/lib/yearLifecycle';
 import {
   IDENTITY_KEYS,
   type IdentityProfile,
@@ -111,23 +112,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   );
 
   const handleExportGlobal = useCallback(() => {
-    const chartData = generateChartData(profile);
-    const header = 'Mois,CA HT (€),TVA collectée (€),Facturé TTC (€),Bénéfice Net (€)\n';
-    const rows = chartData.map((d) => `${d.month},${d.brut},${d.tva},${d.ttc},${d.net}`).join('\n');
-    const totalFixed = profile.fixedCosts.reduce((s, c) => s + c.amount, 0);
-    const summary = [
-      '',
-      `Profil,${profile.name}`,
-      `Année,${profile.year}`,
-      `TJM HT,${profile.tjm}€`,
-      `Taux TVA,${profile.tvaAssujetti ? `${profile.tvaRate * 100}%` : 'Franchise en base'}`,
-      `TVA à partir de,${profile.tvaAssujetti ? profile.tvaEffectiveDate ?? 'Dès le début de l’année' : 'Non applicable'}`,
-      `Jours/mois,${profile.workingDays}`,
-      `Taux URSSAF,${profile.urssafRate}%`,
-      `Charges fixes mensuelles,${totalFixed}€`,
-    ].join('\n');
-    const csv = header + rows + '\n' + summary;
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    // Saisie réelle de l'année (persistée par le calendrier) plutôt qu'un TJM × jours théorique.
+    const { months } = readStoredFiscalYear(profile.year);
+    const csv = buildAnnualCsv(months, profile, profile.year, { includeSummary: true });
+    // BOM UTF-8 : accents lisibles à l'ouverture dans Excel.
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

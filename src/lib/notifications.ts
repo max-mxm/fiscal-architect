@@ -37,7 +37,7 @@ export function computeNotifications(input: NotificationsInput): Notification[] 
       level: 'critical',
       icon: 'vl',
       title: 'Versement libératoire : inéligibilité détectée',
-      body: `Pour ${fiscalYear}, votre revenu fiscal de référence (RFR) ${vlEligibility.rfrYear} dépasse le plafond de ${formatEuro(vlEligibility.threshold)}€. Estimez le montant à provisionner pour une régularisation.`,
+      body: `Pour ${fiscalYear}, votre revenu fiscal de référence (RFR) ${vlEligibility.rfrYear} dépasse le plafond de ${formatEuro(vlEligibility.threshold)}\u00a0€. Estimez le montant à provisionner pour une régularisation.`,
       action: {
         label: 'Estimer le rattrapage',
         to: '/regularisation-vl',
@@ -50,8 +50,8 @@ export function computeNotifications(input: NotificationsInput): Notification[] 
       id: 'compte-pro',
       level: 'warning',
       icon: 'compte-pro',
-      title: 'Compte bancaire dédié obligatoire',
-      body: `Votre CA cumulé (${formatEuro(caCumule)}€) dépasse ${formatEuro(COMPTE_PRO_THRESHOLD)}€. Au-delà sur 2 années consécutives, un compte bancaire dédié est requis.`,
+      title: 'Compte bancaire dédié à prévoir',
+      body: `Votre CA cumulé (${formatEuro(caCumule)}\u00a0€) dépasse ${formatEuro(COMPTE_PRO_THRESHOLD)}\u00a0€. S’il le dépasse deux années de suite, un compte bancaire dédié est requis.`,
     });
   }
 
@@ -62,7 +62,7 @@ export function computeNotifications(input: NotificationsInput): Notification[] 
         level: 'critical',
         icon: 'seuil',
         title: 'Seuil micro dépassé',
-        body: `CA réalisé ${formatEuro(caRealise)}€ ≥ plafond ${formatEuro(seuilMicro)}€. Vous risquez la sortie du régime micro-entreprise.`,
+        body: `CA réalisé ${formatEuro(caRealise)}\u00a0€, au-delà du plafond de ${formatEuro(seuilMicro)}\u00a0€. Vous risquez la sortie du régime micro-entreprise.`,
       });
     } else if (caCumule / seuilMicro >= SEUIL_MICRO_WARNING_PCT) {
       const pct = Math.round((caCumule / seuilMicro) * 100);
@@ -71,7 +71,7 @@ export function computeNotifications(input: NotificationsInput): Notification[] 
         level: 'warning',
         icon: 'seuil',
         title: 'Seuil micro proche',
-        body: `${pct} % du plafond ${formatEuro(seuilMicro)}€ projeté. Anticipez une éventuelle bascule de régime.`,
+        body: `${pct}\u00a0% du plafond de ${formatEuro(seuilMicro)}\u00a0€ atteint. Anticipez une éventuelle bascule de régime.`,
       });
     }
   }
