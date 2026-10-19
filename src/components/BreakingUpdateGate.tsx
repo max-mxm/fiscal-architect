@@ -1,7 +1,9 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { AlertTriangle, Smartphone, Apple } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Download } from 'lucide-react';
 import { wipeLocalData } from '~/lib/wipeLocalData';
+import { buildBackupFilename, createBackupFromStorage, serializeBackup } from '~/lib/importExport';
+import { Dialog } from '~/ui/Dialog';
+import { Button } from '~/ui/Button';
 
 const STORAGE_KEY = 'fiscal-breaking-version';
 const VERSION_URL = '/version.json';
@@ -30,10 +32,6 @@ async function fetchRemoteVersion(): Promise<VersionPayload | null> {
 export const BreakingUpdateGate: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<number | null>(null);
-  const titleId = useId();
-  const descId = useId();
-  const dialogRef = useRef<HTMLDivElement | null>(null);
-  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,16 +54,6 @@ export const BreakingUpdateGate: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    closeBtnRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') e.preventDefault();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open]);
-
   const handleConfirm = async () => {
     if (pending != null) {
       try {
@@ -84,84 +72,57 @@ export const BreakingUpdateGate: React.FC = () => {
       // iOS Safari
       (window.navigator as { standalone?: boolean }).standalone === true);
 
+  const downloadBackup = () => {
+    try {
+      const now = new Date();
+      const blob = new Blob([serializeBackup(createBackupFromStorage(window.localStorage, now))], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = buildBackupFilename(now);
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      /* rien à sauvegarder */
+    }
+  };
+
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.12 }}
-          className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-overlay backdrop-blur-sm"
-        >
-          <motion.div
-            ref={dialogRef}
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-            aria-describedby={descId}
-            initial={{ opacity: 0, scale: 0.96, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 8 }}
-            transition={{ duration: 0.16, ease: 'easeOut' }}
-            className="relative bg-surface-lowest rounded-3xl shadow-2xl max-w-md w-full p-6"
-          >
-            <div className="flex items-start gap-4">
-              <div className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 id={titleId} className="font-headline text-base font-bold text-on-surface">
-                  Mise à jour majeure détectée
-                </h3>
-                <div id={descId} className="text-sm text-on-surface-variant mt-1.5 leading-relaxed space-y-2">
-                  <p>
-                    Une nouvelle version a été déployée et nécessite une réinitialisation
-                    complète. Vos données locales (calendrier, profil, charges) vont être
-                    effacées.
-                  </p>
-                  {isStandalone && (
-                    <p>
-                      Pour bénéficier de la mise à jour, vous devez aussi{' '}
-                      <strong>désinstaller puis réinstaller l'application</strong> :
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {isStandalone && (
-              <div className="mt-4 grid gap-2">
-                <div className="rounded-xl bg-surface-highest/40 px-3 py-2.5 flex items-start gap-2.5">
-                  <Apple className="w-4 h-4 shrink-0 mt-0.5 text-on-surface-variant" />
-                  <p className="text-[12px] text-on-surface-variant leading-relaxed">
-                    <strong>iOS</strong> — appui long sur l'icône de l'app sur l'écran d'accueil →
-                    « Supprimer l'app » → puis Safari → menu Partager → « Sur l'écran d'accueil ».
-                  </p>
-                </div>
-                <div className="rounded-xl bg-surface-highest/40 px-3 py-2.5 flex items-start gap-2.5">
-                  <Smartphone className="w-4 h-4 shrink-0 mt-0.5 text-on-surface-variant" />
-                  <p className="text-[12px] text-on-surface-variant leading-relaxed">
-                    <strong>Android</strong> — appui long sur l'icône → « Désinstaller » → puis
-                    Chrome → menu ⋮ → « Installer l'application ».
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end mt-6">
-              <button
-                ref={closeBtnRef}
-                type="button"
-                onClick={handleConfirm}
-                className="px-4 min-h-[44px] rounded-xl text-sm font-bold bg-secondary hover:opacity-90 text-on-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-secondary/30"
-              >
-                Réinitialiser et recharger
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <Dialog
+      open={open}
+      onClose={() => undefined}
+      dismissable={false}
+      role="alertdialog"
+      size="md"
+      title="Mise à jour majeure"
+      description="Cette nouvelle version doit repartir d’un stockage vide : vos données locales vont être effacées."
+      footer={
+        <>
+          <Button variant="secondary" icon={<Download className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />} onClick={downloadBackup}>
+            Télécharger une sauvegarde
+          </Button>
+          <Button variant="primary" onClick={handleConfirm} data-autofocus>
+            Effacer et recharger
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3 text-[14px] leading-snug text-ink-2">
+        <p>Téléchargez d’abord une sauvegarde : vous pourrez la restaurer depuis Réglages, Données et sauvegarde.</p>
+        {isStandalone && (
+          <>
+            <p className="font-medium text-ink">Réinstallez aussi l’application pour recevoir la mise à jour :</p>
+            <ul className="space-y-1.5 border-l border-line pl-3">
+              <li>
+                <strong className="text-ink">iPhone, iPad</strong> : appui long sur l’icône, « Supprimer l’app », puis dans Safari, Partager, « Sur l’écran d’accueil ».
+              </li>
+              <li>
+                <strong className="text-ink">Android</strong> : appui long sur l’icône, « Désinstaller », puis dans Chrome, menu, « Installer l’application ».
+              </li>
+            </ul>
+          </>
+        )}
+      </div>
+    </Dialog>
   );
 };

@@ -1,10 +1,11 @@
 import type {
+  Activity,
   CalendarMonth,
   EndOfMonthCalculation,
   PaymentDelayMode,
   UserProfile,
 } from '~/types';
-import { calcCAFromEntries, calcInvoiceTotals, isTVAApplicableOn } from '~/lib/fiscal';
+import { calcCAByActivity, calcCAFromEntries, calcInvoiceTotals, isTVAApplicableOn } from '~/lib/fiscal';
 
 export interface PaymentTerms {
   days: number;
@@ -25,6 +26,11 @@ export interface PaymentProjection {
   tvaApplies: boolean;
   /** Montant effectivement facturé / encaissé, TVA comprise. */
   amountTtc: number;
+  /**
+   * Ventilation HT par type d'activité (renseignée par `buildPaymentProjections`).
+   * Absente sur d'anciennes projections : imputer alors à l'activité primaire.
+   */
+  amountByActivity?: Record<Activity, number>;
 }
 
 export interface CashflowMonth {
@@ -98,6 +104,7 @@ export function buildPaymentProjections(
       taxAmount: totals.tva,
       amountTtc: totals.ttc,
       tvaApplies,
+      amountByActivity: calcCAByActivity([month], profile),
     }];
   });
 }

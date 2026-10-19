@@ -890,15 +890,16 @@ describe('calcCAFromEntries', () => {
     expect(calcCAFromEntries(month, baseProfile)).toBe(2 * 800);
   });
 
-  it('entries présentes prennent le pas sur workedDays legacy', () => {
+  it('entries présentes prennent le pas sur workedDays legacy (modes sans calendrier)', () => {
+    // En mode days/mixed, le calendrier visible reste compté (cf. mixedMode.test.ts).
     const month: CalendarMonth = {
       month: 4,
       year: 2026,
-      workedDays: [1, 2, 3, 4, 5], // ignoré
+      workedDays: [1, 2, 3, 4, 5], // ignoré : calendrier masqué en mode flat
       halfDays: [],
       entries: [{ kind: 'flat', id: 'f', amount: 10_000 }],
     };
-    expect(calcCAFromEntries(month, baseProfile)).toBe(10_000);
+    expect(calcCAFromEntries(month, { ...baseProfile, revenueModel: 'flat' })).toBe(10_000);
   });
 });
 

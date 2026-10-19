@@ -1,4 +1,5 @@
-import type { Activity, ActivityEntry, UserProfile, FiscalResult, MonthlyBreakdown, MonthlyChartData, CalendarMonth, RevenueEntry, TVAStatus } from '~/types';
+import type { Activity, ActivityEntry, UserProfile, FiscalResult, MonthlyBreakdown, MonthlyChartData, CalendarMonth, RevenueEntry, RevenueModel, TVAStatus } from '~/types';
+import { getLegalParamsForYear } from '~/constants';
 import { calcVLEligibilityForYear, getVLRfrThresholdPerPart, type VLEligibility } from '~/lib/vlEligibility';
 
 // --- Paramètres fiscaux par activité (2026) ---
@@ -22,6 +23,97 @@ export const ACTIVITY_PARAMS: Record<Activity, ActivityParams> = {
   liberalSsi:   { label: 'Libéral non réglementé (SSI)',   hint: 'BNC SSI : conseil, dev, design',     urssafRate: 25.6, abattement: 0.34, plafond:  83_600, tauxVL: 0.022, cfpRate: 0.002, taxeConsulaireRate: 0 },
   liberalCipav: { label: 'Libéral réglementé (CIPAV)',     hint: 'Architecte, ostéo, psy, etc.',       urssafRate: 23.2, abattement: 0.34, plafond:  83_600, tauxVL: 0.022, cfpRate: 0.002, taxeConsulaireRate: 0 },
 };
+
+// --- Paramètres légaux par activité ET par année ---
+
+/**
+ * Plafond micro « vente / hébergement » par année. `LEGAL_PARAMS_BY_YEAR`
+ * (constants.ts) ne porte que le plafond « services » et le taux SSI.
+ */
+const SEUIL_MICRO_VENTE_BY_YEAR: Record<number, number> = {
+  2023: 188_700,
+  2024: 188_700,
+  2025: 188_700,
+  2026: 203_100,
+};
+
+/** Taux CIPAV par année : 21,2 % jusqu'en 2024, 23,2 % depuis le 1er janvier 2025. */
+const URSSAF_RATE_CIPAV_BY_YEAR: Record<number, number> = {
+  2023: 21.2,
+  2024: 21.2,
+  2025: 23.2,
+};
+
+function lookupByYear(table: Record<number, number>, year: number, fallback: number): number {
+  if (table[year] !== undefined) return table[year];
+  const years = Object.keys(table).map(Number).sort((a, b) => b - a);
+  const closest = years.find((y) => y <= year);
+  return closest !== undefined ? table[closest] : fallback;
+}
+
+export interface ActivityLegalParams {
+  /** Taux URSSAF légal (en %) de l'activité pour l'année. */
+  urssafRate: number;
+  /** Plafond de CA micro de l'activité pour l'année. */
+  seuilMicro: number;
+  /** Taxe pour frais de chambre consulaire due (BIC) ou non (libéraux). */
+  taxeConsulaireEnabled: boolean;
+}
+
+/**
+ * Paramètres légaux d'une activité pour une année donnée.
+ *
+ * `LEGAL_PARAMS_BY_YEAR` donne le taux du **libéral SSI** et le plafond
+ * **services** de chaque année ; `ACTIVITY_PARAMS` donne les taux 2026 de
+ * chaque activité. Les combiner naïvement donnait un résultat faux (ex. taux
+ * SSI appliqué à une activité de vente, ou taux SSI 2026 sur une année 2025).
+ * Règle retenue :
+ * - libéral SSI : taux et plafond de `LEGAL_PARAMS_BY_YEAR` ;
+ * - CIPAV : taux CIPAV de l'année, plafond services de l'année ;
+ * - services BIC : taux `ACTIVITY_PARAMS` (stable depuis 2024), plafond services de l'année ;
+ * - vente : taux `ACTIVITY_PARAMS` (stable), plafond vente de l'année.
+ */
+export function getActivityLegalParams(activity: Activity, year: number): ActivityLegalParams {
+  const legal = getLegalParamsForYear(year);
+  const base = ACTIVITY_PARAMS[activity] ?? ACTIVITY_PARAMS.liberalSsi;
+  const taxeConsulaireEnabled = base.taxeConsulaireRate > 0;
+  switch (activity) {
+    case 'liberalSsi':
+      return { urssafRate: legal.urssafRate, seuilMicro: legal.seuilMicro, taxeConsulaireEnabled };
+    case 'liberalCipav':
+      return {
+        urssafRate: lookupByYear(URSSAF_RATE_CIPAV_BY_YEAR, year, base.urssafRate),
+        seuilMicro: legal.seuilMicro,
+        taxeConsulaireEnabled,
+      };
+    case 'vente':
+      return {
+        urssafRate: base.urssafRate,
+        seuilMicro: lookupByYear(SEUIL_MICRO_VENTE_BY_YEAR, year, base.plafond),
+        taxeConsulaireEnabled,
+      };
+    default:
+      return { urssafRate: base.urssafRate, seuilMicro: legal.seuilMicro, taxeConsulaireEnabled };
+  }
+}
+
+/**
+ * Taux URSSAF (en %) appliqué à une activité du profil : le taux du profil
+ * (personnalisable) pour l'activité primaire, le taux légal de l'année pour
+ * les activités secondaires.
+ */
+export function getUrssafRateForActivity(profile: UserProfile, activity: Activity): number {
+  if (activity === getPrimaryActivity(profile)?.type) return profile.urssafRate;
+  return getActivityLegalParams(activity, profile.year).urssafRate;
+}
+
+/**
+ * Nombre de parts fiscales utilisable par le barème (repli sur 1 si absent ou
+ * invalide).
+ */
+export function normalizeParts(parts: number | null | undefined): number {
+  return typeof parts === 'number' && Number.isFinite(parts) && parts > 0 ? parts : 1;
+}
 
 // --- TVA — franchise en base (seuils nationaux applicables depuis 2025) ---
 
@@ -112,8 +204,8 @@ export interface InvoiceTotals {
   ttc: number;
 }
 
-/** Lit une date ISO sans la décaler au changement d'heure / fuseau local. */
-function parseLocalISODate(value: string): Date | null {
+/** Lit une date ISO (YYYY-MM-DD) à midi heure locale, sans décalage de fuseau. */
+export function parseLocalISODate(value: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return null;
   const [, year, month, day] = match;
@@ -183,25 +275,87 @@ export function resolveMonthlyTjm(
 
 // --- Modèles de revenu pluggables (jours / forfait / flat) ---
 
+type DaysEntry = Extract<RevenueEntry, { kind: 'days' }>;
+
+/** Préfixe des identifiants de la « ligne calendrier » (jours cochés). */
+export const CALENDAR_LINE_PREFIX = 'calendar-';
+
+/** Identifiant de la ligne jours dérivée du calendrier d'un mois. */
+export function calendarLineId(month: Pick<CalendarMonth, 'year' | 'month'>): string {
+  return `${CALENDAR_LINE_PREFIX}${month.year}-${month.month}`;
+}
+
+/**
+ * Vrai pour la ligne `days` dérivée du calendrier (id `calendar-…`). Une telle
+ * ligne peut avoir été persistée dans `entries` par l'UI (bug du mode mixte) :
+ * son contenu `days`/`halfDays` n'est alors qu'une copie figée, jamais lue.
+ */
+export function isCalendarLine(entry: RevenueEntry): entry is DaysEntry {
+  return entry.kind === 'days' && entry.id.startsWith(CALENDAR_LINE_PREFIX);
+}
+
 /**
  * Retourne les entries effectives d'un mois.
  *
- * - Si `entries` est non-vide → c'est la source de vérité (mode forfait/flat/mixed
- *   ou days explicite). Les `workedDays`/`halfDays` du calendrier sont ignorés.
- * - Sinon → dérive virtuellement une ligne `days` depuis `workedDays`/`halfDays`.
- *   Permet le mode rapide « clic dans le calendrier » sans manipuler entries.
+ * Les jours cochés (`workedDays`/`halfDays`) sont **toujours** la source de
+ * vérité de la ligne jours : une ligne `calendar-…` persistée dans `entries`
+ * est réconciliée avec le calendrier (on ne garde d'elle que `tjmOverride` et
+ * `activityId`). Les autres entries (forfaits, montants mensuels, lignes `days`
+ * explicites d'un autre id) sont conservées telles quelles.
+ *
+ * La ligne calendrier est incluse si des jours sont cochés et :
+ * - qu'aucune autre entry n'existe (mode rapide historique), ou
+ * - qu'elle avait été persistée dans `entries`, ou
+ * - que le mode de saisie affiche le calendrier (`days` ou `mixed`).
+ *
+ * En modes `forfait`/`flat` (calendrier masqué), des jours résiduels restent
+ * ignorés dès qu'un forfait ou un montant mensuel est saisi (comportement
+ * historique). Sans `revenueModel`, seule la règle historique s'applique.
+ */
+export function effectiveEntriesForModel(month: CalendarMonth, revenueModel: RevenueModel | undefined): RevenueEntry[] {
+  const entries = month.entries ?? [];
+  const halfDays = month.halfDays ?? [];
+  const workedDays = month.workedDays ?? [];
+  const hasCalendarDays = workedDays.length > 0 || halfDays.length > 0;
+  const persisted = entries.find(isCalendarLine);
+  if (!persisted && entries.length > 0 && !hasCalendarDays) return entries;
+
+  const others = persisted ? entries.filter((e) => !isCalendarLine(e)) : entries;
+  const includeCalendar = hasCalendarDays && (
+    others.length === 0
+    || persisted !== undefined
+    || revenueModel === 'days'
+    || revenueModel === 'mixed'
+  );
+  if (!includeCalendar) return others;
+
+  const line: DaysEntry = {
+    kind: 'days',
+    id: persisted?.id ?? calendarLineId(month),
+    days: workedDays,
+    halfDays,
+  };
+  if (persisted?.tjmOverride !== undefined) line.tjmOverride = persisted.tjmOverride;
+  if (persisted?.activityId !== undefined) line.activityId = persisted.activityId;
+
+  if (!persisted) return [line, ...others];
+  // Conserve la position de la ligne persistée ; supprime ses éventuels doublons.
+  const out: RevenueEntry[] = [];
+  for (const e of entries) {
+    if (e === persisted) out.push(line);
+    else if (!isCalendarLine(e)) out.push(e);
+  }
+  return out;
+}
+
+/**
+ * Entries effectives d'un mois sans connaître le mode de saisie (règle
+ * historique + réconciliation d'une ligne calendrier persistée). Signature à un
+ * argument conservée pour les usages en callback (`months.map(effectiveEntries)`).
+ * Préférer `effectiveEntriesForModel(month, profile.revenueModel)`.
  */
 export function effectiveEntries(month: CalendarMonth): RevenueEntry[] {
-  if (month.entries.length > 0) return month.entries;
-  if (month.workedDays.length === 0 && month.halfDays.length === 0) return [];
-  return [
-    {
-      kind: 'days',
-      id: `calendar-${month.year}-${month.month}`,
-      days: month.workedDays,
-      halfDays: month.halfDays,
-    },
-  ];
+  return effectiveEntriesForModel(month, undefined);
 }
 
 export function entryAmount(
@@ -230,7 +384,7 @@ export function entryAmount(
  * Mode `mixed` : somme de toutes les entries (toutes catégories confondues)
  */
 export function calcCAFromEntries(month: CalendarMonth, profile: UserProfile): number {
-  return effectiveEntries(month).reduce((sum, e) => sum + entryAmount(e, profile, month.month), 0);
+  return effectiveEntriesForModel(month, profile.revenueModel).reduce((sum, e) => sum + entryAmount(e, profile, month.month), 0);
 }
 
 /** CA annuel = somme des `calcCAFromEntries` sur les 12 mois. */
@@ -259,7 +413,7 @@ export function calcCaRealiseFromEntries(
   for (const m of months) {
     if (m.month > currentMonthIndex) continue;
     const isCurrent = m.month === currentMonthIndex;
-    for (const e of effectiveEntries(m)) {
+    for (const e of effectiveEntriesForModel(m, profile.revenueModel)) {
       switch (e.kind) {
         case 'days': {
           const tjm = e.tjmOverride ?? resolveMonthlyTjm(profile, m.month);
@@ -317,7 +471,7 @@ export function calcSeuilDateFromEntries(
     const events: Event[] = [];
     let flatTotal = 0;
 
-    for (const e of effectiveEntries(m)) {
+    for (const e of effectiveEntriesForModel(m, profile.revenueModel)) {
       if (e.kind === 'days') {
         const tjm = e.tjmOverride ?? resolveMonthlyTjm(profile, m.month);
         const halfSet = new Set(e.halfDays ?? []);
@@ -348,7 +502,12 @@ export function calcSeuilDateFromEntries(
 
 /** Indique si un mois contient au moins une entry productrice de revenu. */
 export function monthHasRevenue(month: CalendarMonth): boolean {
-  return effectiveEntries(month).some((e) => {
+  return monthHasRevenueForModel(month, undefined);
+}
+
+/** `monthHasRevenue` selon le mode de saisie (cf. `effectiveEntriesForModel`). */
+export function monthHasRevenueForModel(month: CalendarMonth, revenueModel: RevenueModel | undefined): boolean {
+  return effectiveEntriesForModel(month, revenueModel).some((e) => {
     if (e.kind === 'days') return e.days.length > 0 || (e.halfDays?.length ?? 0) > 0;
     return e.amount > 0;
   });
@@ -384,7 +543,7 @@ export function calcCAByActivity(
 ): Record<Activity, number> {
   const result: Record<Activity, number> = { vente: 0, serviceBic: 0, liberalSsi: 0, liberalCipav: 0 };
   for (const m of months) {
-    for (const e of effectiveEntries(m)) {
+    for (const e of effectiveEntriesForModel(m, profile.revenueModel)) {
       const type = resolveActivityType(e, profile);
       result[type] += entryAmount(e, profile, m.month);
     }
@@ -435,9 +594,8 @@ export function calcNetMicroMulti(
   const cfpEnabled = profile.cfpEnabled;
   const taxeConsulaireEnabled = profile.taxeConsulaireEnabled;
   const acreTotal = Math.max(0, opts.acreReduction ?? 0);
-  const primaryActivity = getPrimaryActivity(profile).type;
-  const urssafRateFor = (activity: Activity) =>
-    activity === primaryActivity ? profile.urssafRate : ACTIVITY_PARAMS[activity].urssafRate;
+  const parts = normalizeParts(opts.parts ?? profile.partsFiscales);
+  const urssafRateFor = (activity: Activity) => getUrssafRateForActivity(profile, activity);
 
   let chargesURSSAFBrutTotal = 0;
   for (const a of Object.keys(caByActivity) as Activity[]) {
@@ -499,7 +657,7 @@ export function calcNetMicroMulti(
     };
   }
 
-  const ir = calcIR(revenuImposableTotal);
+  const ir = calcIR(revenuImposableTotal, parts);
   const netApresIR = caTotal - totalChargesObligatoires - chargesFixes - ir;
   return {
     caAnnuel: caTotal,
@@ -571,7 +729,17 @@ export function calcTotalChargesFixes(costs: UserProfile['fixedCosts']): number 
 
 // --- Impôt sur le revenu (barème progressif) ---
 
+/**
+ * IR au barème progressif avec quotient familial : `parts × barème(revenu / parts)`.
+ *
+ * Approximation assumée : pas de plafonnement de l'avantage du quotient
+ * familial (au-delà des 2 premières parts, l'avantage réel est plafonné par
+ * demi-part), pas de décote ni de réductions/crédits d'impôt, et le revenu du
+ * foyer se limite au revenu micro. L'IR est donc sous-estimé pour les foyers à
+ * plus de 2 parts et hauts revenus.
+ */
 export function calcIR(revenuImposable: number, parts: number = 1): number {
+  parts = normalizeParts(parts);
   const revenuParPart = revenuImposable / parts;
   let impotParPart = 0;
 
@@ -676,6 +844,12 @@ export interface FiscalCalcOptions {
   tvaSeuilDate?: Date | null;      // défaut : null
   /** Coût IJ annuel (libéraux uniquement) à ajouter aux charges. Défaut : 0. */
   ijAnnuel?: number;
+  /**
+   * Parts fiscales du foyer pour le barème (quotient familial). Défaut : 1 pour
+   * `calcNetMicro`/`calcMonthlyBreakdown`, `profile.partsFiscales` pour les
+   * fonctions multi-activité qui reçoivent le profil.
+   */
+  parts?: number;
 }
 
 export function calcNetMicro(
@@ -718,7 +892,7 @@ export function calcNetMicro(
   }
 
   const revenuImposable = ca * (1 - abattement);
-  const ir = calcIR(revenuImposable);
+  const ir = calcIR(revenuImposable, normalizeParts(opts.parts));
   const netApresIR = ca - totalChargesObligatoires - chargesFixes - ir;
 
   return {
@@ -877,7 +1051,7 @@ export function generateChartData(profile: UserProfile): MonthlyChartData[] {
       params.urssafRate,
       chargesFixesMensuelles,
       profile.versementLiberatoire,
-      { abattement: params.abattement, tauxVL: params.tauxVL },
+      { abattement: params.abattement, tauxVL: params.tauxVL, parts: profile.partsFiscales },
     );
     const invoiceDate = new Date(profile.year, monthIndex + 1, 0, 12);
     const invoice = calcInvoiceTotals(brut, isTVAApplicableOn(profile, invoiceDate), profile.tvaRate);

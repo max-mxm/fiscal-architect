@@ -1,5 +1,6 @@
-import type { CalendarMonth } from '~/types';
+import type { CalendarMonth, RevenueEntry } from '~/types';
 import { getDaysInMonth, isWeekend } from '~/lib/calendar';
+import { isCalendarLine } from '~/lib/fiscal';
 
 type IsFerieFn = (monthIndex: number, day: number) => boolean;
 
@@ -105,4 +106,14 @@ export function fillAllInMonths(
 /** Vide un mois (jours pleins + demi-journées). */
 export function clearMonthInMonths(months: CalendarMonth[], monthIndex: number): CalendarMonth[] {
   return months.map((m, i) => (i !== monthIndex ? m : { ...m, workedDays: [], halfDays: [] }));
+}
+
+/**
+ * Retire la ligne jours dérivée du calendrier (id `calendar-…`) d'une liste
+ * d'entries avant de la persister : les jours cochés vivent dans
+ * `workedDays`/`halfDays`, une copie dans `entries` serait figée. Les lignes
+ * `days` explicites (autre id) sont conservées.
+ */
+export function withoutCalendarLines(entries: RevenueEntry[]): RevenueEntry[] {
+  return entries.filter((e) => !isCalendarLine(e));
 }

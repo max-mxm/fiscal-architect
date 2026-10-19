@@ -2,12 +2,10 @@ import { useCallback } from 'react';
 import type { FiscalYear, RevenueEntry, UserProfile } from '~/types';
 import { useVersionedStorage } from '~/hooks/useLocalStorage';
 import {
-  MONTH_NAMES,
   createEmptyFiscalYear,
   getJoursFeries,
-  formatDaysFR,
 } from '~/lib/calendar';
-import { calcEquivDays, resolveMonthlyTjm } from '~/lib/fiscal';
+import { buildAnnualCsv } from '~/lib/csvExport';
 import {
   cycleDayInMonths,
   dragSetDayInMonths,
@@ -102,19 +100,11 @@ export function useFiscalYear(year: number) {
     }
   }, []);
 
-  const exportCSV = useCallback((profile: Pick<UserProfile, 'tjm' | 'tjmByMonth'>) => {
-    const header = 'Mois,Jours pleins,Demi-journées,Jours équivalents,TJM (€),CA (€)\n';
-    const rows = fiscalYear.months
-      .map((m) => {
-        const halfCount = m.halfDays.length;
-        const equiv = calcEquivDays(m);
-        const tjmMois = resolveMonthlyTjm(profile, m.month);
-        const ca = equiv * tjmMois;
-        return `${MONTH_NAMES[m.month]},${m.workedDays.length},${halfCount},${formatDaysFR(equiv)},${tjmMois},${ca}`;
-      })
-      .join('\n');
-    const csv = header + rows;
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  /** Export CSV de l'année depuis la saisie réelle (jours, forfaits, montants mensuels). */
+  const exportCSV = useCallback((profile: UserProfile) => {
+    const csv = buildAnnualCsv(fiscalYear.months, profile, year);
+    // BOM UTF-8 : accents lisibles à l'ouverture dans Excel.
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

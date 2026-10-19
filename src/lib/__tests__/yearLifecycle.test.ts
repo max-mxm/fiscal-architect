@@ -6,6 +6,7 @@ import {
   createYearInherited,
   isYearEmpty,
   previewInheritedConfig,
+  readStoredFiscalYear,
 } from '~/lib/yearLifecycle';
 
 const yearConfigKey = (year: number) => `fiscal-year-config-${year}`;
@@ -88,6 +89,33 @@ describe('yearLifecycle', () => {
     });
   });
 
+  describe('readStoredFiscalYear', () => {
+    it('returns the persisted calendar of the year', () => {
+      const calendar = createEmptyFiscalYear(2026);
+      calendar.months[2].workedDays = [3, 4];
+      localStorage.setItem(yearCalendarKey(2026), JSON.stringify(calendar));
+      expect(readStoredFiscalYear(2026).months[2].workedDays).toEqual([3, 4]);
+    });
+
+    it('returns an empty calendar when nothing is stored or JSON is invalid', () => {
+      expect(readStoredFiscalYear(2026)).toEqual(createEmptyFiscalYear(2026));
+      localStorage.setItem(yearCalendarKey(2026), '{oops');
+      expect(readStoredFiscalYear(2026)).toEqual(createEmptyFiscalYear(2026));
+    });
+
+    it('normalises months missing entries/halfDays', () => {
+      localStorage.setItem(yearCalendarKey(2026), JSON.stringify({
+        schemaVersion: 1,
+        year: 2026,
+        months: [{ month: 0, year: 2026, workedDays: [5] }],
+      }));
+      const fy = readStoredFiscalYear(2026);
+      expect(fy.months).toHaveLength(12);
+      expect(fy.months[0]).toEqual({ month: 0, year: 2026, workedDays: [5], halfDays: [], entries: [] });
+      expect(fy.months[11].workedDays).toEqual([]);
+    });
+  });
+
   describe('createYearFresh', () => {
     it('writes a default config and an empty calendar', () => {
       const { config, calendar } = createYearFresh(2027);
@@ -131,6 +159,22 @@ describe('yearLifecycle', () => {
       const legal = getLegalParamsForYear(2027);
       expect(config.urssafRate).toBe(legal.urssafRate);
       expect(config.seuilMicro).toBe(legal.seuilMicro);
+    });
+
+    it('patches legal params according to the primary activity (not always SSI)', () => {
+      const source = {
+        ...buildDefaultYearConfig(2025),
+        activities: [{ id: 'shop', type: 'vente' as const, isPrimary: true }],
+        urssafRate: 12.3,
+        seuilMicro: 188_700,
+        taxeConsulaireEnabled: true,
+      };
+      localStorage.setItem(yearConfigKey(2025), JSON.stringify(source));
+      const { config } = createYearInherited(2026, 2025);
+      expect(config.urssafRate).toBe(12.3);
+      expect(config.seuilMicro).toBe(203_100);
+      expect(previewInheritedConfig(2026, 2025)?.urssafRate).toBe(12.3);
+      expect(previewInheritedConfig(2026, 2025)?.seuilMicro).toBe(203_100);
     });
 
     it('resets rfrN2 and missionStart to target year', () => {

@@ -1,29 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Home } from '~/pages/Home'
-
-export type SettingsParam = 'profile' | 'fiscal' | 'payments' | 'costs'
+import { MonthScreen } from '~/screens/MonthScreen'
 
 interface IndexSearch {
-  settings?: SettingsParam
-  confirm?: 'reset-all' | 'clear-year' | 'fill-year' | 'fill-month'
+  /** Mois affiché (0-11), pour les liens depuis l'écran Année. */
+  mois?: number
 }
-
-const SETTINGS_VALUES: ReadonlyArray<SettingsParam> = ['profile', 'fiscal', 'payments', 'costs']
 
 export const Route = createFileRoute('/')({
   validateSearch: (raw: Record<string, unknown>): IndexSearch => {
-    const out: IndexSearch = {}
-    if (typeof raw.settings === 'string' && (SETTINGS_VALUES as readonly string[]).includes(raw.settings)) {
-      out.settings = raw.settings as SettingsParam
-    }
-    if (raw.confirm === 'reset-all' || raw.confirm === 'clear-year' || raw.confirm === 'fill-year' || raw.confirm === 'fill-month') {
-      out.confirm = raw.confirm
-    }
-    return out
+    const m = Number(raw.mois)
+    return Number.isInteger(m) && m >= 0 && m <= 11 ? { mois: m } : {}
   },
-  component: HomeRoute,
+  component: MonthScreen,
 })
-
-function HomeRoute() {
-  return <Home />
-}

@@ -1,49 +1,27 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useEffect, useRef } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Undo2, X } from 'lucide-react';
+import { usePrefersReducedMotion } from '~/hooks/usePrefersReducedMotion';
 
 interface UndoToastProps {
   open: boolean;
   message: string;
   onUndo: () => void;
   onDismiss: () => void;
-  /** Durée totale en ms avant auto-dismiss. */
-  duration?: number;
+  durationMs?: number;
 }
 
-export const UndoToast: React.FC<UndoToastProps> = ({
-  open,
-  message,
-  onUndo,
-  onDismiss,
-  duration = 5000,
-}) => {
-  const [progress, setProgress] = useState(100);
-  const startedAtRef = useRef<number>(0);
-  const rafRef = useRef<number>(0);
+/** Bandeau d'annulation, au-dessus de la barre d'onglets sur mobile. */
+export const UndoToast: React.FC<UndoToastProps> = ({ open, message, onUndo, onDismiss, durationMs = 6000 }) => {
+  const reduced = usePrefersReducedMotion();
+  const dismissRef = useRef(onDismiss);
+  dismissRef.current = onDismiss;
 
   useEffect(() => {
-    if (!open) {
-      cancelAnimationFrame(rafRef.current);
-      setProgress(100);
-      return;
-    }
-    startedAtRef.current = performance.now();
-
-    const tick = () => {
-      const elapsed = performance.now() - startedAtRef.current;
-      const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
-      setProgress(remaining);
-      if (remaining <= 0) {
-        onDismiss();
-        return;
-      }
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [open, duration, onDismiss]);
+    if (!open) return;
+    const t = window.setTimeout(() => dismissRef.current(), durationMs);
+    return () => window.clearTimeout(t);
+  }, [open, message, durationMs]);
 
   return (
     <AnimatePresence>
@@ -51,37 +29,40 @@ export const UndoToast: React.FC<UndoToastProps> = ({
         <motion.div
           role="status"
           aria-live="polite"
-          initial={{ opacity: 0, y: 20 }}
+          initial={reduced ? { opacity: 0 } : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.18, ease: 'easeOut' }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] w-[min(440px,calc(100vw-2rem))]"
+          exit={reduced ? { opacity: 0 } : { opacity: 0, y: 12 }}
+          transition={{ duration: reduced ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}
+          className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-[85] mx-auto max-w-md overflow-hidden rounded-[var(--radius-card)] bg-ink text-card shadow-[var(--shadow-overlay)] lg:bottom-6"
         >
-          <div className="relative overflow-hidden rounded-2xl bg-slate-900 text-white dark:bg-surface-lowest dark:text-on-surface dark:border dark:border-outline-variant/30 shadow-2xl">
-            <div className="flex items-center gap-3 p-4">
-              <span className="text-sm font-medium flex-1 truncate">{message}</span>
-              <button
-                type="button"
-                onClick={onUndo}
-                className="inline-flex items-center gap-1.5 px-3 min-h-[36px] rounded-xl bg-secondary-container/20 text-secondary-container dark:bg-secondary/15 dark:text-secondary text-sm font-bold hover:bg-secondary-container/30 dark:hover:bg-secondary/25 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary-container/50"
-              >
-                <Undo2 className="w-3.5 h-3.5" /> Annuler
-              </button>
-              <button
-                type="button"
-                onClick={onDismiss}
-                aria-label="Fermer la notification"
-                className="text-white/60 hover:text-white dark:text-on-surface-variant dark:hover:text-on-surface p-1.5 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div
-              className="absolute bottom-0 left-0 h-0.5 bg-secondary-container transition-[width] motion-reduce:hidden"
-              style={{ width: `${progress}%` }}
-              aria-hidden="true"
-            />
+          <div className="flex items-center gap-2 py-1.5 pl-4 pr-1.5">
+            <p className="min-w-0 flex-1 text-[14px] leading-snug">{message}</p>
+            <button
+              type="button"
+              onClick={onUndo}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-ctl)] px-3 text-[14px] font-bold text-ca-light hover:bg-white/10"
+            >
+              <Undo2 className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={onDismiss}
+              aria-label="Fermer"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-ctl)] text-card/70 hover:bg-white/10 hover:text-card"
+            >
+              <X className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+            </button>
           </div>
+          {!reduced && (
+            <motion.span
+              aria-hidden="true"
+              className="block h-[3px] origin-left bg-ca"
+              initial={{ scaleX: 1 }}
+              animate={{ scaleX: 0 }}
+              transition={{ duration: durationMs / 1000, ease: 'linear' }}
+            />
+          )}
         </motion.div>
       )}
     </AnimatePresence>
