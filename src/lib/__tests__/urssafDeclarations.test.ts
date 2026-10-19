@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPaymentProjections } from '~/lib/cashflow';
+import { buildPaymentProjections, carriedOverPayments } from '~/lib/cashflow';
 import { ACTIVITY_PARAMS, IJ_RATE_LIBERAL } from '~/lib/fiscal';
 import { buildUrssafDeclarations } from '~/lib/urssafDeclarations';
 import { flatMonths, makeProfile } from './testUtils';
@@ -118,5 +118,29 @@ describe('buildUrssafDeclarations — cotisations', () => {
       tvaApplies: false,
     }], profile, 2026, new Date(2026, 0, 1));
     expect(decls[0].urssaf).toBeCloseTo(123, 6);
+  });
+});
+
+describe('buildUrssafDeclarations — origine des encaissements', () => {
+  const profile = makeProfile({ revenueModel: 'flat', paymentDelayDays: 30, paymentDelayMode: 'net' });
+
+  it('détaille chaque paiement reçu avec la facture dont il provient, en HT et TTC', () => {
+    const taxed = { ...profile, tvaAssujetti: true, tvaEffectiveDate: '2026-01-01' };
+    const projections = buildPaymentProjections(flatMonths(2026, [2_300, 2_800]), taxed);
+    const decls = buildUrssafDeclarations(projections, taxed, 2026, new Date(2026, 0, 1));
+    expect(decls[1].sources).toEqual([]); // rien n'est encaissé en février
+    expect(decls[2].caEncaisse).toBe(5_100); // le CA déclaré reste HT
+    expect(decls[2].sources).toEqual([
+      { serviceMonth: 0, serviceYear: 2026, invoiceDate: new Date(2026, 0, 31, 12), receivedDate: new Date(2026, 2, 2, 12), amount: 2_300, amountTtc: 2_760 },
+      { serviceMonth: 1, serviceYear: 2026, invoiceDate: new Date(2026, 1, 28, 12), receivedDate: new Date(2026, 2, 30, 12), amount: 2_800, amountTtc: 3_360 },
+    ]);
+  });
+
+  it('compte en janvier la facture de décembre N-1 encaissée en N', () => {
+    const previous = carriedOverPayments(flatMonths(2025, [...Array(11).fill(0), 4_000]), { ...profile, year: 2025 }, 2026);
+    const projections = buildPaymentProjections(flatMonths(2026, [1_000]), profile);
+    const decls = buildUrssafDeclarations([...previous, ...projections], profile, 2026, new Date(2026, 0, 1));
+    expect(decls[0].caEncaisse).toBe(4_000);
+    expect(decls[0].sources).toMatchObject([{ serviceMonth: 11, serviceYear: 2025, receivedDate: new Date(2026, 0, 30, 12) }]);
   });
 });

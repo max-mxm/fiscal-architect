@@ -1,5 +1,6 @@
 import type { Activity, ActivityEntry, TVAStatus } from '~/types';
 import type { PaymentProjection, CashflowMonth } from '~/lib/cashflow';
+import type { UrssafDeclarationSource } from '~/lib/urssafDeclarations';
 
 /** Tout ce qu'affiche l'écran Mois pour le mois sélectionné. */
 export interface MonthVM {
@@ -86,7 +87,10 @@ export interface DeclarationVM {
   key: string;
   label: string;
   due: Date;
+  /** CA HT encaissé sur la période, factures de N-1 payées en N comprises. */
   caEncaisse: number;
+  /** Paiements reçus sur la période, avec la facture dont chacun provient. */
+  sources: UrssafDeclarationSource[];
   cotisations: number;
   status: 'past' | 'current' | 'upcoming';
 }
@@ -99,11 +103,14 @@ export interface TreasuryVM {
   timeline: CashflowMonth[];
   invoiced: number;
   invoicedHt: number;
+  /** Montants TTC dès qu'une facture porte de la TVA ; les variantes `…Ht` restent hors taxe. */
   collectedToDate: number;
+  collectedHt: number;
   toCollect: number;
   toCollectHt: number;
   collectedInYear: number;
   deferred: number;
+  deferredHt: number;
   nextIndex: number;
   tvaTotal: number;
   tvaFrom: string | null;

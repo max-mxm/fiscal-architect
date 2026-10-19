@@ -24,6 +24,7 @@ import { buildUrssafDeclarations } from '~/lib/urssafDeclarations';
 import { calcProvisions } from '~/lib/provisions';
 import { calcVLEligibilityForYear } from '~/lib/vlEligibility';
 import { buildCashflowTimeline, buildPaymentProjections, getNextPaymentProjectionIndex, type PaymentProjection } from '~/lib/cashflow';
+import { useCarriedOverPayments } from '~/hooks/useCarriedOverPayments';
 import { MONTH_NAMES, MONTH_SHORT } from '~/lib/calendar';
 import type { CalendarMonth, UserProfile } from '~/types';
 import type { MonthVM, SeuilStatus, TreasuryVM, UpcomingVM, YearMonthVM, YearVM } from '~/view/types';
@@ -100,6 +101,7 @@ export function FiscalViewProvider({ children }: { children: ReactNode }) {
   const fy = useFiscalYearCtx();
   const { year, currentMonthIndex, todayDate, isJourFerie } = fy;
   const months = fy.fiscalYear.months;
+  const carriedOver = useCarriedOverPayments(year, profile);
 
   const core = useMemo<Core>(() => {
     const ref = referenceDate(year);
@@ -214,15 +216,18 @@ export function FiscalViewProvider({ children }: { children: ReactNode }) {
     const collectedToDate = projections.filter((p) => p.dueDate <= ref).reduce((s, p) => s + amt(p), 0);
     const collectedHt = projections.filter((p) => p.dueDate <= ref).reduce((s, p) => s + p.amount, 0);
     const deferred = projections.filter((p) => p.dueDate.getFullYear() > year).reduce((s, p) => s + amt(p), 0);
+    const deferredHt = projections.filter((p) => p.dueDate.getFullYear() > year).reduce((s, p) => s + p.amount, 0);
     const collectedInYear = projections.filter((p) => p.dueDate.getFullYear() === year).reduce((s, p) => s + amt(p), 0);
     const nextIndex = getNextPaymentProjectionIndex(projections, ref);
     const firstTaxed = projections.find((p) => p.tvaApplies);
 
-    const declarations = buildUrssafDeclarations(projections, profile, year, ref).map((d) => ({
+    // Le CA se déclare à l'encaissement : la facture de décembre N-1 payée en janvier compte en N.
+    const declarations = buildUrssafDeclarations([...carriedOver, ...projections], profile, year, ref).map((d) => ({
       key: `${d.periodicity}-${d.index}`,
       label: d.label,
       due: d.dueDate,
       caEncaisse: d.caEncaisse,
+      sources: d.sources,
       cotisations: d.total,
       status: d.status,
     }));
@@ -239,10 +244,12 @@ export function FiscalViewProvider({ children }: { children: ReactNode }) {
       invoiced,
       invoicedHt,
       collectedToDate,
+      collectedHt,
       toCollect: Math.max(0, invoiced - collectedToDate),
       toCollectHt: Math.max(0, invoicedHt - collectedHt),
       collectedInYear,
       deferred,
+      deferredHt,
       nextIndex,
       tvaTotal: projections.reduce((s, p) => s + p.taxAmount, 0),
       tvaFrom: firstTaxed ? shortFmt.format(firstTaxed.invoiceDate) : null,
@@ -301,7 +308,7 @@ export function FiscalViewProvider({ children }: { children: ReactNode }) {
     upcoming.sort((a, b) => a.date.getTime() - b.date.getTime());
 
     return { year: yearVm, treasury, upcoming: upcoming.slice(0, 4) };
-  }, [months, profile, year, currentMonthIndex, todayDate, isJourFerie]);
+  }, [months, profile, year, currentMonthIndex, todayDate, isJourFerie, carriedOver]);
 
   return <Ctx.Provider value={core}>{children}</Ctx.Provider>;
 }

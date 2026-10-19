@@ -11,6 +11,20 @@ import { ACTIVITY_TYPES, calcMonthlyBreakdownMulti, emptyCAByActivity, type CABy
  */
 export type DeclarationStatus = 'past' | 'current' | 'upcoming';
 
+/** Un paiement reçu dans la période, rattaché à la facture dont il provient. */
+export interface UrssafDeclarationSource {
+  /** Mois de prestation facturé (0..11) et son année (N-1 pour une facture de décembre payée en janvier). */
+  serviceMonth: number;
+  serviceYear: number;
+  invoiceDate: Date;
+  /** Date d'encaissement (échéance contractuelle). */
+  receivedDate: Date;
+  /** Montant HT encaissé : c'est lui qui se déclare. */
+  amount: number;
+  /** Montant reçu sur le compte, TVA comprise (égal au HT sans TVA). */
+  amountTtc: number;
+}
+
 export interface UrssafDeclaration {
   periodicity: 'monthly' | 'quarterly';
   /** Mois (0..11) ou trimestre (0..3). */
@@ -24,6 +38,8 @@ export interface UrssafDeclaration {
   /** CA HT encaissé dans la période (date d'encaissement des factures). */
   caEncaisse: number;
   caByActivity: CAByActivity;
+  /** Paiements composant `caEncaisse`, par date d'encaissement. */
+  sources: UrssafDeclarationSource[];
   urssafBrut: number;
   acreReduction: number;
   /** URSSAF nette d'ACRE. */
@@ -47,7 +63,8 @@ function dayNumber(d: Date): number {
  * **encaissé** sur la période (mensuelle ou trimestrielle selon
  * `profile.declarationPeriod`). Le CA de chaque période est la somme des
  * projections dont la date d'encaissement (`dueDate`) tombe dans la période ;
- * les encaissements d'une autre année sont ignorés.
+ * les encaissements d'une autre année sont ignorés. Passer aussi les factures
+ * de N-1 payées en N (`carriedOverPayments`) pour que janvier soit complet.
  *
  * Cotisations estimées mois d'encaissement par mois d'encaissement : URSSAF par
  * activité moins l'ACRE du mois, CFP et taxe consulaire si activées, IJ si
@@ -63,8 +80,17 @@ export function buildUrssafDeclarations(
 ): UrssafDeclaration[] {
   const primary: Activity = getPrimaryActivity(profile)?.type ?? 'liberalSsi';
   const caByMonth: CAByActivity[] = Array.from({ length: 12 }, emptyCAByActivity);
+  const sourcesByMonth: UrssafDeclarationSource[][] = Array.from({ length: 12 }, () => []);
   for (const p of paymentProjections) {
     if (p.dueDate.getFullYear() !== year) continue;
+    sourcesByMonth[p.dueDate.getMonth()].push({
+      serviceMonth: p.serviceMonth,
+      serviceYear: p.serviceYear,
+      invoiceDate: p.invoiceDate,
+      receivedDate: p.dueDate,
+      amount: p.amount,
+      amountTtc: p.amountTtc,
+    });
     const target = caByMonth[p.dueDate.getMonth()];
     const split = p.amountByActivity ?? { ...emptyCAByActivity(), [primary]: p.amount };
     for (const a of ACTIVITY_TYPES) target[a] += split[a] ?? 0;
@@ -116,6 +142,10 @@ export function buildUrssafDeclarations(
       dueDate,
       caEncaisse: ACTIVITY_TYPES.reduce((s, a) => s + caByActivity[a], 0),
       caByActivity,
+      sources: sourcesByMonth
+        .slice(first, last + 1)
+        .flat()
+        .sort((a, b) => a.receivedDate.getTime() - b.receivedDate.getTime()),
       urssafBrut: sum('urssafBrut'),
       acreReduction: sum('acreReduction'),
       urssaf,
