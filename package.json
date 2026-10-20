@@ -25,7 +25,7 @@
   "bugs": {
     "url": "https://github.com/max-mxm/fiscal-architect/issues"
   },
-  "homepage": "https://fiscal-architect-j1gfhjmps-maxmxms-projects.vercel.app/",
+  "homepage": "https://fiscal-architect.vercel.app/",
   "packageManager": "pnpm@10.12.1",
   "scripts": {
     "dev": "vite dev --port=4000",
